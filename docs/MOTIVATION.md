@@ -46,6 +46,8 @@ The most comprehensive attempts to provide a general-purpose, high-performance p
 
 SYCL, an open standard maintained by the Khronos Group, extends modern C++ (C++17 and C++20) to support heterogeneous execution. It allows developers to write single-source code that can be compiled for CPUs, GPUs, and FPGAs from multiple vendors, including Intel, NVIDIA, and AMD.
 
+Relative to earlier Khronos technologies, `OpenCL` exposed the low-level compute API directly, while `SPIR-V` standardized a portable binary intermediate representation for kernels and shaders. `SYCL` can therefore be understood as a higher-level, single-source C++ response to many of the portability goals that OpenCL pursued, while avoiding much of the verbosity and host/device fragmentation that made OpenCL workflows difficult to scale.
+
 Intel has been a primary driver of the SYCL ecosystem through its oneAPI initiative, which provides the DPC++ (Data Parallel C++) compiler. The oneAPI 2025 releases have introduced significant enhancements, such as device-side ThreadSanitizer and MemorySanitizer support to detect data races and uninitialized memory access in GPU code. Furthermore, the SYCL Graph extension has been matured to reduce kernel launch overhead, providing up to a 15% performance improvement for small, repetitive workloads in scientific applications like GROMACS.
 
 ### AdaptiveCpp: The Performance Portability Leader
@@ -147,6 +149,7 @@ The analysis of the current landscape demonstrates that while libraries and comp
 |----------|------------------|------------------------|
 | Performance Libraries | cuBLAS, oneDNN, rocPRIM | Foundational but opaque; creating vendor lock-in. |
 | Compiler Extensions | OpenMP, OpenACC | Practical for legacy code; performance often underwhelming. |
+| Portable Low-Level Standards | OpenCL, SPIR-V | Vendor-neutral baseline for kernels and compiler interchange, but still comparatively low-level and verbose. |
 | Runtime Systems | IREE, ONNX Runtime | Essential for deployment; handles scheduling and orchestration. |
 | DSLs | Triton, Halide, Wave | Peak efficiency for specific tasks; limited scope. |
 | Unified Standards | SYCL, DPC++, AdaptiveCpp | Leading the move to vendor neutrality; AdaptiveCpp offers superior JIT features. |
@@ -196,6 +199,17 @@ The landscape above can also be summarized in more practical terms: each approac
 - Have a deliberately narrow scope.
 - Often expose a ceiling where the last increment of performance still requires dropping to lower-level code.
 
+#### OpenCL and SPIR-V as a Baseline for Portability
+
+`OpenCL` and `SPIR-V` deserve separate mention because they occupy a foundational but lower-level position in the ecosystem. OpenCL is a cross-vendor compute API and execution model, whereas SPIR-V is a standardized binary IR used in Vulkan and OpenCL toolchains. Together, they provide an important portability substrate, but not a complete answer to developer productivity.
+
+| Technology | Primary role | Main advantage | Main trade-off |
+|---|---|---|---|
+| OpenCL | Cross-vendor compute API/runtime | Broad hardware reach and explicit control | Verbose host/device structure and uneven vendor ergonomics |
+| SPIR-V | Portable intermediate representation | Common compiler target and toolchain interoperability | Not a high-level language or end-user programming model by itself |
+
+In practice, modern systems like `SYCL` and MLIR-based compilers often look more attractive because they build on similar portability goals while offering cleaner abstractions, stronger composition, and better integration with modern compiler pipelines.
+
 #### 4. Unified C++ Standards (e.g. `SYCL`, `oneAPI`, `AdaptiveCpp`)
 
 **Strengths**
@@ -240,6 +254,7 @@ The landscape above can also be summarized in more practical terms: each approac
 |---|---|---|---|---|
 | Optimized libraries | High | Very high | Low | Standard BLAS, FFT, and DNN kernels |
 | OpenMP / OpenACC | High | Moderate | Moderate | Rapid acceleration of legacy code |
+| OpenCL / SPIR-V | Moderate | High with expert tuning | High | Low-level cross-vendor kernels and portable compiler targets |
 | Triton / Halide | High | High | Moderate | AI kernels and image processing |
 | SYCL / oneAPI / AdaptiveCpp | Moderate | Moderate to high | Very high | Cross-vendor HPC in modern C++ |
 | Mojo | Moderate to high | Very high | High | Research kernels and performance-portable accelerator code |
@@ -274,6 +289,14 @@ The landscape above can also be summarized in more practical terms: each approac
 - What is the difference between MLIR and LLVM IR? (Hacker News) https://news.ycombinator.com/item?id=22421323
 
 - If we talk about performance code, why is MLIR better than LLVM? (Answer Overflow) https://www.answeroverflow.com/m/11234567890
+
+**OpenCL, SPIR-V & Khronos Standards**
+
+- OpenCL Overview (Khronos Group) https://www.khronos.org/opencl/
+
+- SPIR-V Specification (Khronos Registry) https://registry.khronos.org/SPIR-V/
+
+- Vulkan Overview (Khronos Group) https://www.khronos.org/vulkan/
 
 **SYCL, oneAPI & AdaptiveCpp**
 
