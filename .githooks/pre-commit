@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Part of the Quar Language project, under the Apache License v2.0 with LLVM
+# Exceptions. See /LICENSE for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+staged_files=()
+while IFS= read -r file; do
+  [[ -n "$file" ]] || continue
+  staged_files+=("$file")
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [[ ${#staged_files[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+echo "[quar] Running pre-commit checks..."
+
+git diff --cached --check
+
+cpp_files=()
+source_files=()
+
+for file in "${staged_files[@]}"; do
+  [[ -f "$file" ]] || continue
+
+  case "$file" in
+    *.c|*.cc|*.cpp|*.cxx|*.h|*.hh|*.hpp|*.hxx)
+      cpp_files+=("$file")
+      ;;
+  esac
+
+  case "$file" in
+    *.c|*.cc|*.cpp|*.cxx)
+      source_files+=("$file")
+      ;;
+  esac
+done
+
+if [[ ${#cpp_files[@]} -gt 0 ]]; then
+  if ! command -v clang-format >/dev/null 2>&1; then
+    echo "[quar] error: clang-format is required for C/C++ formatting checks." >&2
+    exit 1
+  fi
+
+  echo "[quar] Checking clang-format..."
+  clang-format --dry-run --Werror "${cpp_files[@]}"
+fi
+
+if [[ ${#source_files[@]} -gt 0 ]]; then
+  if ! command -v clang-tidy >/dev/null 2>&1; then
+    echo "[quar] error: clang-tidy is required for lint checks." >&2
+    exit 1
+  fi
+
+  if [[ ! -f build/compile_commands.json ]]; then
+    echo "[quar] error: build/compile_commands.json was not found." >&2
+    echo "[quar] Run: cmake -S . -B build -G Ninja" >&2
+    exit 1
+  fi
+
+  echo "[quar] Checking clang-tidy..."
+  clang-tidy -p build "${source_files[@]}"
+fi
+
+echo "[quar] All pre-commit checks passed."
