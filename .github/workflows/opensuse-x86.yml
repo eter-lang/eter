@@ -1,0 +1,43 @@
+name: openSUSE x86
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 0 1 * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container: opensuse/tumbleweed:latest
+    strategy:
+      matrix:
+        compiler:
+          - { compiler: GNU, CC: gcc, CXX: g++ }
+          - { compiler: LLVM, CC: clang, CXX: clang++ }
+        type: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Dependencies
+        run: |
+          zypper --non-interactive refresh
+          zypper --non-interactive install \
+            cmake ninja gcc gcc-c++ \
+            llvm-devel clang mlir-devel \
+            python3 python3-pip python3-lit \
+            git diffutils tar gzip
+      - name: Build quar
+        env:
+          CC: ${{ matrix.compiler.CC }}
+          CXX: ${{ matrix.compiler.CXX }}
+        run: |
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} \
+                -G Ninja ../
+          ninja -j2
+      - name: Run tests
+        run: |
+          cd build
+          lit -va ./test/

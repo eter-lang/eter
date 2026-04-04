@@ -1,0 +1,51 @@
+name: Debian x86
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 0 1 * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container: debian:trixie
+    strategy:
+      matrix:
+        compiler:
+          - { compiler: GNU, CC: gcc, CXX: g++ }
+          - { compiler: LLVM, CC: clang-22, CXX: clang++-22 }
+        type: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Dependencies
+        run: |
+          apt-get update
+          apt-get install -y wget gnupg ca-certificates
+          wget -O /tmp/llvm-snapshot.gpg.key https://apt.llvm.org/llvm-snapshot.gpg.key
+          gpg --dearmor -o /usr/share/keyrings/llvm-snapshot.gpg /tmp/llvm-snapshot.gpg.key
+          echo "deb [signed-by=/usr/share/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/trixie/ llvm-toolchain-trixie-22 main" | tee /etc/apt/sources.list.d/llvm-22.list
+          apt-get update
+          apt-get install -y \
+            cmake ninja-build gcc g++ \
+            llvm-22 llvm-22-dev llvm-22-tools clang-22 \
+            mlir-22 libmlir-22-dev \
+            python3 python3-pip python3-setuptools \
+            git
+          pip3 install lit --break-system-packages
+      - name: Build quar
+        env:
+          CC: ${{ matrix.compiler.CC }}
+          CXX: ${{ matrix.compiler.CXX }}
+        run: |
+          mkdir build && cd build
+          cmake -DCMAKE_PREFIX_PATH="/usr/lib/llvm-22/" \
+                -DCMAKE_BUILD_TYPE=${{ matrix.type }} \
+                -G Ninja ../
+          ninja -j2
+      - name: Run tests
+        run: |
+          cd build
+          lit -va ./test/
