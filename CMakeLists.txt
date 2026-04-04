@@ -12,7 +12,7 @@ option(QUAR_ENABLE_WERROR "Treat warnings as errors" ON)
 option(QUAR_ENABLE_ASSERTIONS "Enable assertions in Quar" ON)
 option(QUAR_INCLUDE_TESTS "Enable Quar's lit/FileCheck test suite" ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -22,7 +22,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 add_library(QuarProjectOptions INTERFACE)
-target_compile_features(QuarProjectOptions INTERFACE cxx_std_17)
+target_compile_features(QuarProjectOptions INTERFACE cxx_std_23)
 
 if(MSVC)
   target_compile_options(QuarProjectOptions INTERFACE /W4)
