@@ -5,7 +5,7 @@ The Quar Programming Language
 
 **Quar** [/kwɔːr/] — *Derived from Quasar: an extremely luminous active galactic nucleus*.
 
-[Why Quar?](#why-quar) • [Getting Started with Quar](docs/GETTING_STARTED.md) • [Contributing to Quar](docs/CONTRIBUTING.md) • [TODO List](docs/TODO.md) • [Project Layout](#project-layout) • [License](#license)
+[Why Quar?](#why-quar) • [Getting the Source Code and Building Quar](#getting-the-source-code-and-building-quar) • [Project Layout](#project-layout) • [License](#license)
 
 </div>
 
