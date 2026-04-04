@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Part of the Quar Language project, under the Apache License v2.0 with LLVM
+# Exceptions. See /LICENSE for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+echo "[quar] Running pre-push checks..."
+
+if [[ ! -f build/build.ninja ]]; then
+  echo "[quar] error: build directory is not configured." >&2
+  echo "[quar] Run: cmake -S . -B build -G Ninja" >&2
+  exit 1
+fi
+
+echo "[quar] Building project..."
+cmake --build build
+
+echo "[quar] Running test suite..."
+cmake --build build --target check-quar
+
+echo "[quar] Pre-push checks passed."

@@ -36,6 +36,47 @@ cmake --build build
 cmake --build build --target check-quar
 ```
 
+## Git Hooks
+
+Quar includes native Git hooks under `.githooks/` so contributors can run the
+basic formatting, linting, build, and test checks automatically before commit
+and push operations.
+
+Enable them with:
+
+```bash
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit .githooks/pre-push
+```
+
+You can also run the same checks manually at any time with:
+
+```bash
+.githooks/pre-commit
+.githooks/pre-push
+```
+
+### `pre-commit`
+
+The `pre-commit` hook currently checks:
+
+- staged diff hygiene with `git diff --cached --check`
+- `clang-format` for C and C++ headers/sources
+- `clang-tidy -p build` for staged C and C++ source files
+
+### `pre-push`
+
+The `pre-push` hook currently checks:
+
+- `cmake --build build`
+- `cmake --build build --target check-quar`
+
+Before enabling the hooks, make sure that:
+
+- `clang-format` and `clang-tidy` are available on your `PATH`
+- you have already configured the project with CMake so that
+  `build/compile_commands.json` exists
+
 ## Coding Style
 
 Quar follows LLVM-style conventions where practical:
