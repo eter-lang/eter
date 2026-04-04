@@ -25,6 +25,11 @@ Before building Quar, make sure the following tools are available:
 
 ### Installing LLVM, MLIR, `lit`, and `FileCheck`
 
+Quar currently expects **LLVM/MLIR 22.x**. The setup differs slightly by
+platform.
+
+#### macOS
+
 On **macOS** with Homebrew, a practical setup is:
 
 ```bash
@@ -46,6 +51,35 @@ If needed, make the LLVM tools visible in your shell:
 export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
 ```
 
+#### Linux
+
+On **Ubuntu/Debian**, a practical setup for **LLVM/MLIR 22.x** is to use the
+`apt.llvm.org` repository and then install the required packages:
+
+```bash
+sudo apt update
+sudo apt install -y wget lsb-release software-properties-common gnupg python3-pip
+wget https://apt.llvm.org/llvm.sh
+chmod +x llvm.sh
+sudo ./llvm.sh 22
+sudo apt install -y clang-22 lld-22 llvm-22-dev libmlir-22-dev mlir-22-tools
+python3 -m pip install --user lit
+```
+
+Notes:
+
+- `mlir-22-tools` provides utilities such as **`FileCheck`**
+- on many systems, the LLVM tools are under `/usr/lib/llvm-22/bin`
+- on non-Debian distributions, install the equivalent LLVM, MLIR, and
+  **`FileCheck`** packages from your package manager or use an official LLVM
+  binary release
+
+If needed, make the LLVM tools visible in your shell:
+
+```bash
+export PATH="/usr/lib/llvm-22/bin:$PATH"
+```
+
 You can verify the install with:
 
 ```bash
@@ -54,13 +88,26 @@ FileCheck --version
 lit --version
 ```
 
+If your Linux distribution installs versioned binaries only, use the versioned
+commands directly, such as `clang-22 --version`.
+
 If CMake does not automatically find LLVM and MLIR, pass their config paths
-explicitly:
+explicitly.
+
+For **macOS** with Homebrew:
 
 ```bash
 cmake -S . -B build -G Ninja \
   -DLLVM_DIR=/opt/homebrew/opt/llvm/lib/cmake/llvm \
   -DMLIR_DIR=/opt/homebrew/opt/llvm/lib/cmake/mlir
+```
+
+For **Linux** with `apt.llvm.org` packages:
+
+```bash
+cmake -S . -B build -G Ninja \
+  -DLLVM_DIR=/usr/lib/llvm-22/lib/cmake/llvm \
+  -DMLIR_DIR=/usr/lib/llvm-22/lib/cmake/mlir
 ```
 
 ### Source Checkout
