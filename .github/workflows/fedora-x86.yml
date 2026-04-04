@@ -16,6 +16,7 @@ jobs:
       LLVM_VERSION: "22.1.2"
       LLVM_PREFIX: /opt/llvm-22
     strategy:
+      fail-fast: false
       matrix:
         compiler:
           - { compiler: GNU, CC: gcc, CXX: g++ }
@@ -25,11 +26,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Dependencies
         run: |
-          dnf install -y \
-            cmake ninja-build gcc gcc-c++ \
-            python3 python3-pip \
-            wget xz git diffutils zlib-devel ncurses-libs libffi-devel
-          wget -q "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
+          dnf install -y --setopt=install_weak_deps=False \
+            ca-certificates cmake ninja-build gcc gcc-c++ \
+            python3 python3-pip python3-setuptools \
+            wget xz diffutils zlib-devel ncurses-libs libffi-devel
+          wget -nv --tries=5 --waitretry=5 --timeout=30 \
+            "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
           tar xf "LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
           mv "LLVM-${LLVM_VERSION}-Linux-X64" "${LLVM_PREFIX}"
           pip3 install lit --break-system-packages

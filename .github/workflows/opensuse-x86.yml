@@ -16,6 +16,7 @@ jobs:
       LLVM_VERSION: "22.1.2"
       LLVM_PREFIX: /opt/llvm-22
     strategy:
+      fail-fast: false
       matrix:
         compiler:
           - { compiler: GNU, CC: gcc, CXX: g++ }
@@ -26,11 +27,12 @@ jobs:
       - name: Install Dependencies
         run: |
           zypper --non-interactive refresh
-          zypper --non-interactive install \
-            cmake ninja gcc gcc-c++ \
-            python3 python3-pip \
-            wget xz git diffutils tar gzip
-          wget -q "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
+          zypper --non-interactive install --no-recommends \
+            ca-certificates cmake ninja gcc gcc-c++ \
+            python3 python3-pip python3-setuptools \
+            wget xz diffutils tar gzip
+          wget -nv --tries=5 --waitretry=5 --timeout=30 \
+            "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
           tar xf "LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
           mv "LLVM-${LLVM_VERSION}-Linux-X64" "${LLVM_PREFIX}"
           pip3 install lit --break-system-packages
