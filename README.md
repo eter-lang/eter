@@ -23,6 +23,7 @@ For additional information, the [Motivation](docs/MOTIVATION.md) document provid
 ## Getting the Source Code and Building Quar
 
 Consult the [Getting Started with Quar](docs/GETTING_STARTED.md) page for information on building and running Quar.
+Quar currently expects **LLVM/MLIR 22.x** and a **C++23-capable** compiler toolchain.
 
 For information on how to contribute to the Quar project, please take a look at the [Contributing to Quar](docs/CONTRIBUTING.md) guide.
 
