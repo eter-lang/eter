@@ -49,6 +49,7 @@ For IDE/LSP setup tips, including the recommended root `.clangd` file, see [Gett
 - `unittests/` — unit-test targets
 - `docs/` — guides such as `GETTING_STARTED.md` and `CONTRIBUTING.md`
 - `.githooks/` — pre-commit and pre-push Git hooks for formatting, linting, and validation
+- `.github/workflows/` — CI workflow definitions for GitHub Actions
 
 ## License
 

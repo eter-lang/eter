@@ -31,7 +31,7 @@ jobs:
           apt-get install -y \
             cmake ninja-build gcc g++ \
             llvm-22 llvm-22-dev llvm-22-tools clang-22 \
-            mlir-22 libmlir-22-dev \
+            libmlir-22-dev mlir-22-tools \
             python3 python3-pip python3-setuptools \
             git
           pip3 install lit --break-system-packages
