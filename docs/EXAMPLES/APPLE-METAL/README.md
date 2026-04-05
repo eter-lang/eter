@@ -1,5 +1,7 @@
 # Apple Metal Examples
 
+> Currently, in accordance with the [Running GPU programs on Apple platforms](https://discourse.llvm.org/t/running-gpu-programs-on-apple-platforms) thread on the LLVM Discourse, the only way to run GPU code on Apple platforms is to use the Apple Metal API. Since the Apple metal compilation paths aren’t publicly documented, there is no way for MLIR-based compilers to target Apple GPUs directly. That is, the only supported paths go through Apple Metal source code — [IREE](https://github.com/iree-org/iree/blob/f3ec9037dbbedee6f4baa5ef506eade504e2f775/compiler/plugins/target/MetalSPIRV/SPIRVToMSL.h#L34) convert SPIR-V to Metal Shading Language (MSL) source code.
+
 This folder contains Apple Metal example applications that demonstrate Metal and Metal C++ usage on macOS.
 
 There are three example cases:
