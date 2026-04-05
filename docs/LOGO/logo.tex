@@ -1,0 +1,159 @@
+% Part of the Eter Language project, under the Apache License v2.0 with LLVM
+% Exceptions. See /LICENSE for license information.
+% SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception 
+
+% pdflatex -shell-escape logo.tex; pdflatex -shell-escape logo.tex; pdflatex -shell-escape logo.tex
+% latexmk -pdf -pvc -shell-escape -interaction=nonstopmode -file-line-error ./logo.tex
+
+\documentclass[10pt,journal,compsoc]{standalone}
+\usepackage{times}
+\usepackage{tikz}
+\usetikzlibrary{%
+   angles, arrows, arrows.meta, backgrounds, calc, decorations, decorations.markings, decorations.pathmorphing,%
+    decorations.pathreplacing, decorations.shapes, fit, matrix, mindmap, patterns, positioning, scopes,%
+    shadows, shadows.blur, shapes.arrows, shapes.callouts, shapes.geometric, shapes.misc, shapes.multipart, shapes.symbols, trees,%
+    decorations.pathreplacing,calligraphy%
+}
+
+\usepackage[dvipsnames]{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[scaled=.8]{beramono}
+
+\pgfdeclarelayer{back}
+\pgfdeclarelayer{front}
+\pgfsetlayers{back,main,front}
+
+\usepackage[active,tightpage,pdftex]{preview}
+\PreviewEnvironment{tikzpicture}
+\setlength{\PreviewBorder}{4.00001bp}
+
+\definecolor{first}{RGB}{100, 200, 200}
+\definecolor{second}{RGB}{70, 130, 170}
+\definecolor{third}{RGB}{40, 90, 130}
+\definecolor{fourth}{RGB}{80, 150, 180}
+
+\begin{document}
+\begin{tikzpicture}
+
+% \draw[help lines,step=.5] (20,20) gridwithcoordinates (1,1);
+
+\coordinate (C) at (10,10);
+\def\r{10}
+\coordinate (CH1) at ($(C)+(90:\r)$);
+\coordinate (CH2) at ($(C)+(30:\r)$);
+\coordinate (CH3) at ($(C)+(-30:\r)$);
+\coordinate (CH4) at ($(C)+(-90:\r)$);
+\coordinate (CH5) at ($(C)+(-150:\r)$);
+\coordinate (CH6) at ($(C)+(150:\r)$);
+
+\coordinate (D) at (10,10);
+\def\r{6.5}
+\coordinate (DH1) at ($(D)+(90:\r)$);
+\coordinate (DH2) at ($(D)+(30:\r)$);
+\coordinate (DH3) at ($(D)+(-30:\r)$);
+\coordinate (DH4) at ($(D)+(-90:\r)$);
+\coordinate (DH5) at ($(D)+(-150:\r)$);
+\coordinate (DH6) at ($(D)+(150:\r)$);
+
+% \draw[thick,gray,fill=gray!20,opacity=0.7]
+%   (CH1) --
+%   (CH2) --
+%   (CH3) --
+%   (CH4) --
+%   (CH5) --
+%   (CH6) --
+%   cycle;
+
+% \draw[thick,gray,fill=gray!20,opacity=0.7]
+%   (DH1) --
+%   (DH2) --
+%   (DH3) --
+%   (DH4) --
+%   (DH5) --
+%   (DH6) --
+%   cycle;
+
+\draw[thick,first,fill=first]
+  (CH2) --
+  (CH1) --
+  (DH1) --
+  (DH2) --
+  cycle;
+
+\draw[thick,first,fill=first]
+  (CH1) --
+  (CH6) --
+  (DH6) --
+  (DH1) --
+  cycle;
+
+
+\draw[thick,second,fill=second]
+  (CH6) --
+  (CH5) --
+  (DH5) --
+  (DH6) --
+  cycle;
+
+\draw[thick,third,fill=third]
+  (CH5) --
+  (CH4) --
+  (DH4) --
+  (DH5) --
+  cycle;
+
+\draw[thick,third,fill=third]
+  (CH4) --
+  (CH3) --
+  (DH3) --
+  (DH4) --
+  cycle;
+
+\coordinate (CH2down) at ($(CH2)+(0,-1)$);
+\coordinate (DH2down) at ($(DH2)+(0,-1)$);
+\draw[thick,fourth,fill=fourth]
+    (CH2) -- (CH2down) -- (DH2down) -- (DH2) -- cycle;
+
+
+\coordinate (DH1down) at ($(DH1)+(0,-7.5)$);
+\coordinate (DH1downdown) at ($(DH1down)+(0,-3.5)$);
+\coordinate (CH2downdown) at ($(CH2down)+(0,-3.5)$);
+\draw[thick,fourth,fill=fourth]
+    (DH2down) --
+    (DH1down) --
+    (DH1downdown) --
+    (CH2downdown) --
+    (CH2down) --
+    cycle;
+
+\coordinate (DH1downANDDH1downdown) at ($(7,7.25)$);
+\draw[thick,second,fill=second]
+    (DH1down) --
+    (DH1downdown) --
+    (DH1downANDDH1downdown) --
+    cycle;
+
+\coordinate (DH1downBLOCK) at ($(DH1)+(0,-2)$);
+\coordinate (DH1downdownBLOCK) at ($(DH1downBLOCK)+(0,-3.5)$);
+\coordinate (DH1downBLOCKleft) at ($(DH1downBLOCK)+(-4,-2.5)$);
+\coordinate (DH1downdownBLOCKleft) at ($(DH1downdownBLOCK)+(-4,-2.5)$);
+\draw[thick,second,fill=second]
+    (DH1downBLOCK) --
+    (DH1downdownBLOCK) --
+    (DH1downdownBLOCKleft) --
+    (DH1downBLOCKleft) --
+    cycle;
+
+\coordinate (DH1downANDDH1downdownBLOCK) at ($(+13,+12.75)$);
+\draw[thick,fourth,fill=fourth]
+    (DH1downBLOCK) --
+    (DH1downdownBLOCK) --
+    (DH1downANDDH1downdownBLOCK) --
+    cycle;
+
+\end{tikzpicture}
+\end{document}
