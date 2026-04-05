@@ -4,6 +4,7 @@
 
 % pdflatex -shell-escape logo.tex; pdflatex -shell-escape logo.tex; pdflatex -shell-escape logo.tex
 % latexmk -pdf -pvc -shell-escape -interaction=nonstopmode -file-line-error ./logo.tex
+% convert -density 600 logo.pdf logo.png 
 
 \documentclass[10pt,journal,compsoc]{standalone}
 \usepackage{times}
