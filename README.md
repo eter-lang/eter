@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/LOGO/logo.png" alt="Eter logo" width="128" />
+
 The Eter Programming Language
 =============================
 
