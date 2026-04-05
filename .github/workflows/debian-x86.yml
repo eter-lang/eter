@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-24.04
     container: debian:trixie
     strategy:
+      fail-fast: false
       matrix:
         compiler:
           - { compiler: GNU, CC: gcc, CXX: g++ }
