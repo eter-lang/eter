@@ -49,7 +49,10 @@ For IDE/LSP setup tips, including the recommended root `.clangd` file, see [Gett
 - `tools/` — executables and developer tools
 - `test/` — `lit` / `FileCheck` regression tests, including `Smoke/`
 - `unittests/` — unit-test targets
-- `docs/` — guides such as `GETTING_STARTED.md`, `CONTRIBUTING.md`, and `CI` documentation
+- `docs/` — guides and supporting documentation
+  - `docs/EXAMPLES/` — runnable examples and sample application workflows
+  - `docs/CI/` — continuous integration documentation and local workflow testing
+  - `docs/LOGO/` — project logo and branding assets
 - `.githooks/` — pre-commit and pre-push Git hooks for formatting, linting, and validation
 - `.github/workflows/` — CI workflow definitions for GitHub Actions
 
