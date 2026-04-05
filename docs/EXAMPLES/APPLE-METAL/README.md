@@ -61,3 +61,5 @@ Once downloaded, keep `metal-cpp/` locally and excluded from git.
 
 - Apple Metal C++ documentation: https://developer.apple.com/metal/cpp/
 - Apple Metal programming documentation: https://developer.apple.com/metal/
+- Apple Metal Shading Language specification: https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf
+- Apple Metal Performance Shaders documentation: https://developer.apple.com/documentation/metalperformanceshaders?language=objc
