@@ -29,7 +29,7 @@ Existing approaches tries to solve this problem with libraries, compiler extensi
 **Eter** is a new programming language designed to address these challenges by providing a high-level, expressive syntax for writing code that can be efficiently compiled to a wide range of hardware targets.
 Eter is built on top of the LLVM and MLIR compiler infrastructure, which allows it to leverage the powerful optimization and code generation capabilities of these frameworks.
 
-For additional information, the [Motivation](docs/MOTIVATION/MOTIVATION.md) document provides a detailed overview of the technical and practical challenges in heterogeneous computing.
+For additional information, the AI-generated [Motivation](docs/MOTIVATION/MOTIVATION.md) document provides a detailed overview of the technical and practical challenges in heterogeneous computing.
 
 ## Getting the Source Code and Building Eter
 

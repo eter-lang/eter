@@ -1,6 +1,10 @@
-// Part of the Eter Language project, under the Apache License v2.0 with LLVM
-// Exceptions. See /LICENSE for license information.
+//===----------------------------------------------------------------------===//
+//
+// Part of the Eter Project, under the Apache License v2.0 with LLVM Exceptions.
+// See /LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 // How to compile:
 // 1. xcrun -sdk macosx metal -c Kernels.metal -o Kernels.air

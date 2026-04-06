@@ -1,0 +1,19 @@
+/** \mainpage Eter
+
+\section main_intro Introduction
+Welcome to Eter.
+
+This documentation describes the **internal** software that makes
+up Eter, not the **external** use of Eter. There are no instructions
+here on how to use Eter, only the APIs that make up the software. For usage
+instructions, please see the programmer's guide or reference manual.
+
+\section main_caveat Caveat
+This documentation is generated directly from the source code with doxygen.
+Since Eter is constantly under active development, what you're about to
+read is out of date! However, it may still be useful since certain portions
+of Eter are very stable.
+
+\section main_changelog Change Log
+- Original content written 04/06/2026 by Federico Bruzzone
+*/

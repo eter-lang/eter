@@ -1,7 +1,11 @@
 <!--
-Part of the Eter Language project, under the Apache License v2.0 with LLVM
-Exceptions. See /LICENSE for license information.
+===----------------------------------------------------------------------===
+
+Part of the Eter Project, under the Apache License v2.0 with LLVM Exceptions.
+See /LICENSE for license information.
 SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+===----------------------------------------------------------------------===
 -->
 
 # Getting Started with Eter
@@ -182,15 +186,25 @@ To run the current driver executable directly:
 
 This is also a simple smoke check that the build completed successfully.
 
-## Directory Layout
+## API documentation
 
-A few top-level directories are especially important during development:
+The project supports Doxygen-based API documentation generation via the
+`doc-doxygen` CMake target.
 
-- `include/eter/` — public headers
-- `lib/` — core implementation libraries
-- `tools/` — executables such as `eter`
-- `test/Smoke/` — `lit` / `FileCheck` smoke tests
-- `docs/` — project guides and design notes
+After configuring the project, run from the build directory:
+
+```sh
+cmake --build build --target doc-doxygen
+```
+
+The generated HTML output is written to:
+
+```sh
+build/doxygen/html/index.html
+```
+
+If Doxygen is not installed, CMake will configure normally and print a status
+message indicating that `doc-doxygen` is disabled.
 
 ## Common Problems
 

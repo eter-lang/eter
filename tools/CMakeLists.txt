@@ -1,5 +1,9 @@
-# Part of the Eter Language project, under the Apache License v2.0 with LLVM
-# Exceptions. See /LICENSE for license information.
+#===----------------------------------------------------------------------===#
+#
+# Part of the Eter Project, under the Apache License v2.0 with LLVM Exceptions.
+# See /LICENSE for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===----------------------------------------------------------------------===#
 
 add_subdirectory(eter)
