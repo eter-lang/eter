@@ -50,6 +50,7 @@ For IDE/LSP setup tips, including the recommended root `.clangd` file, see [Gett
 - `test/` — `lit` / `FileCheck` regression tests, including `Smoke/`
 - `unittests/` — unit-test targets
 - `docs/` — guides and supporting documentation
+  - `docs/MOTIVATION/` — motivation and design rationale for Eter
   - `docs/EXAMPLES/` — runnable examples and sample application workflows
   - `docs/CI/` — continuous integration documentation and local workflow testing
   - `docs/LOGO/` — project logo and branding assets
