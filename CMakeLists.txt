@@ -60,7 +60,7 @@ if(LLVM_PACKAGE_VERSION VERSION_LESS ETER_REQUIRED_LLVM_VERSION OR
   )
 endif()
 
-set(DOXYGEN_IN ${CMAKE_SOURCE_DIR}/docs/Doxyfile.in)
+set(DOXYGEN_IN ${CMAKE_SOURCE_DIR}/docs/doxygen.cfg.in)
 set(DOXYGEN_OUT ${CMAKE_BINARY_DIR}/Doxyfile)
 
 set(abs_top_builddir ${CMAKE_BINARY_DIR})
