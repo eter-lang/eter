@@ -36,9 +36,9 @@ For additional information, the AI-generated [Motivation](docs/MOTIVATION/MOTIVA
 Consult the [Getting Started with Eter](docs/GETTING_STARTED.md) page for information on building and running Eter.
 Eter currently expects **LLVM/MLIR 22.x** and a **C++23-capable** compiler toolchain.
 
-For information on how to contribute to the Eter project, please take a look at the [Contributing to Eter](docs/CONTRIBUTING.md) guide.
+For information on how to contribute to the Eter project, please take a look at the [Contributing to Eter](./CONTRIBUTING.md) guide.
 
-Contributors may also want to enable the repository Git hooks described in [Contributing to Eter](docs/CONTRIBUTING.md) for local formatting, linting, and pre-push validation.
+Contributors may also want to enable the repository Git hooks described in [Contributing to Eter](./CONTRIBUTING.md) for local formatting, linting, and pre-push validation.
 
 For IDE/LSP setup tips, including the recommended root `.clangd` file, see [Getting Started with Eter](docs/GETTING_STARTED.md).
 

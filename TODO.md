@@ -1,6 +1,6 @@
 # TODO List
 
 - CODE_OF_CONDUCT.md
-- c++17
+- clang-format and clang-tidy configuration
 - AI-generated code policy
 - subdirectory for lib folder
