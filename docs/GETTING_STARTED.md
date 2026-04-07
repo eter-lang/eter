@@ -122,8 +122,8 @@ If you do not already have a local checkout, clone the repository and enter the
 source tree:
 
 ```bash
-git clone https://github.com/quar-lang/quar
-cd quar
+git clone https://github.com/eter-lang/eter
+cd eter
 ```
 
 ## Getting the Source Code and Building Eter
@@ -137,6 +137,17 @@ cmake --build build
 ```
 
 This configures the project in `build/` and then builds the default targets.
+
+To enable runtime sanitizer checks for supported Clang/GCC builds, add the
+sanitizer options at configure time:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DETER_ENABLE_SANITIZERS=ON
+```
+
+By default, Eter enables `address`, `undefined`, and `leak`. To customize the
+sanitizers, set `-DETER_SANITIZERS="address;undefined;leak;thread"` or use
+`memory` for MemorySanitizer.
 
 ### Pointing CMake at LLVM and MLIR
 

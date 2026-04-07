@@ -15,6 +15,8 @@ include(GNUInstallDirs)
 option(ETER_ENABLE_WERROR "Treat warnings as errors" ON)
 option(ETER_ENABLE_ASSERTIONS "Enable assertions in Eter" ON)
 option(ETER_INCLUDE_TESTS "Enable Eter's lit/FileCheck test suite" ON)
+option(ETER_ENABLE_SANITIZERS "Enable sanitizer instrumentation for supported targets" OFF)
+set(ETER_SANITIZERS "address;undefined;leak" CACHE STRING "Sanitizers to enable when ETER_ENABLE_SANITIZERS is ON. Supported values: address;undefined;leak;thread;memory")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -42,6 +44,49 @@ endif()
 
 if(ETER_ENABLE_ASSERTIONS)
   target_compile_definitions(EterProjectOptions INTERFACE ETER_ENABLE_ASSERTIONS=1)
+endif()
+
+if(ETER_ENABLE_SANITIZERS)
+  string(REPLACE "," ";" ETER_SANITIZERS_LIST "${ETER_SANITIZERS}")
+  set(ETER_SANITIZERS_VALID "address;undefined;leak;thread;memory")
+  set(ETER_SANITIZERS_NORMALIZED "")
+
+  foreach(ET_SANITIZER IN LISTS ETER_SANITIZERS_LIST)
+    string(STRIP "${ET_SANITIZER}" ET_SANITIZER_STRIPPED)
+    if(NOT ET_SANITIZER_STRIPPED STREQUAL "")
+      list(APPEND ETER_SANITIZERS_NORMALIZED "${ET_SANITIZER_STRIPPED}")
+    endif()
+  endforeach()
+
+  foreach(ET_SANITIZER IN LISTS ETER_SANITIZERS_NORMALIZED)
+    list(FIND ETER_SANITIZERS_VALID "${ET_SANITIZER}" ETER_SANITIZER_INDEX)
+    if(ETER_SANITIZER_INDEX EQUAL -1)
+      message(FATAL_ERROR "Unsupported sanitizer '${ET_SANITIZER}' in ETER_SANITIZERS. Supported values: ${ETER_SANITIZERS_VALID}")
+    endif()
+  endforeach()
+
+  list(FIND ETER_SANITIZERS_NORMALIZED memory ETER_MEMORY_INDEX)
+  if(NOT ETER_MEMORY_INDEX EQUAL -1)
+    foreach(ET_SANITIZER IN LISTS ETER_SANITIZERS_NORMALIZED)
+      if(ET_SANITIZER STREQUAL "address" OR ET_SANITIZER STREQUAL "thread" OR ET_SANITIZER STREQUAL "leak")
+        message(FATAL_ERROR "MemorySanitizer is mutually exclusive with '${ET_SANITIZER}'. Use only 'memory' or another compatible sanitizer set.")
+      endif()
+    endforeach()
+  endif()
+
+  list(JOIN ETER_SANITIZERS_NORMALIZED "," ETER_SANITIZER_FLAGS)
+
+  if(MSVC)
+    message(WARNING "ETER_ENABLE_SANITIZERS is ON, but sanitizer support is currently implemented only for Clang/GCC targets.")
+  else()
+    target_compile_options(EterProjectOptions INTERFACE
+      -fsanitize=${ETER_SANITIZER_FLAGS}
+      -fno-omit-frame-pointer
+    )
+    target_link_options(EterProjectOptions INTERFACE
+      -fsanitize=${ETER_SANITIZER_FLAGS}
+    )
+  endif()
 endif()
 
 set(ETER_REQUIRED_LLVM_MAJOR 22)
