@@ -1,13 +1,3 @@
-<!--
-===----------------------------------------------------------------------===
-
-Part of the Eter Project, under the Apache License v2.0 with LLVM Exceptions.
-See /LICENSE for license information.
-SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-
-===----------------------------------------------------------------------===
--->
-
 # Contributing to Eter
 
 Thank you for your interest in contributing to Eter. Contributions of code,
@@ -40,6 +30,41 @@ cmake --build build
 cmake --build build --target check-eter
 ```
 
+## Formatting and linting manually
+
+Before running clang-tidy, configure the build so that `build/compile_commands.json` exists:
+
+```bash
+cmake -S . -B build -G Ninja
+```
+
+Then run:
+
+```bash
+# Apply formatting automatically to the last patch using LLVM's helper
+git clang-format HEAD~1
+```
+
+If `git clang-format` is not available, install LLVM/Clang and make sure its tools are on your `PATH`.
+On Linux, install the Clang tooling package for your distribution so that `clang-format`
+and `git-clang-format` are available. Then rerun the command above.
+If you use `git clang-format`, make sure you are on the branch with the intended diff and replace `HEAD~1` 
+with the right range for your review.
+
+Eventually, you can also run the individual tools directly, such as:
+
+```bash
+# Check C/C++ formatting without modifying files
+clang-format --dry-run --Werror <files>
+
+# Apply formatting in place
+clang-format -i <files>
+
+# Run clang-tidy using the CMake compile commands database
+clang-tidy -p build <source-files>
+```
+
+
 ## Git Hooks
 
 Eter includes native Git hooks under `.githooks/` so contributors can run the
@@ -59,43 +84,6 @@ You can also run the same checks manually at any time with:
 .githooks/pre-commit
 .githooks/pre-push
 ```
-
-### Formatting and linting manually
-
-Before running clang-tidy, configure the build so that `build/compile_commands.json` exists:
-
-```bash
-cmake -S . -B build -G Ninja
-```
-
-Then run:
-
-```bash
-# Check C/C++ formatting without modifying files
-clang-format --dry-run --Werror <files>
-
-# Apply formatting in place
-clang-format -i <files>
-
-# Apply formatting automatically to the last patch using LLVM's helper
-git clang-format HEAD~1
-
-# Run clang-tidy using the CMake compile commands database
-clang-tidy -p build <source-files>
-```
-
-If `git clang-format` is not available, install LLVM/Clang and make sure its tools are on your `PATH`.
-On macOS with Homebrew, for example:
-
-```bash
-brew install llvm
-export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
-```
-
-On Linux, install the Clang tooling package for your distribution so that `clang-format`
-and `git-clang-format` are available. Then rerun the command above.
-
-If you use `git clang-format`, make sure you are on the branch with the intended diff and replace `HEAD~1` with the right range for your review.
 
 ### `pre-commit`
 
