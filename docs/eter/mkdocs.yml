@@ -25,5 +25,5 @@ theme:
     next: 78     # n
     previous: 80 # p
     search: 83   # s
-  navigation_depth: 3
+  navigation_depth: 2
   locale: en
