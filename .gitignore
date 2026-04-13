@@ -82,8 +82,11 @@ pythonenv*
 .clangd
 
 # Apple Metal C++ SDK downloaded locally
-/docs/EXAMPLES/APPLE-METAL/metal-cpp/
-docs/EXAMPLES/APPLE-METAL/metal-cpp_*.zip
+/docs/examples/apple-metal/metal-cpp/
+docs/examples/apple-metal/metal-cpp_*.zip
+# Ignore Python virtual environments anywhere in the repository
+venv/
+.venv/
 # static analyzer regression testing project files
 /clang/utils/analyzer/projects/*/CachedSource
 /clang/utils/analyzer/projects/*/PatchedSource

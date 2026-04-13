@@ -100,14 +100,14 @@ one.
 ### Validate
 
 ```sh
-cd docs/EXAMPLES/MLIR-FAT-BINARY
+cd docs/examples/mlir-fat-binary
 ./run-validate.sh
 ```
 
 ### Generate the fat binary
 
 ```sh
-cd docs/EXAMPLES/MLIR-FAT-BINARY
+cd docs/examples/mlir-fat-binary
 chmod +x emit-fat-binary.sh
 ./emit-fat-binary.sh
 ```

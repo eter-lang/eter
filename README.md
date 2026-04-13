@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/LOGO/logo.png" alt="Eter logo" width="128" />
+<img src="docs/logo/logo.png" alt="Eter logo" width="128" />
 
 The Eter Programming Language
 =============================
@@ -34,6 +34,10 @@ Eter empowers developers to write native GPU kernels and manage distributed reso
 In Eter, machine learning models are first-class citizens, making inference on a pre-trained model as seamless as a standard function call. 
 Built on the LLVM and MLIR infrastructure, Eter leverages industry-leading optimization and code generation capabilities to deliver native performance with high-level elegance.
 
+
+```
+```
+
 ## Getting the Source Code and Building Eter
 
 Consult the [Getting Started with Eter](./GETTING_STARTED.md) page for information on building and running Eter.
@@ -53,10 +57,10 @@ For IDE/LSP setup tips, including the recommended root `.clangd` file, see [Gett
 - `test/` — `lit` / `FileCheck` regression tests, including `Smoke/`
 - `unittests/` — unit-test targets
 - `docs/` — guides and supporting documentation
-  - `docs/MOTIVATION/` — motivation and design rationale for Eter
-  - `docs/EXAMPLES/` — runnable examples and sample application workflows
-  - `docs/CI/` — continuous integration documentation and local workflow testing
-  - `docs/LOGO/` — project logo and branding assets
+  - `docs/motivation/` — motivation and design rationale for Eter
+  - `docs/examples/` — runnable examples and sample application workflows
+  - `docs/ci/` — continuous integration documentation and local workflow testing
+  - `docs/logo/` — project logo and branding assets
 - `.githooks/` — pre-commit and pre-push Git hooks for formatting, linting, and validation
 - `.github/workflows/` — CI workflow definitions for GitHub Actions
 
