@@ -304,7 +304,7 @@ fn main() {
     ```rust
     // Proposed v0.2 Syntax
     @gpu
-    @infer_barriers // The compiler automatically inserts barrier() where needed
+    @infer_barriers // The compiler automatically inserts a sychronization barrier() where needed
     fn auto_synced_kernel(input: [f32] @global, mut cache: [f32] @shared) {
         let id: u32 = get_local_id();
         cache[id] = input[id]; 
