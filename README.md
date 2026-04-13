@@ -24,17 +24,20 @@ The Eter Programming Language
 
 ## Why Eter?
 
-**Heterogeneous computing** is increasingly important in modern software development, but it can be difficult to write performant code that runs across a variety of hardware targets.
-Existing approaches tries to solve this problem with libraries, compiler extensions, runtime systems, domain-specific languages, and system programming languages, but these solutions often have limitations in some technical or practical dimension.
-**Eter** is a new programming language designed to address these challenges by providing a high-level, expressive syntax for writing code that can be efficiently compiled to a wide range of hardware targets.
-Eter is built on top of the LLVM and MLIR compiler infrastructure, which allows it to leverage the powerful optimization and code generation capabilities of these frameworks.
+Modern software development increasingly relies on **heterogeneous computing**, yet writing performant code across diverse hardware remains a significant challenge. 
+Existing solutions—ranging from libraries and compiler extensions to domain-specific and system programming languages—often face technical limitations or practical trade-offs.
+Currently, **machine learning** (ML) **models** are compiled via specialized tools like XLA, Glow, or TVM, making their integration into general-purpose languages such as Python, C++, or Rust difficult and often requiring wrappers that introduce overhead and complexity. 
+Furthermore, achieving high performance across different architectures such as **GPUs** and **specialized accelerators** often demands a deep understanding of hardware-specific models, which compromises both efficiency and portability.
 
-For additional information, the AI-generated [Motivation](docs/MOTIVATION/MOTIVATION.md) document provides a detailed overview of the technical and practical challenges in heterogeneous computing.
+**Eter** is a new programming language designed to bridge these gaps. It provides a high-level, expressive syntax that compiles efficiently to a wide range of targets, including CPUs, GPUs, and specialized accelerators. 
+Eter empowers developers to write native GPU kernels and manage distributed resources—such as device meshes and sharded tensors—directly within the language. 
+In Eter, machine learning models are first-class citizens, making inference on a pre-trained model as seamless as a standard function call. 
+Built on the LLVM and MLIR infrastructure, Eter leverages industry-leading optimization and code generation capabilities to deliver native performance with high-level elegance.
 
 ## Getting the Source Code and Building Eter
 
 Consult the [Getting Started with Eter](./GETTING_STARTED.md) page for information on building and running Eter.
-Eter currently expects **LLVM/MLIR 22.x** and a **C++23-capable** compiler toolchain.
+Eter currently expects **LLVM/MLIR 22.x** and a **C++17-capable** compiler toolchain.
 
 For information on how to contribute to the Eter project, please take a look at the [Contributing to Eter](./CONTRIBUTING.md) guide.
 
