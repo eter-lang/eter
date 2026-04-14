@@ -18,7 +18,7 @@ The `metal-cpp` subfolder contains third-party Apple Metal C++ SDK files. These 
 Use the included `Makefile` to download the SDK and build all examples:
 
 ```sh
-cd docs/examples/apple-metal
+cd docsrc/examples/apple-metal
 make download
 make all
 ```
@@ -32,7 +32,7 @@ xcodebuild -downloadComponent MetalToolchain
 If you prefer to download manually:
 
 ```sh
-cd docs/examples/apple-metal
+cd docsrc/examples/apple-metal
 curl -L -o metal-cpp_26.4.zip https://developer.apple.com/metal/cpp/files/metal-cpp_26.4.zip
 unzip -o metal-cpp_26.4.zip
 ```

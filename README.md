@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/logo/logo.png" alt="Eter logo" width="128" />
+<img src="docsrc/logo/logo.png" alt="Eter logo" width="128" />
 
 The Eter Programming Language
 =============================
@@ -16,7 +16,7 @@ The Eter Programming Language
 [![Arch Linux x86](https://github.com/quar-lang/quar/actions/workflows/arch-x86.yml/badge.svg)](https://github.com/quar-lang/quar/actions/workflows/arch-x86.yml)
 [![openSUSE x86](https://github.com/quar-lang/quar/actions/workflows/opensuse-x86.yml/badge.svg)](https://github.com/quar-lang/quar/actions/workflows/opensuse-x86.yml) -->
 
-[Why Eter?](#why-eter) • [Getting the Source Code and Building Eter](#getting-the-source-code-and-building-eter) • [Project Layout](#project-layout) • [License](#license)
+[Why Eter?](#why-eter) • [Getting the Source Code and Building Eter](#getting-the-source-code-and-building-eter) • [License](#license)
 
 </div>
 
@@ -44,21 +44,6 @@ For information on how to contribute to the Eter project, please take a look at 
 Contributors may also want to enable the repository Git hooks described in [Contributing to Eter](./CONTRIBUTING.md) for local formatting, linting, and pre-push validation.
 
 For IDE/LSP setup tips, including the recommended root `.clangd` file, see [Getting Started with Eter](./GETTING_STARTED.md).
-
-## Project Layout
-
-- `include/eter/` — public headers
-- `lib/` — core library implementation
-- `tools/` — executables and developer tools
-- `test/` — `lit` / `FileCheck` regression tests, including `Smoke/`
-- `unittests/` — unit-test targets
-- `docs/` — guides and supporting documentation
-  - `docs/motivation/` — motivation and design rationale for Eter
-  - `docs/examples/` — runnable examples and sample application workflows
-  - `docs/ci/` — continuous integration documentation and local workflow testing
-  - `docs/logo/` — project logo and branding assets
-- `.githooks/` — pre-commit and pre-push Git hooks for formatting, linting, and validation
-- `.github/workflows/` — CI workflow definitions for GitHub Actions
 
 ## License
 
