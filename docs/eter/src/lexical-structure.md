@@ -18,6 +18,7 @@ The character sequences `/*` and `*/` are multiline comment opening and closing 
 
 ## Tokens
 
+
 A token is a terminal symbol of the syntactic grammar. It falls into one of five categories: 
 1. literals (e.g., `42`, `"hello"`, etc.)
 2. keywords (e.g., `if`, `else`, `while`, etc.)
@@ -29,3 +30,19 @@ A token is a terminal symbol of the syntactic grammar. It falls into one of five
 > The input `a << b` is translated to a sequence of 4 tokens: identifier, raw-operator, raw-operator, identifier. The first and third tokens are known to be followed by an inline space.
 
 Unless otherwise specified, the token recognized at a given lexical position is the one having the longest possible sequence of characters.
+
+### Literals
+> [!CAUTION]
+> TODO
+### Keywords 
+> [!CAUTION]
+> TODO
+### Identifiers 
+> [!CAUTION]
+> TODO
+### Operators 
+> [!CAUTION]
+> TODO
+### Delimiters 
+> [!CAUTION]
+> TODO

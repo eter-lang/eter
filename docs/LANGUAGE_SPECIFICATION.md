@@ -14,7 +14,7 @@ Eter is designed to bridge the gap between high-level machine learning framework
 - **Statement Terminator**: The semicolon (`;`) is mandatory for all expressions and declarations.
 - **Comments**: Single-line (`//`) and multi-line (`/* ... */`).
 - **Entry Point**: Execution begins at the `fn main()` function.
-- **Attributes**: The `@` prefix is used for hardware-specific metadata and type qualifiers.
+- **Quilifi**: The `@` prefix is used for hardware-specific metadata and type qualifiers.
 
 ## Variable Bindings and Mutability
 
