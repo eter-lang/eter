@@ -13,11 +13,11 @@ Before building Eter, make sure the following tools are available:
 
 - **CMake 3.20+**
 - **Ninja** as the recommended generator
-- **A modern C++23-capable toolchain** such as AppleClang, Clang, or GCC
+- **A modern C++-17-capable toolchain** such as AppleClang, Clang, or GCC
 - **LLVM/MLIR 22.x**
 - **`lit`** and **`FileCheck`** for the regression test suite
 
-Eter is configured to require **C++23** by default.
+Eter is configured to require **C++-17** by default.
 
 ### Installing LLVM, MLIR, `lit`, and `FileCheck`
 
