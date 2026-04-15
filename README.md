@@ -34,10 +34,15 @@ Eter empowers developers to write native GPU kernels and manage distributed reso
 In Eter, machine learning models are first-class citizens, making inference on a pre-trained model as seamless as a standard function call. 
 Built on the LLVM and MLIR infrastructure, Eter leverages industry-leading optimization and code generation capabilities to deliver native performance with high-level elegance.
 
+## Current state
+
+A full [language specification](https://eter-lang.github.io/eter/) is currenly being developed. The source code can be found [here](./docs/)
+
 ## Getting the Source Code and Building Eter
 
 Consult the [Getting Started with Eter](./GETTING_STARTED.md) page for information on building and running Eter.
 Eter currently expects **LLVM/MLIR 22.x** and a **C++17-capable** compiler toolchain.
+
 
 For information on how to contribute to the Eter project, please take a look at the [Contributing to Eter](./CONTRIBUTING.md) guide.
 
