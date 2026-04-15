@@ -61,7 +61,6 @@ sudo ./llvm.sh 22
 sudo apt install -y clang-22 lld-22 llvm-22-dev libmlir-22-dev mlir-22-tools
 python3 -m pip install --user lit
 ```
-
 Notes:
 
 - `mlir-22-tools` provides utilities such as **`FileCheck`**
@@ -76,6 +75,18 @@ If needed, make the LLVM tools visible in your shell:
 export PATH="/usr/lib/llvm-22/bin:$PATH"
 ```
 
+On **ArchLinux** all packages can be easily installed using **pacman** package manager except for **mlir** package which must be installed via yay. \
+(If some packages are not found update the mirrors using ```sudo pacman -Syyu```)
+
+```bash
+sudo pacman -S ninja
+sudo pacman -S cmake
+sudo pacman -S llvm clang
+yay -S --needed mlir
+sudo pacman -S python-pip
+python3 -m pip install --user lit
+
+```
 You can verify the install with:
 
 ```bash
