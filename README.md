@@ -25,7 +25,7 @@ The Eter Programming Language
 > [!WARNING]
 > Eter is currently in the early stages of development. The language design and implementation are subject to significant changes, and the implementation is not started yet.
 
-While [The Eter Reference](https://eter-lang.github.io/eter/) serves as the primary source of documentation for the language, including its syntax and semantics, the [API Reference](https://eter-lang.github.io/eter/api/) provides the doxygen-generated documentation for the Eter compiler's C++ API, which is intended for contributors and advanced users interested in extending or interfacing with the compiler.
+While [The Eter Reference](https://eter-lang.github.io/eter/) serves as the primary source of language specification ([source code](./docs)), including its syntax and semantics, the [API Reference](https://eter-lang.github.io/eter/api/) provides the doxygen-generated documentation for the Eter compiler's C++ API, which is intended for contributors and advanced users interested in extending or interfacing with the compiler.
 
 ```rust
 // 1. Hardware Infrastructure Definition
@@ -91,10 +91,6 @@ Furthermore, achieving high performance across different architectures such as *
 Eter empowers developers to write native GPU kernels and manage distributed resources—such as device meshes and sharded tensors—directly within the language. 
 In Eter, machine learning models are first-class citizens, making inference on a pre-trained model as seamless as a standard function call. 
 Built on the LLVM and MLIR infrastructure, Eter leverages industry-leading optimization and code generation capabilities to deliver native performance with high-level elegance.
-
-## Current state
-
-A full [language specification](https://eter-lang.github.io/eter/) is currenly being developed. The source code can be found [here](./docs/)
 
 ## Getting the Source Code and Building Eter
 
