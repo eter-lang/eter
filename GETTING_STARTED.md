@@ -75,7 +75,7 @@ If needed, make the LLVM tools visible in your shell:
 export PATH="/usr/lib/llvm-22/bin:$PATH"
 ```
 
-On **ArchLinux** all packages can be easily installed using **pacman** package manager except for **mlir** package which must be installed via yay. \
+On **ArchLinux** all packages can be easily installed using the **pacman** package manager except for **mlir** package which must be installed via an AUR compatible package manager like **yay** or **paru**.
 (If some packages are not found update the mirrors using ```sudo pacman -Syyu```)
 
 ```bash
