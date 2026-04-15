@@ -77,16 +77,10 @@ export PATH="/usr/lib/llvm-22/bin:$PATH"
 
 On **ArchLinux** all packages can be easily installed using the **pacman** package manager except for **mlir** package which must be installed via an AUR compatible package manager like **yay** or **paru**.
 (If some packages are not found update the mirrors using ```sudo pacman -Syyu```)
-
 ```bash
-sudo pacman -S ninja
-sudo pacman -S cmake
-sudo pacman -S llvm clang
-yay -S --needed mlir
-sudo pacman -S python-pip
+sudo pacman -S ninja cmake llvm clang python-pip
+yay -S --needed mlir 
 python3 -m pip install --user lit
-
-```
 You can verify the install with:
 
 ```bash
