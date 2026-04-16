@@ -28,23 +28,35 @@ The Eter Programming Language
 While [The Eter Reference](https://eter-lang.github.io/eter/) serves as the primary source of language specification ([source code](./docs)), including its syntax and semantics, the [API Reference](https://eter-lang.github.io/eter/api/) provides the doxygen-generated documentation for the Eter compiler's C++ API, which is intended for contributors and advanced users interested in extending or interfacing with the compiler.
 
 ```rust
+// ML models as first-class citizens. The @model attribute orchestrates the native 
+// loading and linking of pre-trained assets directly into the program's binary.
+// The function signature acts as a static hardware contract: the compiler enforces 
+// tensor shape integrity and memory residency (e.g., @host, @gpu), ensuring 
+// zero-overhead data transitions and eliminating runtime shape mismatches.
+@model<TF /* TensorFlow */, version = V1>("mobilenet_v2")
+extern fn infer(x: tsor[f32; [1, 224, 224, 3]] @host) -> tsor[f32; [1, 1000]] @host;
+
+fn main() {
+    let input tsor[f32; [1, 224, 224, 3]] @host = tsor::from_image("dog.jpg");
+    let output tsor[f32; [1, 1000]] = infer(input);
+    print("Inference completed. Output shape: ", output.shape());
+}
+```
+
+<!--
+```rust
 // 1. Hardware Infrastructure Definition
 // Define a logical grid of 8 GPUs. The compiler uses this 'Mesh' 
 // to automatically handle data distribution and collective communications.
 let cluster = Mesh(devices=8, topology="1d");
 
-// 2. Model as a First-Class Citizen (External Linking)
-// We use 'extern' because the implementation is an optimized StableHLO binary.
-// The compiler ensures that the @sharded tensor layout matches 
-// what the external transformer block expects across the cluster.
-extern @model<TF<V1>>("mobilenet_v2")
-fn transformer_layer(mut x: Tensor<f32, [4096, 1024]> @sharded(cluster, 0));
+
 
 // 3. Custom Tiling Kernel (TileIR-inspired)
 // We eliminate manual thread management (no threadIdx). 
 // The language operates on "Tiles" (sub-matrices).
 @gpu_tile(128, 128)
-fn custom_preprocess_kernel(mut data: Tensor<f32, [4096, 1024]> @global) {
+fn custom_preprocess_kernel(mut data: tsor<f32; [4096, 1024]> @global) {
     // The compiler generates an optimized memory pipeline:
     // Global Memory (VRAM) -> Shared Memory (SRAM) -> Registers -> Compute.
     for tile in data.tiles() {
@@ -64,7 +76,7 @@ fn custom_preprocess_kernel(mut data: Tensor<f32, [4096, 1024]> @global) {
 fn main() {
     // Sharded Allocation: The system partitions 4096 rows across 8 GPUs.
     // Each physical device allocates only 512 rows in its local VRAM.
-    let mut states = Tensor<f32, [4096, 1024]>::zeros() @sharded(cluster, 0);
+    let mut states tsor[f32; [4096, 1024]] @sharded(cluster, 0) = tsor[0.0; 4096, 1024];
 
     // Launch the tiling kernel. Because 'states' is sharded, 
     // this executes in parallel across all 8 GPUs in the cluster.
@@ -79,6 +91,7 @@ fn main() {
     print("Inference pipeline completed across 8 GPUs.");
 }
 ```
+-->
 
 ## Why Eter?
 
