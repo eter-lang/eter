@@ -7,22 +7,6 @@ Eter is an expression-oriented language, meaning that most semantic constructs w
 
 In short: expressions *compute* values, while statements *perform* actions.
 
-```rust
-fn main() {
-    // STATEMENT: A `let` binding performs the action of allocating 
-    // a local variable and assigning it a value. It does not yield a value.
-    let a: i32 = 10;
-    
-    // STATEMENT: Another action.
-    let b: i32 = 20;
-
-    // EXPRESSION: Evaluates to a value (30).
-    // Notice the lack of a semicolon at the end of the block, 
-    // allowing this value to be implicitly returned.
-    a + b
-}
-```
-
 Expressions and statements are intrinsically linked: you can convert an expression into an **expression statement** by appending a semicolon `;`. This forces the compiler to evaluate the expression solely for its side effects (e.g., executing a function call) while explicitly discarding any resulting value.
 
 ## Statements
@@ -57,29 +41,36 @@ Item declaration statements introduce new items into the current scope. The most
 | Declaration | Description | Example |
 | :--- | :--- | :--- |
 | **Variable Binding** | Binds a value to a new local variable, with a required type annotation. | `let name: String = "Alice";` |
-| **Mutable Binding** | Binds a value to a mutable local variable. | `let mut count: i32 = 0;` |
+| **Mutable Binding** | Binds a value to a mutable local variable. | `mut count: i32 = 0;` |
 | **Constant Declaration** | Defines a compile-time constant. | `const MAX_VAL: u32 = 100;` |
+
+> [!NOTE]
+> Constant names are typically written in `UPPER_SNAKE_CASE` by convention, but they are not constrained to be uppercase by the language.
 
 #### Nested Items and Scoping
 
 Items (such as `const`,  or nested `let` variables) can be declared inside any block scope. This allows you to restrict the visibility of an item strictly to the block it was declared in, keeping the outer namespace clean.
 
-Nested items can be declared inside regular function blocks, unnamed (anonymous) scopes `{ ... }`, and `unsafe { ... }` blocks. 
+Nested items can be declared inside regular function blocks, unnamed (anonymous) scopes `{ ... }`, and `unsafe { ... }` blocks. They are particularly useful inside functional blocks like `if` or `if-else` expressions to encapsulate temporary logic.
 
 ```rust
 fn main() {
     let outer_val: i32 = 10;
+    let condition: bool = true;
 
-    // 1. Unnamed Block Scope
-    // Useful for isolating variables or helper functions 
-    // that are only needed for a short calculation.
-    {
+    // 1. Functional Block Scope (if-else)
+    // Useful for isolating variables or helper logic
+    // that is only needed for a specific branch.
+    if condition {
         let inner_val: i32 = 20;
         const LOCAL_MULTIPLIER: i32 = 5;
+        let result: i32 = inner_val * LOCAL_MULTIPLIER;
+        print(result);
+    } else {
+        let fallback_val: i32 = 0;
+        print(fallback_val);
     }
-
-    let result: i32 = inner_val * LOCAL_MULTIPLIER;
-    // Error! `inner_val` and `LOCAL_MULTIPLIER`
+    // Error! `inner_val`, `LOCAL_MULTIPLIER`, and `fallback_val`
     // are out of scope and cannot be accessed here.
 
     // 2. Unsafe Block Scope
@@ -126,11 +117,14 @@ let letter: char = 'A';         // Character literal
 
 ### Path expressions (::)
 
-A path expression refers to an item, variable, or constant in the current scope or another module using the path separator `::`.
+A path expression refers to an item, variable, or constant in the current scope or another module using the path separator `::`. You can also use paths to explicitly refer to the current module (`self`) or the parent module (`super`).
 
 ```rust
 let max_val: u32 = std::u32::MAX;    // Fully qualified path to a constant
 let math_pi: f64 = math::PI;         // Path to a module item
+
+// Accessing an item within the current actual scope
+let current_item: i32 = self::helper_function();
 ```
 
 ### Block expressions
@@ -140,7 +134,7 @@ A block expression is a sequence of statements enclosed in braces `{}`. The valu
 ```rust
 let y: i32 = {
     let x: i32 = 5;
-    x + 1 // No semicolon: this is the return value of the block
+    return x + 1; 
 }; // y is now 6
 ```
 
@@ -162,9 +156,13 @@ Parentheses `()` can be used to explicitly group expressions and control the ord
 let result: i32 = (2 + 3) * 4;  // Evaluates to 20 instead of 14
 ```
 
-### Array and index expressions
+### Access expressions
 
-Array expressions create fixed-size collections of elements. Index expressions retrieve elements from an array or slice using brackets `[]`.
+Access expressions allow you to retrieve specific elements from compound types like arrays, tuples, and structs. Depending on the underlying type, the syntax to access an element varies.
+
+#### Array and index expressions
+
+Array expressions create fixed-size collections of elements. Index expressions retrieve elements from an array or slice using brackets `[]`. Indexing is always zero-based.
 
 ```rust
 let arr: i32[3] = [1, 2, 3];       // Array expression (list of elements)
@@ -172,9 +170,9 @@ let zeros: i32[5] = [0; 5];        // Array expression (repeated value: [0, 0, 0
 let first: i32 = arr[0];             // Index expression (accessing the first element)
 ```
 
-### Tuple and index expressions
+#### Tuple and index expressions
 
-Tuple expressions create ordered, fixed-size, heterogeneous collections. Tuple elements are accessed using dot `.` notation with an integer index.
+Tuple expressions create ordered, fixed-size, heterogeneous collections. Tuple elements are accessed using dot `.` notation followed by a literal integer index.
 
 ```rust
 let point: (i32, i32, str) = (10, 20, "label");  // Tuple expression
@@ -182,30 +180,19 @@ let x: i32 = point.0;                             // Tuple index expression (get
 let desc: str = point.2;                         // Tuple index expression (gets "label")
 ```
 
-### Struct expressions
+#### Struct expressions and Field access
 
-Struct expressions create instances of user-defined struct types. They specify the name of the struct and provide values for its fields.
+Struct expressions create instances of user-defined struct types. They specify the name of the struct and provide values for its fields. Field access expressions retrieve the value of a specific named field from a struct or union using the dot `.` operator.
 
 ```rust
-let p: Point = Point { x: 10, y: 20 }; // Struct expression
+// Struct instantiation expression
+let p: Point = Point { x: 10, y: 20 }; 
+
+// Field access expression
+let my_x: i32 = p.x;                 // Accesses the 'x' field of the struct 'p'
 ```
 
 ### Call expressions
-
-Call expressions invoke functions or closures. They consist of an expression that evaluates to a callable entity, followed by a parenthesized list of arguments.
-
-```rust
-let result: i32 = add(5, 3);         // Function call
-let length: usize = "hello".len();   // Member function call
-```
-
-### Field access expressions
-
-Field access expressions retrieve the value of a specific field from a struct or union using the dot `.` operator.
-
-```rust
-let my_x: i32 = p.x;                 // Accesses the 'x' field of the struct 'p'
-```
 
 ### Loop expressions
 
@@ -215,7 +202,7 @@ Eter supports both `for` and `while` loops.
 
 ```rust
 // loop expression returning a value
-let mut counter: i32 = 0;
+mut counter: i32 = 0;
 let final_value: i32 = while true {
     counter += 1;
     if counter == 10 {
@@ -224,7 +211,7 @@ let final_value: i32 = while true {
 };
 
 // while loop
-let mut n: i32 = 5;
+mut n: i32 = 5;
 while n > 0 {
     n -= 1;
 }
@@ -232,9 +219,9 @@ while n > 0 {
 // for loop
 
 for( i: i32 = 0; i < 10; i++){
-        if (i % 2 == 0){
-            print(i);
-        }
+    if (i % 2 == 0){
+        print(i);
+    }
 }
 
 ```
@@ -263,13 +250,15 @@ if result == "Success" {
 
 A `match` expression provides pattern matching. It compares a value against a series of patterns and executes the block corresponding to the first matching pattern. Like `if` expressions, `match` blocks can return a value if all branches resolve to the same type.
 
-Patterns can include literals, variables, and the catch-all wildcard `_`.
+Patterns can include literals, variables, and the catch-all wildcard `_`. 
+
+Crucially, because each branch in a `match` must evaluate as an expression to return a value, you generally do not use a semicolon to terminate the branch's expression. Instead, you use a comma `,` to separate and define the "next" pattern in the sequence.
 
 ```rust
 let status_code: i32 = 404;
 
 let message: str = match status_code {
-    200 => "OK",
+    200 => "OK",                     // Notice the comma instead of a semicolon
     404 => "Not Found",
     500 => "Internal Server Error",
     // The underscore `_` acts as a wildcard, catching any unhandled values
@@ -300,7 +289,7 @@ fn get_positive(val: i32) -> i32 {
         return 0; // Early return expression
     }
     
-    val // Implicit return expression (no semicolon)
+    return val;
 }
 ```
 
