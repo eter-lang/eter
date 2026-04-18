@@ -165,8 +165,8 @@ Access expressions allow you to retrieve specific elements from compound types l
 Array expressions create fixed-size collections of elements. Index expressions retrieve elements from an array or slice using brackets `[]`. Indexing is always zero-based.
 
 ```rust
-let arr: i32[3] = [1, 2, 3];       // Array expression (list of elements)
-let zeros: i32[5] = [0; 5];        // Array expression (repeated value: [0, 0, 0, 0, 0])
+let a: arr<i32>[3] = [1, 2, 3];       // Array expression (list of elements)
+let zeros: arr<i32>[5] = [0; 5];        // Array expression (repeated value: [0, 0, 0, 0, 0])
 let first: i32 = arr[0];             // Index expression (accessing the first element)
 ```
 
