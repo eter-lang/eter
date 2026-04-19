@@ -42,7 +42,7 @@ Hylo takes a more radical approach to MVS. It removes the CoW mechanism in favor
 ```rust
 let a = [1, 2, 3] // 'a' owns the array
 var b = a         // 'b' is a new value, a copy of 'a', no shared ownership
-b.append(4)       // 'b' mutates its own copy, no effect on 'a'
+b.append(4)       // 'b' mutates its mov copy, no effect on 'a'
 print(a)          // Output: [1, 2, 3]
 print(b)          // Output: [1, 2, 3, 4]
 ```
@@ -121,25 +121,31 @@ This eliminates the need for a GC or ARC and allows for efficient memory usage w
 Each memory location is sized according to the type of value it holds, and it has a unique address that identifies its starting byte in memory.
 Two memory locations are considered _disjoint_ if they do not overlap in memory, meaning that they do not share any bytes. 
 A memory location `ml1` _contains_ another memory location `ml2` if the bytes of `ml2` are a subset of the bytes of `ml1`.
+A _sub-memory location_ is a memory location that is contained within another memory location. A location is called _root memory location_ if it is not a sub-memory location of any other location.
 Eter's memory model ensures that all memory locations are either disjoint or one contains the other, which allows for efficient memory management and prevents issues related to aliasing and shared mutable state.
- A _sub-memory location_ is a memory location that is contained within another memory location. A location is called _root memory location_ if it is not a sub-memory location of any other location.
 
 ### Memory location lifetime
 
 > [!WARNING]
 > TODO
 
+### The Eter's Circuits
 
-### `let` variables
+Different types of variables in Eter have different ownership, mutability, and memory semantics, which determine how they interact with memory and how they can be used in the program. 
+There are four main types of variables in Eter's memory model: `let`, `mut`, `mov`, and `proj`. 
+Each of these variable defines a different **circuit** for how values are stored, accessed, and modified in memory, and they have different implications for performance.
+One can think of these **circuits** as governing how values flow through the program and how they are stored and accessed in memory.
+
+#### The `let` circuit
 
 | Ownership | Mutability | Memory semantics |
 | :--- | :--- | :--- |
 | **Yes** (Immutable Ownership) | **No** (Read-Only) | **View** (Shared) |
 
+The `let` circuit consists of immutable `let` variables that retain ownership of their values.
 A `let` variable is an immutable value that cannot be modified after it is initialized. 
-When a `let` variable is assigned a value, it creates a new memory location to store that value.
+When a `let` variable is assigned a value, it creates a new memory location within the `let` circuit to store that value.
 If a `let` variable is assigned another `let` variable, the compiler can optimize this assignment by creating a reference to the original memory location instead of copying the value, since both variables are immutable and cannot be modified. 
-This allows for efficient memory usage while maintaining the benefits of value semantics.
 A `let` variable is valid as long as it is in scope, i.e., cannot be moved to another variable or function without copying the value, since it is immutable and cannot be modified after initialization.[^2]
 
 The following example illustrates the behavior of `let` variables in Eter's memory model:
@@ -151,7 +157,7 @@ let y: arr<i32>[3] = x; // 'y' is a new let variable that references the same ar
 ```
 
 
-### `mut` variables
+#### The `mut` circuit
 
 | Ownership | Mutability | Memory semantics |
 | :--- | :--- | :--- |
@@ -159,43 +165,206 @@ let y: arr<i32>[3] = x; // 'y' is a new let variable that references the same ar
 
 A `mut` variable is a mutable value that can be modified after it is initialized. 
 When a `mut` variable is assigned a value, it creates a new memory location to store that value.
-If a `mut` variable is assigned another `mut` variable, the compiler must create a copy of the value to ensure that both variables have their own independent memory locations, since they can be modified. 
+If a `mut` variable is assigned another `mut` variable, the compiler must create a copy of the value to ensure that both variables have their mov independent memory locations, since they can be modified. 
 This allows for efficient mutation of values without copying and eliminates the possibility of shared mutable references.
 A `mut` variable is not always valid in scope, as it can be moved to another variable or function without copying the value, since it is mutable and can be modified after initialization.
 
 The following example illustrates the behavior of `mut` variables in Eter's memory model:
 ```rust
-mut x: arr<i32>[3] = arr<i32>[1, 2, 3]; // 'x' is a mut variable that owns the array.
-mut y: arr<i32>[3] = x; // 'y' is a new mut variable that is a copy of 'x'.
-// 'y' has its own memory location, and modifications to 'y' do not affect 'x'.
+let mut x: arr<i32>[3] = arr<i32>[1, 2, 3]; // 'x' is a mut variable that owns the array.
+let mut y: arr<i32>[3] = x; // 'y' is a new mut variable that is a copy of 'x'.
+// 'y' has its mov memory location, and modifications to 'y' do not affect 'x'.
 y[0] = 10;
 // x = [1, 2, 3]
 // y = [10, 2, 3]
 ```
 
-### `own` variables
+#### The `mov` circuit
 
 | Ownership | Mutability | Memory semantics |
 | :--- | :--- | :--- |
 | **Yes** (Exclusive Ownership) | **Yes** (Mutable) | **Move** (Transfer) |
 
-A `own` variable is a mutable value that has exclusive ownership of its memory location. 
-When an `own` variable is assigned a value, it creates a new memory location to store that value.
-If an `own` variable is assigned another `own` variable, the compiler can optimize this assignment by transferring ownership of the memory location from the source variable to the destination variable without copying the value, since the source variable will no longer be valid after the transfer. 
-This allows for efficient memory usage while maintaining the benefits of value semantics.
-An `own` variable is not valid in scope after it has been moved to another variable or function, since it has exclusive ownership of its memory location and cannot be shared or modified after the transfer.
+The `mov` circuit consists of mutable `mov` variables that have exclusive ownership of their values.
+A `mov` variable is a mutable value that has exclusive ownership of its memory location. 
+When a `mov` variable is assigned a value, it creates a new memory location within the `mov` circuit to store that value.
+In general, a `mov` variable is not valid in scope after it has been moved to another variable or function, since it has exclusive ownership of its memory location and cannot be shared or modified after the transfer.
 
-The following example illustrates the behavior of `own` variables in Eter's memory model:
+##### From `mov` to `mov` circuit
+
+If a `mov` variable is assigned another `mov` variable it remains in the `mov` circuit, but the ownership of the value is transferred from the source variable to the destination variable.
+The compiler can optimize this assignment by transferring ownership of the memory location from the source variable to the destination variable without copying the value, since the source variable will no longer be valid after the transfer. 
+For example, consider the following code:
 ```rust
-own x: arr<i32>[3] = arr<i32>[1, 2, 3]; // 'x' is an own variable that owns the array.
-own y: arr<i32>[3] = x; // 'y' is a new own variable that takes ownership of the array from 'x'.
-// 'x' is no longer valid and cannot be used, while 'y' now owns the array and can be modified.
-y[0] = 10;
-// x = invalid
-// y = [10, 2, 3]
+let mov x: i32 = 1; // 'x' is a mov variable that owns the 
+                    // integer value.
+let mov y: i32 = x; // 'y' is a new mov variable that takes 
+                    // ownership of the integer value from 'x'.
+
+// 'x' is no longer valid and cannot be used,  while 'y' 
+// now owns the integer value and can be modified.
+y = 10;
+
+// let mov z: i32 = x; // ❌ ERROR: 'x' cannot be used 
+                       // after being moved to 'y'.
 ```
 
-### `proj` variables
+##### From `mov` to `let` circuit
+
+If a `mov` variable is assigned to a `let` variable it is moved to the `let` circuit, and the ownership of the value is transferred from the `mov` variable to the `let` variable.
+The compiler can optimize this assignment by transferring ownership of the memory location from the `mov` variable to the `let` variable without copying the value, since the `mov` variable will no longer be valid after the transfer. 
+Since the `let` variable is immutable, it cannot be modified after the transfer, and the `mov` variable is no longer valid in scope. 
+The following example illustrates this behavior:
+```rust
+let mov x: i32 = 1; // 'x' is a mov variable that owns 
+                    // the integer value.
+let y: i32 = x; // 'y' is a new let variable that takes 
+                // ownership of the integer value from 'x'.
+
+// 'x' is no longer valid and cannot be used, while 'y' 
+// now owns the integer value and cannot be modified.
+
+// let mov z: i32 = x; // ❌ ERROR: 'x' cannot be used 
+                       // after being moved to 'y'.
+```
+
+One might wonder why we would transfer ownership from a powerful mov variable to a restricted let variable. The reason lies in _contract enforcement_ and _parallelism_:
+- In large systems, you often want to perform a series of high-speed mutations (in the `mov` circuit) and then _lock_ the result. By moving the value to a `let` variable, you guarantee that no one, not even the original logic, can accidentally modify the data after it has reached its _final_ state.
+- A `mov` variable is exclusive and cannot be shared. By moving it into the `let` circuit, you transform a _hot_ exclusive resource into a _cold_ shared value. This allows the compiler to safely share the data across multiple threads or views, knowing it will never change again.
+
+##### From `mov` to `mut` circuit
+
+If a `mov` variable is assigned to a `mut` variable it is moved to the `mut` circuit, and the ownership of the value is transferred from the `mov` variable to the `mut` variable.
+The compiler can optimize this assignment by transferring ownership of the memory location from the `mov` variable to the `mut` variable without copying the value, since the `mov` variable will no longer be valid after the transfer.
+The following example illustrates this behavior:
+```rust
+let mov x: i32 = 1; // 'x' is a mov variable that owns 
+                    // the integer value.
+let mut y: i32 = x; // 'y' is a new mut variable that takes 
+                    // ownership of the integer value from 'x'.
+
+// 'x' is no longer valid and cannot be used, while 'y' 
+// now owns the integer value and can be modified.
+
+// let mov z: i32 = x; // ❌ ERROR: 'x' cannot be used 
+                       // after being moved to 'y'.
+```
+
+
+Since the `mov` variable is already mutable, one may wonder why it is necessary to transfer ownership to a `mut` variable instead of keeping it in the `mov` circuit. The reason is that the `mut` circuit allows for a more flexible management of the variable's lifecycle within the local scope. While a `mov` variable is strictly tied to a _use-it-and-lose-it_ philosophy (where every assignment or pass-to-function terminates the original binding), a `mut` variable acts as a stable container. As mentioned in the previous section, once the value enters the `mut` circuit:
+- The variable y can be passed to multiple functions as a view (`let`) or a projection (`proj`) without ever losing its name or its ability to be mutated further down in the code.
+
+```rust
+fn double_view(let v: i32, let w: i32) { /* ... */ }
+
+fn main() {
+    let mov x: i32 = 1; // 'x' is a mov variable that owns 
+                        // the integer value.
+    // double_view(x, x); // ❌ ERROR: 'x' cannot be passed as a 
+                          // view to multiple functions, since it is 
+                          // a mov variable and would lose its name after 
+                          // the first pass.
+
+    let mut y: i32 = x; // 'y' is a new mut variable that takes 
+                        // ownership of the integer value from 'x'.
+
+    double_view(y, y); // 'y' can be passed as a view to multiple 
+                       // functions without losing its name or mutability.
+
+    y = 10; // 'y' can still be mutated after being passed to functions.
+}
+```
+
+- If the programmer performs an operation that would normally require a copy (like assigning y to another `mut` variable), the `mut` circuit allows the compiler to perform that copy to preserve both variables. In the `mov` circuit, this would simply be a compiler error.
+
+```rust
+fn main() {
+    let mov a: i32 = 1; // 'a' is a mov variable that owns 
+                        // the integer value.
+
+    // Within the mov circuit, we cannot decouple the ownership 
+    // of 'a' into multiple variables.
+    // let mut x: i32 = a; 
+    // let mut y: i32 = a; // ❌ ERROR: 'a' is no longer valid after 
+                           // being moved to 'x'.
+
+    let mut x: i32 = a; 
+    let mut y = x; 
+
+    x = 100; 
+    y = 200; 
+}
+```
+
+##### From `mov` to `proj` circuit
+
+If a `mov` variable is assigned to a `proj` variable, it enters the `proj` circuit. Unlike the previous transitions, the `mov` variable is not consumed and does not lose ownership. Instead, it becomes temporarily shadowed (or locked) while the projection is active.
+The compiler establishes a direct link to the original memory location. Through the `proj` variable, the data can be mutated in-place, but the `proj` variable itself does not own the memory; it is merely a loan that allows for efficient mutation without copying.
+The compiler can optimize this assignment by creating a reference to the original memory location without copying the value, since the `proj` variable can mutate the same memory location as the `mov` variable.
+For example, consider the following code:
+```rust
+fn main() {
+    let mov a: i32 = 1; // 'a' is a mov variable that owns 
+                        // the integer value.
+
+    // Create a projection 'p' that references the same 
+    // memory location as 'a'. 
+    let proj p = &a; 
+
+    // While 'p' is active, 'a' is shadowed (locked).
+    // let tmp: i32 = a; // ❌ ERROR: 'a' is currently shadowed by a projection.
+
+    // We can mutate the original memory through the projection
+    &p = 0; 
+
+    // The latest use of 'p' determines when 'a' becomes valid again. 
+    // After this point, 'a' can be used again.
+}
+```
+Note that, this snippet could be reasonably rewritten without a `proj` variable, by directly mutating `a` in place: `&a = 0;`. 
+
+At this point, the question arises: why do we need a `proj` variable at all? Why not just keep the variable in the `mov` circuit and allow it to be mutated directly?
+The reason lies in abstraction and modular mutation:
+- By projecting individual fields of a structure, you can precisely define which part of a resource is being modified. Additionally, it allows you to mutate multiple times without losing the original variable's name or ownership, as long as the projections are active.
+```rust
+struct S { mut first: i32, mut second: i32 }
+
+fn do_something(let x: i32) { /* ... */ }
+
+fn main() {
+    let mov s: S = S::new(); // 's' is a mov variable that owns the struct.
+
+    let proj f: i32 = &s.first;
+    let proj s: i32 = &s.second;
+
+    &f = 100;
+    &s = 200;
+
+    do_something(f);
+    do_something(s);
+
+    // 's' is still valid and can be used after the projections, 
+    // since the projections do not consume the original variable.
+}
+```
+- `proj` is the primary way to allow functions to modify a `mov` resource without taking ownership of it. This allows the caller to retain the resource after the function has finished its work.
+```rust
+fn do_something(proj x: i32) { &x += 20; }
+
+fn main() {
+    let mov x: i32 = 40; // 'x' is a mov variable that owns 
+                         // the integer value.
+
+    // Pass 'x' as a projection to 'do_something', allowing it 
+    // to mutate the value in place without taking ownership.
+    do_something(&x);
+
+    // 'x' is still valid and can be used after the function call,
+    // since the projection does not consume the original variable.
+}
+```
+
+#### `proj` variables
 
 | Ownership | Mutability | Memory semantics |
 | :--- | :--- | :--- |
@@ -205,12 +374,15 @@ A `proj` variable is a mutable value that does not have ownership of its memory 
 When a `proj` variable is assigned a value, it creates a new memory location to store that value.
 If a `proj` variable is assigned another `proj` variable, the compiler can optimize this assignment by creating a reference to the original memory location instead of copying the value, since both variables can mutate the same memory location. 
 This allows for efficient mutation of values without copying and eliminates the possibility of shared mutable references, while still allowing for efficient memory usage.
+
+Assigning a `proj` value to a `let` binding does not copy the underlying value. It means that, as long as the `proj` variable is valid, the `let` variable can access the same memory location through the projection. However, since the `let` variable is immutable, it cannot modify the value, and any attempt to do so would result in a compile-time error.
+
 A `proj` variable is not valid in scope after it has been moved to another variable or function, since it does not have ownership of its memory location and cannot be shared or modified after the transfer.
 
 The following example illustrates the behavior of `proj` variables in Eter's memory model:
 ```rust
-proj x: arr<i32>[3] = arr<i32>[1, 2, 3]; // 'x' is a proj variable that references the array.
-proj y: arr<i32>[3] = x; // 'y' is a new proj variable that references the same array as 'x'.
+let proj x: arr<i32>[3] = arr<i32>[1, 2, 3]; // 'x' is a proj variable that references the array.
+let proj y: arr<i32>[3] = x; // 'y' is a new proj variable that references the same array as 'x'.
 // Both 'x' and 'y' reference the same memory location, and modifications to either 'x' or 'y' affect the same array.
 y[0] = 10;
 // x = [10, 2, 3]
@@ -222,15 +394,15 @@ In the Racordon _et al._'s words, it creates a crucial optimization opportunity:
 That is, `proj` argument passing can be implemented as pass-by-reference without surfacing reference semantics in the programming model.
 The following example exemplifies the [Law of Exclusivity] in Eter's memory model:
 ```rust
-proj x: arr<i32>[3] = arr<i32>[1, 2, 3]; // 'x' is a proj variable that references the array.
-proj y: arr<i32>[3] = x; // 'y' is a new proj variable that references the same array as 'x'.
-proj z: arr<i32>[3] = x; // ❌ ERROR: 'z' cannot reference the same array as 'x' and 'y' due to the Law of Exclusivity.
+let proj x: arr<i32>[3] = arr<i32>[1, 2, 3]; // 'x' is a proj variable that references the array.
+let proj y: arr<i32>[3] = x; // 'y' is a new proj variable that references the same array as 'x'.
+let proj z: arr<i32>[3] = x; // ❌ ERROR: 'z' cannot reference the same array as 'x' and 'y' due to the Law of Exclusivity.
 ```
 The trasparent pass-by-reference semantics of `proj` variables is shown in the following example:
 ```rust
 fn increment(proj a: arr<i32>[3]) { /* Increment each element of the array in place */ }
 
-proj x: arr<i32>[3] = arr<i32>[1, 2, 3];
+let proj x: arr<i32>[3] = arr<i32>[1, 2, 3];
 increment(x); // Passing 'x' as a proj argument allows for direct modification of the array
 // x = [2, 3, 4]
 ```
@@ -268,13 +440,17 @@ For instance, consider the following example:
 ```rust
 struct Point { mut x: i32, mut y: i32 }
 
-fn move_point(proj p: Point, proj target: i32) { /* Move 'p' towards 'target' in place */ }
+fn move_point(proj p: Point, proj target: i32) {}
 
 fn main() {
-    mut my_point: Point = Point { x: 0, y: 0 };
-    mut offset: i32 = 5;
-    move_point(proj my_point, proj offset); // OK: 'my_point' and 'offset' are distinct paths.
-    move_point(proj my_point, proj my_point.x); // ❌ ERROR: 'my_point' and 'my_point.x' overlap paths. The sub-tree 'my_point.x' is part of the path 'my_point', so they cannot both be 'proj' in the same context.
+    let mut my_point: Point = Point { x: 0, y: 0 };
+    let mut offset: i32 = 5;
+    move_point(&my_point, &offset); // OK: 'my_point' and 'offset' 
+                                            // are distinct paths.
+    // move_point(& my_point, & my_point.x); // ❌ ERROR: 'my_point' and 'my_point.x' overlap paths. 
+                                             // The sub-tree 'my_point.x' is part of the path
+                                             // 'my_point', so they cannot both be 'proj' in 
+                                             // the same context.
 }
 ```
 
@@ -288,15 +464,15 @@ A specific restriction applies when a `proj` identifies an element within an arr
 
 The following example illustrates this concept:
 ```rust
-fun swap(proj a: i32, proj b: i32) { /* Swap the values of 'a' and 'b' in place */ }
+fn swap(proj a: i32, proj b: i32) { /* Swap the values of 'a' and 'b' in place */ }
 
-fun main() {
-    mut x: arr<i32>[3] = [10, 20, 30];
+fn main() {
+    let mut x: arr<i32>[3] = [10, 20, 30];
 
-    swap(proj x[0], proj x[1]) // OK: The compiler can statically verify that 'x[0]' and 'x[1]' are distinct paths, so it allows the swap.
+    swap(proj x[0], proj x[1]); // OK: The compiler can statically verify that 'x[0]' and 'x[1]' are distinct paths, so it allows the swap.
 
-    let i = get_index() // Assume 'get_index()' returns an integer at runtime.
-    swap(proj x[i], proj x[1]) // ❌ ERROR: The compiler is CONSERVATIVE. 
+    let i: usize = get_index(); // Assume 'get_index()' returns an integer at runtime.
+    swap(proj x[i], proj x[1]); // ❌ ERROR: The compiler is CONSERVATIVE. 
                                // Because 'i' could be 1 at runtime, it assumes the paths 
                                // 'x[i]' and 'x[1]' MIGHT overlap. 
                                // To stay safe without a borrow checker, it rejects the call.
@@ -309,12 +485,12 @@ As shown at the beginning of this chapter, a critical advantage of the MVS model
 
 In Eter, a `proj` binding is more flexible. 
 It acknowledges that while a projection is active, the projector is the temporary owner of the value it references. 
-This allows to "empty" the slot by moving the value (transferring it to a own parameter) and then "refilling" it later.
+This allows to "empty" the slot by moving the value (transferring it to a mov parameter) and then "refilling" it later.
 
 Concretely, the following code is valid in Eter but would be illegal in Rust:
 ```rust
 struct T {}
-fn own_t(own t: T) {} 
+fn own_t(mov t: T) {} 
 
 fn ref_mut_t(proj t: T) {
     own_t(t); // Move the value out of the projection, transferring ownership to 'own_t'.
@@ -349,20 +525,42 @@ The constraints of the `proj` system ensure that this pattern is safe and does n
 
 ### Value transfer semantics
 
-| ↓ to \ from → | `let x = 𝓿;` | `mut x = 𝓿;` | `own x = 𝓿;` | `proj x = 𝓿;` |
+| ↓ to \ from → | `let x = 𝓿` | `let mut x = 𝓿` | `let mov x = 𝓿` | `let proj x = 𝓿` |
 |-|-|-|-|-|
-| `let  y = x;` | $O(1)$ ✅ (View)        | $O(1)$ ✅ (View) | $O(1)$ ✅ (View) | $O(1)$ ✅ (Sub-View) |
-| `mut  y = x;` | $O(N)$ ✅ (Copy)       | $O(N)$ ✅ (Copy) | $O(N)$ ✅ (Copy) | $O(N)$ ✅ (Copy) |
-| `own  y = x;` | ❌ (Cannot move `let`)  | $O(1)$ ✅ (Move) | $O(1)$ ✅ (Move) | ❌ (Cannot move `proj`) | 
-| `proj y = x;` | ❌ (Needs `mut` source) | $O(1)$ ✅ (Link) | $O(1)$ ✅ (Link) | $O(1)$ ✅ (Re-Link) |
+| `let  y = x` | $O(1)$ ✅ (View)        | $O(1)$ ✅ (View) | $O(1)$ ✅ (View) | $O(1)$ ✅ (Sub-View) |
+| `let mut  y = x` | $O(N)$ ⚠️ (Needs `copy`)       | $O(N)$ ⚠️ (Needs `copy`) | $O(1)$ ✅ (Move) | $O(N)$ ⚠️ (Needs `copy`) |
+| `let mov  y = x` | ❌ (Cannot move `let`)  | $O(1)$ ✅ (Move) | $O(1)$ ✅ (Move) | ️$O(1)$ ✅ (Move, but needs reinitialization) |
+| `let proj y = x` | ❌ (Needs `mut` source) | $O(1)$ ✅ (Link) | $O(1)$ ✅ (Link) | $O(1)$ ✅ (Re-Link) |
+| `x = 𝓿'` | ❌ (Cannot assign to `let`) |
 
-### Interprocedural Value transfer semantics
 
-| ↓ to \ from → | `let x = 𝓿;` | `mut x = 𝓿;` | `own x = 𝓿;` | `proj x = 𝓿;` |
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+
+
+### Interprocedural Value transfer semantics
+
+| ↓ to \ from → | `let x = 𝓿;` | `let mut x = 𝓿;` | `let mov x = 𝓿;` | `let proj x = 𝓿;` |
 |-|-|-|-|-|
 | `fn_let(let x)` | TODO | TODO | TODO | TODO |
 | `fn_mut(mut x)` | TODO | TODO | TODO | TODO |
-| `fn_own(own x)` | TODO | TODO | TODO | TODO |
+| `fn_own(mov x)` | TODO | TODO | TODO | TODO |
 | `fn_proj(proj x)` | TODO | TODO | TODO | TODO |
 
 
