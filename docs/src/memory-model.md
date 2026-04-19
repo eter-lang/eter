@@ -140,11 +140,12 @@ One can think of these **circuits** as governing how values flow through the pro
 
 | ↓ to \ from → | `let x = 𝓿` | `let mut x = 𝓿` | `let mov x = 𝓿` | `let proj x = 𝓿` |
 |-|-|-|-|-|
-| `let  y = x`     | $O(1)$ ✅ (View)         | $O(1)$ ✅ (View)         | $O(1)$ ✅ (Move) | $O(1)$ ✅ (Sub-View) |
-| `let mut  y = x` | $O(N)$ ⚠️ (Deep copy)    | $O(N)$ ⚠️ (Deep copy)    | $O(1)$ ✅ (Move) | $O(N)$ ⚠️ (Deep copy) |
-| `let mov  y = x` | ❌ (Cannot move `let`)   | $O(1)$ ✅ (Move)         | $O(1)$ ✅ (Move) | ️$O(1)$ ✅ (Move, but needs reinitialization) |
-| `let proj y = &x` | ❌ (Needs `mut` source)  | $O(1)$ ✅ (Link)         | $O(1)$ ✅ (Link) | $O(1)$ ✅ (Re-Link) |
-| `x = 𝓿'` |  TODO | TODO | TODO | TODO |
+| `let  y = x`      | $O(1)$ ✅ (Alias)        | $O(1)$ ✅ (Freeze) / $O(N)$ ⚠️ (Copy) | $O(1)$ ✅ (Move) | $O(1)$ ✅ (Sub-Alias) |
+| `let mut  y = x`  | $O(N)$ ⚠️ (Copy)         | $O(N)$ ⚠️ (Copy)                    | $O(1)$ ✅ (Move) | $O(N)$ ⚠️ (Copy) |
+| `let mov  y = x`  | ❌ (Cannot move `let`)   | $O(1)$ ✅ (Freeze)                  | $O(1)$ ✅ (Move) | ️$O(1)$ ✅ (Move, but needs reinitialization) |
+| `let proj y = &x` | ❌ (Needs `mut` source)  | $O(1)$ ✅ (Link)                    | $O(1)$ ✅ (Link) | $O(1)$ ✅ (Re-Link) |
+| `x = 𝓿'`          | ❌ (Forbidden)          | ✅ (Over-write)| ✅ (Re-init) | ❌ (Forbidden) |
+| `&x = 𝓿'`         | ❌ (Forbidden)          | ✅ (In-place) | ✅ (In-place) | ✅ (In-place) |
 
 
 
@@ -152,18 +153,19 @@ One can think of these **circuits** as governing how values flow through the pro
 
 | Ownership | Mutability | Memory semantics |
 | :--- | :--- | :--- |
-| **Yes** (Shared) | **No** (Read-Only) | **View** (Shared) |
+| **Yes** (Shared) | **No** (Read-Only) | **Alias** (Reference Linked) |
 
 The `let` circuit consists of immutable `let` variables that retain ownership of their values.
 A `let` variable is an immutable value that cannot be modified after it is initialized. 
 When a `let` variable is assigned a value, it creates a new memory location within the `let` circuit to store that value.
-If a `let` variable is assigned another `let` variable, the compiler can optimize this assignment by creating a reference to the original memory location instead of copying the value, since both variables are immutable and cannot be modified. 
 A `let` variable is valid as long as it is in scope, i.e., cannot be moved to another variable or function without copying the value, since it is immutable and cannot be modified after initialization.[^2]
 
 
 ##### From `let` to `let` circuit
 
 If a `let` variable is assigned another `let` variable it remains in the `let` circuit, and both variables reference the same memory location.
+If a `let` variable is assigned another `let` variable, the compiler can optimize this assignment by creating a reference to the original memory location instead of copying the value, since both variables are immutable and cannot be modified. 
+For example, consider the following code:
 ```rust
 let x: i32 = 1; // 'x' is a let variable that owns 
                 // the integer value.
@@ -181,8 +183,10 @@ The following example illustrates this behavior:
 ```rust
 let x: i32 = 1; // 'x' is a let variable that owns 
                 // the integer value.
-let mut y: i32 = x; // 'y' is a new mut variable that is a copy of 'x'.
-// 'y' has its own memory location, and modifications to 'y' do not affect 'x'.
+let mut y: i32 = x; // 'y' is a new mut variable 
+                    // that is a copy of 'x'.
+// 'y' has its own memory location, and modifications 
+// to 'y' do not affect 'x'.
 y = 10;
 // x = 1
 // y = 10
@@ -205,7 +209,7 @@ let x: i32 = 1;
                        // into the exclusive 'mov' circuit.
 
 let mut tmp = x;       // 1. Implicit copy to create independence.
-let mov y = mov tmp;   // 2. Transfer ownership to the mov circuit.
+let mov y = tmp;       // 2. Transfer ownership to the mov circuit.
 ```
 
 ##### From `let` to `proj` circuit
@@ -232,26 +236,141 @@ let proj p = &tmp;  // 2. Now you can project and mutate safely.
 
 | Ownership | Mutability | Memory semantics |
 | :--- | :--- | :--- |
-| **Yes** () | **Yes** (Mutable) | **Copy** (Independent) |
+| **Yes** (Independent) | **Yes** (Mutable) | **Copy** (Independent) |
 
 The `mut` circuit consists of mutable `mut` variables that retain ownership of their values.
 A `mut` variable is a mutable value that can be modified after it is initialized. 
 When a `mut` variable is assigned a value, it creates a new memory location to store that value.
+The core principle of this circuit is _physical independence_: the compiler guarantees that every `mut` variable owns a disjoint block of memory.
+While this circuit creates a clear boundary for mutation, it also needs to perform a several copies to maintain the value-isolated semantics, which can lead to performance overhead if not optimized properly.
+However, modern optimizing compilers perform various optimizations to minimize the cost of the copies resulting from the `mut` circuit, such as
+1. **Scalar Promotion**: for small, fixed-size types (like `i32`, `bool`, or `f64`), the copy is often just a single CPU register operation, such as a `mov` instruction. In these cases, the cost of an implicit copy is negligible and effectively $O(1)$ at the hardware level. 
+2. **Copy Elision & SSA**: if the compiler's static analysis (often via Static Single Assignment form) determines that the source variable is never used again after the assignment, it can _elide_ the copy entirely. The destination variable simply takes over the existing memory location, effectively transforming the `mut`-to-`mut` assignment into a zero-cost move.
+3. **Constant & Copy Propagation**: if a `mut` variable is assigned a value that is known at compile-time, or is a copy of another variable that hasn't changed, the compiler can propagate that value directly to all usage points, bypassing the need to allocate and copy physical memory locations until absolutely necessary for a mutation.
+4. **Dead Store Elimination**: if a `mut` variable is copied but the destination is overwritten (e.g., `y = x; y = 10;`) before being read, the compiler will identify the first copy as a _dead store_ and remove it entirely from the generated machine code.
 
 
+##### From `mut` to `mut` circuit
 
-If a `mut` variable is assigned another `mut` variable, the compiler must create a copy of the value to ensure that both variables have their own independent memory locations, since they can be modified. 
-This allows for efficient mutation of values without copying and eliminates the possibility of shared mutable references.
-A `mut` variable is not always valid in scope, as it can be moved to another variable or function without copying the value, since it is mutable and can be modified after initialization.
-
-The following example illustrates the behavior of `mut` variables in Eter's memory model:
+If a `mut` variable is assigned to another `mut` variable, they remain within the `mut` circuit, but the compiler must create a full copy of the value.
+This ensures that both variables have their own disjoint memory locations. 
+Since both are mutable, this _value-isolated_ semantic is what prevents shared mutable state: changing one variable will never side-effect the other.
+For example, consider the following code:
 ```rust
-let mut x: arr<i32>[3] = arr<i32>[1, 2, 3]; // 'x' is a mut variable that owns the array.
-let mut y: arr<i32>[3] = x; // 'y' is a new mut variable that is a copy of 'x'.
-// 'y' has its own memory location, and modifications to 'y' do not affect 'x'.
-y[0] = 10;
-// x = [1, 2, 3]
-// y = [10, 2, 3]
+let mut x: i32 = 42; 
+let mut y = x; // ⚠️ O(N) Copy: 'y' is a fresh clone of 'x'
+
+// Both exist independently in the mut circuit.
+y = 100; 
+
+// x: 42 (Unchanged)
+// y: 100 (Independent)
+```
+
+##### From `mut` to `let` circuit
+
+Assigning a `mut` variable to a `let` variable moves the value into the `let` circuit. This operation effectively _freezes_ the current state of the data, transforming a private, mutable resource into a shared, read-only one.
+Depending on whether the original `mut` variable is used afterwards, the compiler applies two different strategies:
+1. Freeze Optimization: if the source `mut` variable is no longer used after the assignment, the compiler performs a zero-cost $O(1)$ transfer. The memory location is simply re-labeled as immutable.
+```rust
+let mut x: i32 = 42;
+let y: i32 = x; //'y' takes ownership of the value from 'x' without 
+                // copying, since 'x' is not used afterwards.
+// 'x' is not used after this point, so the compiler can optimize 
+// the assignment by reusing the same memory location for 'y' without copying.
+```
+2. Implicit Copy: if the source `mut` variable continues to be used (and potentially mutated) after the assignment, the compiler must create a copy. This ensures that the new `let` variable remains a faithful _snapshot_ of the data at the moment of assignment, unaffected by future changes to the original `mut` variable.
+```rust
+let mut x: i32 = 42;
+let y: i32 = x; // 'y' is a snapshot of 'x' at this point in time.
+x = 100; // Mutating 'x' does not affect 'y'.
+// x: 100 (Mutated)
+// y: 42 (Snapshot, unchanged)
+```
+
+##### From `mut` to `mov` circuit
+
+The transition from a `mut` variable to a `mov` variable is an _ownership promotion_ in the exclusive `mov` circuit.
+This is always an $O(1)$ operation that freezes the current state of the data.
+Since the `mut` variable already possessed its own independent memory location, the compiler simply transfers the _exclusive key_ of that memory to the new `mov` variable.
+The original `mut` variable is immediately invalidated (consumed). 
+This is crucial for performance: you can build a complex object in the `mut` circuit and then _freeze_ its exclusivity by moving it to the `mov` circuit without any reallocation.
+For example, consider the following code:
+```rust
+let mut x: i32 = 42; // 'x' is a mut variable that owns the integer value.
+&x += 1; // 'x' is mutated in place, now holds 43.
+/* A thousand lines of complex logic that builds up 'x' to a final state... */
+let mov y: i32 = x; // 'y' is a new mov variable that takes ownership 
+                    // of the integer value from 'x' without copying.
+// 'x' is no longer valid and cannot be used, while 'y' now owns the integer value.
+```
+
+##### From `mut` to `proj` circuit
+
+Transitioning from a `mut` variable to a `proj` variable allows you to _borrow_ mutable access to a value without triggering the independent copy logic inherent to the `mut` circuit. While a `mut` variable owns its memory independently, a `proj` acts as a temporary, high-performance window into that memory.
+This transition is an $O(1)$ operation that establishes a shadow. The original `mut` variable remains the owner but is temporarily _frozen_ (shadowed) until the projection is no longer in use.
+The compiler can optimize this assignment by creating a reference to the original memory location without copying the value, since the `proj` variable can mutate the same memory location as the `mut` variable.
+For example, consider the following code:
+```rust
+fn main() {
+    let mut a: i32 = 1; // 'a' is a mut variable that owns 
+                        // the integer value.
+
+    // Create a projection 'p' that references the same 
+    // memory location as 'a'. 
+    let proj p = &a; 
+
+    // While 'p' is active, 'a' is shadowed (locked).
+    // let tmp: i32 = a; // ❌ ERROR: 'a' is currently shadowed by a projection.
+
+    // We can mutate the original memory through the projection
+    &p = 0; 
+
+    // The latest use of 'p' determines when 'a' becomes valid again. 
+    // After this point, 'a' can be used again.
+}
+```
+This snippet could be reasonably rewritten without a `proj` variable, by directly mutating `a` in place: `&a = 0;`.
+
+
+The utility of `proj` when starting from a `mut` source is twofold:
+- In the `mut` circuit, passing a variable to a function or another scope might trigger a copy to preserve value independence. By using a projection, you explicitly tell the compiler: "Don't copy the data; let this secondary path modify the existing bytes directly."
+```rust
+fn do_something(proj x: i32) { &x += 20; }
+
+fn main() {
+    let mut x: i32 = 40; // 'x' is a mut variable that owns 
+                         // the integer value.
+
+    // Pass 'x' as a projection to 'do_something', allowing it 
+    // to mutate the value in place without taking ownership.
+    do_something(&x);
+
+    // 'x' is still valid and can be used after the function call,
+    // since the projection does not consume the original variable.
+}
+```
+- When working with complex data structures (like structs or arrays), you often want to mutate specific fields without copying the entire structure. Projections allow you to create mutable references to individual fields, enabling efficient in-place updates while keeping the overall structure intact.
+```rust
+struct S { mut first: i32, mut second: i32 }
+
+fn do_something(let x: i32) { /* ... */ }
+
+fn main() {
+    let mut s: S = S::new(); // 's' is a mut variable that owns the struct.
+
+    let proj f: i32 = &s.first;
+    let proj s: i32 = &s.second;
+
+    &f = 100;
+    &s = 200;
+
+    do_something(f);
+    do_something(s);
+
+    // 's' is still valid and can be used after the projections, 
+    // since the projections do not consume the original variable.
+}
 ```
 
 #### The `mov` circuit
@@ -439,7 +558,45 @@ fn main() {
 }
 ```
 
-#### `proj` variables
+
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+
+#### The `proj` circuit
 
 | Ownership | Mutability | Memory semantics |
 | :--- | :--- | :--- |
@@ -576,49 +733,6 @@ fn ref_mut_t(proj t: T) {
 
 The constraints of the `proj` system ensure that this pattern is safe and does not lead to aliasing or shared mutable state, while still allowing for efficient mutation of values without copying.
 
-
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
-
-
-
-
-
-
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
----
 
 
 ### Interprocedural Value transfer semantics
