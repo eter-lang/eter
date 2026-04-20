@@ -132,20 +132,23 @@ Eter's memory model ensures that all memory locations are either disjoint or one
 ### The Eter's Circuits
 
 Different types of variables in Eter have different ownership, mutability, and memory semantics, which determine how they interact with memory and how they can be used in the program. 
-There are four main types of variables in Eter's memory model: `let`, `let mut`, `let mov`, and `let proj`. 
-Each of these variable defines a different **circuit** for how values are stored, accessed, and modified in memory, and they have different implications for performance.
+There are three main types of variables in Eter's memory model: `let`, `let mut`, and `let proj`. 
+Each of these variable defines a different **circuit** for how values are owned, mutated, and accessed in memory.
 One can think of these **circuits** as governing how values flow through the program and how they are stored and accessed in memory.
+
+The Eter programming language uses these circuits consistently. 
+It means that the same rules apply to all types of values, whether they are simple scalars, complex structs, or even functions.
+Additionally, the semantic is consistent across all operations, including variable assignment, function calls, and field access.
 
 ##### Matrix of value transfer semantics
 
-| ↓ to \ from → | `let x = 𝓿` | `let mut x = 𝓿` | `let mov x = 𝓿` | `let proj x = 𝓿` |
-|-|-|-|-|-|
-| `let  y = x`      | $O(1)$ ✅ (Alias)        | $O(1)$ ✅ (Freeze) / $O(N)$ ⚠️ (Copy) | $O(1)$ ✅ (Move) | $O(1)$ ✅ (Sub-Alias) |
-| `let mut  y = x`  | $O(N)$ ⚠️ (Copy)         | $O(N)$ ⚠️ (Copy)                    | $O(1)$ ✅ (Move) | $O(N)$ ⚠️ (Copy) |
-| `let mov  y = x`  | ❌ (Cannot move `let`)   | $O(1)$ ✅ (Freeze)                  | $O(1)$ ✅ (Move) | ️$O(1)$ ✅ (Move, but needs reinitialization) |
-| `let proj y = &x` | ❌ (Needs `mut` source)  | $O(1)$ ✅ (Link)                    | $O(1)$ ✅ (Link) | $O(1)$ ✅ (Re-Link) |
-| `x = 𝓿'`          | ❌ (Forbidden)          | ✅ (Over-write)| ✅ (Re-init) | ❌ (Forbidden) |
-| `&x = 𝓿'`         | ❌ (Forbidden)          | ✅ (In-place) | ✅ (In-place) | ✅ (In-place) |
+| ↓ to \ from → | `let x = 𝓿` | `let mut x = 𝓿` |  `let proj x = 𝓿` |
+|-|-|-|-|
+| `let  y = x`      | $O(1)$ ✅ (Alias)        | $O(1)$ ✅ (Move) | ❌ (Forbidden) |
+| `let mut  y = x`  | $O(N)$ ⚠️ (Copy)         | $O(1)$ ✅ (Move) | $O(1)$ ✅ (Extract/Refill) |
+| `let proj y = &x` | ❌ (Needs `mut` source)  | $O(1)$ ✅ (Link) | $O(1)$ ✅ (Re-Link) |
+| `&x = 𝓿'`         | ❌ (Forbidden)           | ✅ (In-place)    | ✅ (In-place) |
+| `x = 𝓿'`          | TODO  | TODO   | TODO |
 
 
 
@@ -159,6 +162,7 @@ The `let` circuit consists of immutable `let` variables that retain ownership of
 A `let` variable is an immutable value that cannot be modified after it is initialized. 
 When a `let` variable is assigned a value, it creates a new memory location within the `let` circuit to store that value.
 A `let` variable is valid as long as it is in scope, i.e., cannot be moved to another variable or function without copying the value, since it is immutable and cannot be modified after initialization.[^2]
+The ownership of a `let` variable is shared, meaning that multiple `let` variables can reference the same memory location and the memory location is not deallocated until all `let` variables that reference it go out of scope.
 
 
 ##### From `let` to `let` circuit
