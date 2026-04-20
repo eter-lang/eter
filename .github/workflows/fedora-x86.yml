@@ -40,6 +40,7 @@ jobs:
         env:
           CC: ${{ matrix.compiler.CC }}
           CXX: ${{ matrix.compiler.CXX }}
+          PATH: ${{ env.LLVM_PREFIX }}/bin:${{ env.PATH }}
         run: |
           mkdir build && cd build
           cmake -DCMAKE_PREFIX_PATH="${LLVM_PREFIX}" \
@@ -47,6 +48,8 @@ jobs:
                 -G Ninja ../
           ninja -j2
       - name: Run tests
+        env:
+          PATH: ${{ env.LLVM_PREFIX }}/bin:${{ env.PATH }}
         run: |
           cd build
           lit -va ./test/

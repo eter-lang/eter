@@ -13,7 +13,7 @@ find_program(ETER_LIT_EXECUTABLE
 )
 
 find_program(FILECHECK_EXECUTABLE
-  NAMES FileCheck
+  NAMES FileCheck filecheck
   HINTS "${LLVM_TOOLS_BINARY_DIR}"
   DOC "Path to the FileCheck utility"
 )
