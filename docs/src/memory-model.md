@@ -108,8 +108,8 @@ In this example, the `ref_mut_t` function can pass `t` as a sink to `own_t`, whi
 
 ## Eter's memory model
 
-Eter embraces the MVS as a core part of its memory model.
-In Eter, all values are truly independent and can be mutated in place without copying, while the compiler statically guarantees that there are no shared mutable references. 
+Eter embraces the MVS as a core part of its memory model, but introduces a unique twist by introducing the concept of **circuits** to manage how values are stored, accessed, and mutated in memory.
+In Eter, all values are treated as independent entities with their own memory locations, and can be transferred between different circuits that govern their ownership, mutability, and memory semantics.
 This eliminates the need for a GC or ARC and allows for efficient memory usage while maintaining the benefits of value semantics.
 
 ### The building blocks of memory
@@ -132,7 +132,7 @@ Eter's memory model ensures that all memory locations are either disjoint or one
 ### The Eter's Circuits
 
 Different types of variables in Eter have different ownership, mutability, and memory semantics, which determine how they interact with memory and how they can be used in the program. 
-There are four main types of variables in Eter's memory model: `let`, `mut`, `mov`, and `proj`. 
+There are four main types of variables in Eter's memory model: `let`, `let mut`, `let mov`, and `let proj`. 
 Each of these variable defines a different **circuit** for how values are stored, accessed, and modified in memory, and they have different implications for performance.
 One can think of these **circuits** as governing how values flow through the program and how they are stored and accessed in memory.
 
@@ -177,7 +177,8 @@ let y: i32 = x; // 'y' is a new let variable that
 
 ##### From `let` to `mut` circuit
 
-If a `let` variable is assigned to a `mut` variable, it is moved to the `mut` circuit. However, since the `let` circuit allows for shared views (multiple variables referencing the same memory location) and the `let` variables must be valid in scope, the compiler performs an implicit copy to ensure that the new `mut` variable has its own independent and exclusive memory location.
+If a `let` variable is assigned to a `mut` variable, it is moved to the `mut` circuit. 
+However, since the `let` circuit allows for shared views (multiple variables referencing the same memory location) and the `let` variables must be valid in scope, the compiler performs an implicit copy to ensure that the new `mut` variable has its own independent and exclusive memory location.
 This ensures that any subsequent modifications to the `mut` variable do not affect the original `let` variable or any other variables that might be referencing the same data.
 The following example illustrates this behavior:
 ```rust
@@ -191,6 +192,20 @@ y = 10;
 // x = 1
 // y = 10
 ```
+If we would admit a direct move from `let` to `mut` without copying, in the presence of concurrent threads or multiple views, we would have a situation where one thread could be modifying the value through the `mut` variable while another thread is still referencing the same memory location through the `let` variable, leading to data races and undefined behavior. Instead, by enforcing an implicit copy, the compiler ensures that each thread or view has its own independent copy of the data, thus maintaining thread safety and preventing data races.
+```rust
+use std::thread::{self, JoinHandle};
+
+let x: i32 = 1; // 'x' is a let variable that owns 
+                // the integer value.
+
+let first: JoinHandle<unit> = thread::spawn(|| { let _ = x; /* Thread 1 reads 'x' */ });
+let second: JoinHandle<unit> = thread::spawn(|| { let _ = x; /* Thread 2 reads 'x' */ });
+
+first.join().or_else(|_| panic("Thread 1 panicked"));
+second.join().or_else(|_| panic("Thread 2 panicked"));
+```
+
 
 ##### From `let` to `mov` circuit
 
@@ -352,7 +367,10 @@ fn main() {
 ```
 - When working with complex data structures (like structs or arrays), you often want to mutate specific fields without copying the entire structure. Projections allow you to create mutable references to individual fields, enabling efficient in-place updates while keeping the overall structure intact.
 ```rust
-struct S { mut first: i32, mut second: i32 }
+struct S { 
+    pub mut first: i32, 
+    pub mut second: i32 
+}
 
 fn do_something(let x: i32) { /* ... */ }
 
@@ -670,7 +688,10 @@ The system ensures safety by verifying that the same path, or overlapping segmen
 
 For instance, consider the following example:
 ```rust
-struct Point { mut x: i32, mut y: i32 }
+struct Point { 
+    pub mut x: i32, 
+    pub mut y: i32 
+}
 
 fn move_point(proj p: Point, proj target: i32) {}
 
