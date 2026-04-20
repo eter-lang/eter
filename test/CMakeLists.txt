@@ -6,15 +6,22 @@
 #
 #===----------------------------------------------------------------------===#
 
+if(DEFINED LLVM_DIR)
+  get_filename_component(LLVM_DIR_PARENT "${LLVM_DIR}" PATH)
+  get_filename_component(LLVM_DIR_PARENT "${LLVM_DIR_PARENT}" PATH)
+  get_filename_component(LLVM_ROOT_DIR "${LLVM_DIR_PARENT}" PATH)
+  set(LLVM_TOOL_BIN_DIR "${LLVM_ROOT_DIR}/bin")
+endif()
+
 find_program(ETER_LIT_EXECUTABLE
   NAMES llvm-lit lit
-  HINTS "${LLVM_TOOLS_BINARY_DIR}"
+  HINTS "${LLVM_TOOLS_BINARY_DIR}" "${LLVM_TOOL_BIN_DIR}"
   DOC "Path to the lit test runner"
 )
 
 find_program(FILECHECK_EXECUTABLE
   NAMES FileCheck filecheck
-  HINTS "${LLVM_TOOLS_BINARY_DIR}"
+  HINTS "${LLVM_TOOLS_BINARY_DIR}" "${LLVM_TOOL_BIN_DIR}"
   DOC "Path to the FileCheck utility"
 )
 
