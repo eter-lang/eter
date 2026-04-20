@@ -41,6 +41,7 @@ jobs:
           CC: ${{ matrix.compiler.CC }}
           CXX: ${{ matrix.compiler.CXX }}
         run: |
+          export PATH="${LLVM_PREFIX}/bin:$PATH"
           mkdir build && cd build
           cmake -DCMAKE_PREFIX_PATH="${LLVM_PREFIX}" \
                 -DCMAKE_BUILD_TYPE=${{ matrix.type }} \
@@ -48,5 +49,6 @@ jobs:
           ninja -j2
       - name: Run tests
         run: |
+          export PATH="${LLVM_PREFIX}/bin:$PATH"
           cd build
           lit -va ./test/

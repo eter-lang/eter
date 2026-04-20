@@ -9,12 +9,16 @@
 find_program(ETER_LIT_EXECUTABLE
   NAMES llvm-lit lit
   HINTS "${LLVM_TOOLS_BINARY_DIR}"
+  PATHS "${LLVM_TOOLS_BINARY_DIR}"
+  PATH_SUFFIXES bin
   DOC "Path to the lit test runner"
 )
 
 find_program(FILECHECK_EXECUTABLE
   NAMES FileCheck filecheck llvm-FileCheck llvm-filecheck
   HINTS "${LLVM_TOOLS_BINARY_DIR}"
+  PATHS "${LLVM_TOOLS_BINARY_DIR}"
+  PATH_SUFFIXES bin
   DOC "Path to the FileCheck utility"
 )
 
