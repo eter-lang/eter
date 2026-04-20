@@ -6,24 +6,40 @@
 #
 #===----------------------------------------------------------------------===#
 
+set(LLVM_TOOL_BIN_DIR "")
+if(DEFINED LLVM_TOOLS_BINARY_DIR)
+  list(APPEND LLVM_TOOL_BIN_DIR "${LLVM_TOOLS_BINARY_DIR}")
+endif()
+
 if(DEFINED LLVM_DIR)
   get_filename_component(LLVM_DIR_PARENT "${LLVM_DIR}" PATH)
   get_filename_component(LLVM_DIR_PARENT "${LLVM_DIR_PARENT}" PATH)
   get_filename_component(LLVM_ROOT_DIR "${LLVM_DIR_PARENT}" PATH)
-  set(LLVM_TOOL_BIN_DIR "${LLVM_ROOT_DIR}/bin")
+  list(APPEND LLVM_TOOL_BIN_DIR "${LLVM_ROOT_DIR}/bin")
 endif()
+
+if(DEFINED CMAKE_PREFIX_PATH)
+  foreach(_prefix IN LISTS CMAKE_PREFIX_PATH)
+    list(APPEND LLVM_TOOL_BIN_DIR "${_prefix}/bin")
+  endforeach()
+endif()
+
+message(STATUS "LLVM_DIR=${LLVM_DIR}")
+message(STATUS "LLVM_TOOLS_BINARY_DIR=${LLVM_TOOLS_BINARY_DIR}")
+message(STATUS "LLVM_TOOL_BIN_DIR=${LLVM_TOOL_BIN_DIR}")
+message(STATUS "CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
 
 find_program(ETER_LIT_EXECUTABLE
   NAMES llvm-lit lit
-  HINTS "${LLVM_TOOLS_BINARY_DIR}" "${LLVM_TOOL_BIN_DIR}"
-  PATHS "${LLVM_TOOL_BIN_DIR}"
+  HINTS ${LLVM_TOOL_BIN_DIR}
+  PATHS ${LLVM_TOOL_BIN_DIR}
   DOC "Path to the lit test runner"
 )
 
 find_program(FILECHECK_EXECUTABLE
   NAMES FileCheck filecheck
-  HINTS "${LLVM_TOOLS_BINARY_DIR}" "${LLVM_TOOL_BIN_DIR}"
-  PATHS "${LLVM_TOOL_BIN_DIR}"
+  HINTS ${LLVM_TOOL_BIN_DIR}
+  PATHS ${LLVM_TOOL_BIN_DIR}
   DOC "Path to the FileCheck utility"
 )
 
