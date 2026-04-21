@@ -25,7 +25,7 @@ jobs:
         run: |
           pacman -Sy --needed --noconfirm \
             ca-certificates cmake ninja gcc \
-            llvm clang mlir \
+            llvm clang \
             python python-pip python-setuptools \
             wget diffutils xz
           pip3 install lit --break-system-packages
@@ -36,8 +36,15 @@ jobs:
         run: |
           LLVM_CMAKE_DIR="$(llvm-config --cmakedir)"
           MLIR_CMAKE_DIR="${LLVM_CMAKE_DIR%/llvm}/mlir"
-          FILECHECK_PATH="$(command -v FileCheck || command -v FileCheck-22)"
-          LLVM_TOOLS_BIN_DIR="$(dirname "${FILECHECK_PATH}")"
+          if [[ ! -f "${MLIR_CMAKE_DIR}/MLIRConfig.cmake" ]]; then
+            MLIR_CMAKE_DIR="/usr/lib/cmake/mlir"
+          fi
+          FILECHECK_PATH="$(command -v FileCheck || command -v FileCheck-22 || true)"
+          if [[ -n "${FILECHECK_PATH}" ]]; then
+            LLVM_TOOLS_BIN_DIR="$(dirname "${FILECHECK_PATH}")"
+          else
+            LLVM_TOOLS_BIN_DIR="/usr/bin"
+          fi
           mkdir build && cd build
           cmake -DLLVM_DIR="${LLVM_CMAKE_DIR}" \
                 -DMLIR_DIR="${MLIR_CMAKE_DIR}" \
