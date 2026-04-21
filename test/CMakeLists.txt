@@ -29,19 +29,23 @@ message(STATUS "LLVM_TOOLS_BINARY_DIR=${LLVM_TOOLS_BINARY_DIR}")
 message(STATUS "LLVM_TOOL_BIN_DIR=${LLVM_TOOL_BIN_DIR}")
 message(STATUS "CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
 
-find_program(ETER_LIT_EXECUTABLE
-  NAMES llvm-lit llvm-lit-22 lit
-  HINTS ${LLVM_TOOL_BIN_DIR}
-  PATHS ${LLVM_TOOL_BIN_DIR} ENV PATH
-  DOC "Path to the lit test runner"
-)
+if(NOT DEFINED ETER_LIT_EXECUTABLE)
+  find_program(ETER_LIT_EXECUTABLE
+    NAMES llvm-lit llvm-lit-22 lit
+    HINTS ${LLVM_TOOL_BIN_DIR}
+    PATHS ${LLVM_TOOL_BIN_DIR} ENV PATH
+    DOC "Path to the lit test runner"
+  )
+endif()
 
-find_program(FILECHECK_EXECUTABLE
-  NAMES FileCheck FileCheck-22 filecheck filecheck-22 llvm-FileCheck llvm-filecheck
-  HINTS ${LLVM_TOOL_BIN_DIR}
-  PATHS ${LLVM_TOOL_BIN_DIR} ENV PATH
-  DOC "Path to the FileCheck utility"
-)
+if(NOT DEFINED FILECHECK_EXECUTABLE)
+  find_program(FILECHECK_EXECUTABLE
+    NAMES FileCheck FileCheck-22 filecheck filecheck-22 llvm-FileCheck llvm-filecheck llvm-FileCheck-22 llvm-filecheck-22
+    HINTS ${LLVM_TOOL_BIN_DIR}
+    PATHS ${LLVM_TOOL_BIN_DIR} ENV PATH
+    DOC "Path to the FileCheck utility"
+  )
+endif()
 
 if(NOT FILECHECK_EXECUTABLE)
   set(_FILECHECK_CANDIDATE_NAMES
@@ -51,6 +55,8 @@ if(NOT FILECHECK_EXECUTABLE)
     filecheck-22
     llvm-FileCheck
     llvm-filecheck
+    llvm-FileCheck-22
+    llvm-filecheck-22
   )
 
   foreach(_candidate_dir IN LISTS LLVM_TOOL_BIN_DIR)

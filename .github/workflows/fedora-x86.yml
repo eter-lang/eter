@@ -44,21 +44,29 @@ jobs:
           export PATH="${LLVM_PREFIX}/bin:${PATH}"
           LLVM_CMAKE_DIR="${LLVM_PREFIX}/lib/cmake/llvm"
           MLIR_CMAKE_DIR="${LLVM_PREFIX}/lib/cmake/mlir"
-          FILECHECK_PATH="$(command -v FileCheck || command -v FileCheck-22 || true)"
+          FILECHECK_PATH="$(command -v FileCheck || command -v FileCheck-22 || command -v llvm-FileCheck || command -v llvm-FileCheck-22 || command -v filecheck || command -v filecheck-22 || true)"
+          LIT_PATH="$(command -v llvm-lit || command -v llvm-lit-22 || command -v lit || true)"
           if [ -n "${FILECHECK_PATH}" ]; then
             LLVM_TOOLS_BIN_DIR="$(dirname "${FILECHECK_PATH}")"
           else
             LLVM_TOOLS_BIN_DIR="${LLVM_PREFIX}/bin"
           fi
           mkdir build && cd build
+          EXTRA_CMAKE_ARGS=""
+          if [ -n "${FILECHECK_PATH}" ]; then
+            EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DFILECHECK_EXECUTABLE=${FILECHECK_PATH}"
+          fi
+          if [ -n "${LIT_PATH}" ]; then
+            EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DETER_LIT_EXECUTABLE=${LIT_PATH}"
+          fi
           cmake -DLLVM_DIR="${LLVM_CMAKE_DIR}" \
                 -DMLIR_DIR="${MLIR_CMAKE_DIR}" \
                 -DLLVM_TOOLS_BINARY_DIR="${LLVM_TOOLS_BIN_DIR}" \
+                ${EXTRA_CMAKE_ARGS} \
                 -DCMAKE_BUILD_TYPE=${{ matrix.type }} \
                 -G Ninja ../
           ninja -j2
       - name: Run tests
         run: |
-          export PATH="${LLVM_PREFIX}/bin:${PATH}"
           cd build
           lit -va ./test/
