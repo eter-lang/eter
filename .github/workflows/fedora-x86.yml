@@ -12,6 +12,9 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     container: fedora:42
+    env:
+      LLVM_VERSION: "22.1.2"
+      LLVM_PREFIX: /opt/llvm-22
     strategy:
       fail-fast: false
       matrix:
@@ -25,22 +28,27 @@ jobs:
         run: |
           dnf install -y --setopt=install_weak_deps=False \
             ca-certificates cmake ninja-build gcc gcc-c++ \
-            llvm llvm-devel clang mlir mlir-devel \
+            libxml2-devel \
             python3 python3-pip python3-setuptools \
             wget xz diffutils zlib-devel ncurses-libs libffi-devel
+          wget -nv --tries=5 --waitretry=5 --timeout=30 \
+            "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
+          tar xf "LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
+          mv "LLVM-${LLVM_VERSION}-Linux-X64" "${LLVM_PREFIX}"
           pip3 install lit --break-system-packages
       - name: Build eter
         env:
           CC: ${{ matrix.compiler.CC }}
           CXX: ${{ matrix.compiler.CXX }}
         run: |
-          LLVM_CMAKE_DIR="$(llvm-config --cmakedir)"
-          MLIR_CMAKE_DIR="${LLVM_CMAKE_DIR%/llvm}/mlir"
+          export PATH="${LLVM_PREFIX}/bin:${PATH}"
+          LLVM_CMAKE_DIR="${LLVM_PREFIX}/lib/cmake/llvm"
+          MLIR_CMAKE_DIR="${LLVM_PREFIX}/lib/cmake/mlir"
           FILECHECK_PATH="$(command -v FileCheck || command -v FileCheck-22 || true)"
           if [ -n "${FILECHECK_PATH}" ]; then
             LLVM_TOOLS_BIN_DIR="$(dirname "${FILECHECK_PATH}")"
           else
-            LLVM_TOOLS_BIN_DIR="/usr/bin"
+            LLVM_TOOLS_BIN_DIR="${LLVM_PREFIX}/bin"
           fi
           mkdir build && cd build
           cmake -DLLVM_DIR="${LLVM_CMAKE_DIR}" \
@@ -51,5 +59,6 @@ jobs:
           ninja -j2
       - name: Run tests
         run: |
+          export PATH="${LLVM_PREFIX}/bin:${PATH}"
           cd build
           lit -va ./test/
