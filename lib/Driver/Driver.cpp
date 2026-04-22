@@ -31,12 +31,12 @@ bool Driver::parseCommandLine(int Argc, char **Argv) {
     if (Arg == "--version") {
       Options.ShowVersion = true;
       return true;
-    } 
+    }
     if (Arg == "--help" || Arg == "-h") {
       Options.ShowHelp = true;
       return true;
-    } 
-    
+    }
+
     if (Arg == "-O0") {
       Options.OptimizationLevel = 0;
     } else if (Arg == "-o" && I + 1 < Argc) {
@@ -93,7 +93,8 @@ int Driver::compileFile(const std::string &InputFile) {
   // 5. Optimization passes
   // 6. Code generation
 
-  llvm::outs() << "eter: remark: Optimization level: -O" << Options.OptimizationLevel << "\n";
+  llvm::outs() << "eter: remark: Optimization level: -O"
+               << Options.OptimizationLevel << "\n";
 
   if (!Options.OutputFile.empty()) {
     llvm::outs() << "eter: remark: Output file: " << Options.OutputFile << "\n";
@@ -103,7 +104,7 @@ int Driver::compileFile(const std::string &InputFile) {
 }
 
 void Driver::printHelp() const {
-  std::cout << "Eter Compiler " << eter::getVersionString() << "\n"
+  std::cout << "Eter Compiler " << eter::version() << "\n"
             << "\nUsage: eter [options] <input-files>\n"
             << "\nOptions:\n"
             << "  -h, --help              Show this help message\n"
@@ -117,7 +118,7 @@ void Driver::printHelp() const {
 }
 
 void Driver::printVersion() const {
-  std::cout << "Eter compiler version " << eter::getVersionString() << '\n';
+  std::cout << "Eter compiler version " << eter::version() << '\n';
 }
 
 } // namespace eter

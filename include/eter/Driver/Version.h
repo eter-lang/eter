@@ -13,9 +13,22 @@
 
 namespace eter {
 
-// Provide a simple global function returning the version string. Keep this
-// minimal so it can be used during startup and diagnostics.
-std::string getVersionString();
+namespace {
+
+/// Represents the version of the Eter compiler.
+struct Version {
+  const int Major;
+  const int Minor;
+  const int Patch;
+
+  constexpr Version(int Major, int Minor, int Patch) noexcept
+      : Major(Major), Minor(Minor), Patch(Patch) {}
+};
+
+} // namespace
+
+/// The current version of the Eter compiler.
+[[nodiscard]] std::string_view version() noexcept;
 
 } // namespace eter
 
