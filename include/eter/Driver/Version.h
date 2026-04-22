@@ -9,7 +9,7 @@
 #ifndef ETER_DRIVER_VERSION_H
 #define ETER_DRIVER_VERSION_H
 
-#include <string>
+#include <string_view>
 
 namespace eter {
 
