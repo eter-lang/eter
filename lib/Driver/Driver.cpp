@@ -19,13 +19,13 @@ namespace eter {
 
 Driver::Driver() = default;
 
-bool Driver::parseCommandLine(int argc, char **Argv) {
-  if (argc < 2) {
+bool Driver::parseCommandLine(int Argc, char **Argv) {
+  if (Argc < 2) {
     printHelp();
     return false;
   }
 
-  for (int I = 1; I < argc; ++I) {
+  for (int I = 1; I < Argc; ++I) {
     const std::string_view Arg(Argv[I]);
 
     if (Arg == "--version") {
@@ -39,7 +39,7 @@ bool Driver::parseCommandLine(int argc, char **Argv) {
 
     if (Arg == "-O0") {
       Options.OptimizationLevel = 0;
-    } else if (Arg == "-o" && I + 1 < argc) {
+    } else if (Arg == "-o" && I + 1 < Argc) {
       Options.OutputFile = Argv[++I];
     } else if (Arg[0] != '-') {
       // Treat as input file
