@@ -9,7 +9,6 @@
 #ifndef ETER_DRIVER_DRIVER_H
 #define ETER_DRIVER_DRIVER_H
 
-#include <string>
 #include <vector>
 
 namespace eter {
