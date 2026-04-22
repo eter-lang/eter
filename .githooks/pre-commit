@@ -60,7 +60,7 @@ if [[ ${#cpp_files[@]} -gt 0 ]]; then
   clang-format --dry-run --Werror "${cpp_files[@]}"
 fi
 
-if [[ ${#source_files[@]} -gt 0 ]]; then
+if [[ ${#cpp_files[@]} -gt 0 ]]; then
   if ! command -v clang-tidy >/dev/null 2>&1; then
     echo "[eter] error: clang-tidy is required for lint checks." >&2
     exit 1
@@ -73,7 +73,10 @@ if [[ ${#source_files[@]} -gt 0 ]]; then
   fi
 
   echo "[eter] Checking clang-tidy..."
-  clang-tidy -p build "${source_files[@]}"
+  if ! clang-tidy -p build --warnings-as-errors='*' "${cpp_files[@]}"; then
+    echo "[eter] clang-tidy checks failed." >&2
+    exit 1
+  fi
 fi
 
 echo "[eter] All pre-commit checks passed."

@@ -9,10 +9,21 @@
 #include "eter/Driver/Version.h"
 
 #include <string>
+#include <string_view>
 
 namespace eter {
 
 namespace {
+
+// Represents the version of the Eter compiler.
+struct Version {
+  const int Major;
+  const int Minor;
+  const int Patch;
+
+  constexpr Version(int Major, int Minor, int Patch) noexcept
+      : Major(Major), Minor(Minor), Patch(Patch) {}
+};
 
 constexpr Version CurrentVersion(0, 1, 0);
 
