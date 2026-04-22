@@ -113,7 +113,7 @@ configure_file(
 
 add_custom_target(check-eter
   COMMAND ${ETER_LIT_EXECUTABLE} -sv ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS eter
+  DEPENDS eterc
   COMMENT "Running Eter lit test suite"
 )
 
