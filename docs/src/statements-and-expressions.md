@@ -89,12 +89,11 @@ fn main() {
 
 An expression statement is an expression that is evaluated for its side effects, followed by a semicolon. The value produced by the expression is discarded.
 
-Common examples include function calls and method invocations.
+Common examples include function calls.
 
 | Type | Example | Description |
 | :--- | :--- | :--- |
 | **Function Call** | `print("Hello");` | Executes the function and discards the return value. |
-| **Member Function Invocation** | `list::append(1);` | Executes a member function for side effects. |
 
 When a block-based expression (such as `if`, `match`, or a simple `{ ... }` block) is used as an expression statement, the trailing semicolon is optional.
 
@@ -202,6 +201,12 @@ let my_x: i32 = p.x;                 // Accesses the 'x' field of the struct 'p'
 ```
 
 ### Call expressions
+
+Call expressions invoke functions or closures. They consist of an expression that evaluates to a callable entity, followed by a parenthesized list of arguments.
+
+```rust
+let result: i32 = add(5, 3);         // Function call
+```
 
 ### Loop expressions
 
