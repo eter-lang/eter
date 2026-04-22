@@ -45,6 +45,25 @@ Then run:
 git clang-format HEAD~1
 ```
 
+## Run clang-tidy on staged changes
+
+To run clang-tidy only on files in the staged diff (useful for pre-commit checks), you can use:
+
+```bash
+clang-tidy -p build --warnings-as-errors='*' --header-filter='.*' \
+$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$')
+```
+
+On macOS, where clang-tidy needs the SDK sysroot, use:
+
+```bash
+clang-tidy -p build --warnings-as-errors='*' --header-filter='.*' \
+$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$') \
+-- -isysroot $(xcrun --show-sdk-path)
+```
+
+These commands are safe to run locally and match what our `pre-commit` hook executes for staged C/C++ files.
+
 If `git clang-format` is not available, install LLVM/Clang and make sure its tools are on your `PATH`.
 On Linux, install the Clang tooling package for your distribution so that `clang-format`
 and `git-clang-format` are available. Then rerun the command above.
@@ -59,6 +78,13 @@ clang-format --dry-run --Werror <files>
 
 # Apply formatting in place
 clang-format -i <files>
+
+# Run clang-format on staged changes (dry-run)
+```
+
+```bash
+clang-format --dry-run --Werror $(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$')
+```
 
 # Run clang-tidy using the CMake compile commands database
 clang-tidy -p build <source-files>
