@@ -6,9 +6,20 @@
 #
 #===----------------------------------------------------------------------===#
 
-add_executable(eter eter.cpp)
+add_executable(eterc eter.cpp)
 
-target_link_libraries(eter
+target_link_libraries(eterc
   PRIVATE
-    eter::Basic
+    eter::Driver
+)
+
+target_include_directories(eterc SYSTEM
+  PRIVATE
+    ${LLVM_INCLUDE_DIRS}
+)
+
+target_compile_options(eterc
+  PRIVATE
+    ${LLVM_CXXFLAGS}
+    -Wno-unused-parameter # LLVM headers trigger this warning, and we don't want to see it in our code.
 )

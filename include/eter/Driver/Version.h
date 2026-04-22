@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ETER_BASIC_VERSION_H
-#define ETER_BASIC_VERSION_H
+#ifndef ETER_DRIVER_VERSION_H
+#define ETER_DRIVER_VERSION_H
 
 #include <string>
 
 namespace eter {
 
+// Provide a simple global function returning the version string. Keep this
+// minimal so it can be used during startup and diagnostics.
 std::string getVersionString();
 
 } // namespace eter
 
-#endif // ETER_BASIC_VERSION_H
+#endif // ETER_DRIVER_VERSION_H

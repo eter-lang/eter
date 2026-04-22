@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "eter/Basic/Version.h"
+#include "eter/Driver/Version.h"
 
 #include <string>
 
 namespace eter {
 
 std::string getVersionString() {
-  return "eter 0.1.0";
+  return "0.1.0";
 }
 
 } // namespace eter

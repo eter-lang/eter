@@ -6,17 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "eter/Basic/Version.h"
+#include "eter/Driver/Driver.h"
 
-#include <iostream>
-#include <string_view>
+int main(int argc, char **argv) {
+  eter::Driver Driver;
 
-int main(int Argc, char **Argv) {
-  if (Argc > 1 && std::string_view(Argv[1]) == "--version") {
-    std::cout << eter::getVersionString() << '\n';
-    return 0;
+  if (!Driver.parseCommandLine(argc, argv)) {
+    return 1;
   }
 
-  std::cout << "eter: LLVM/MLIR-oriented project scaffold is ready.\n";
-  return 0;
+  return Driver.run();
 }

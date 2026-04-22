@@ -18,6 +18,10 @@ option(ETER_INCLUDE_TESTS "Enable Eter's lit/FileCheck test suite" ON)
 option(ETER_ENABLE_SANITIZERS "Enable sanitizer instrumentation for supported targets" OFF)
 set(ETER_SANITIZERS "address;undefined;leak" CACHE STRING "Sanitizers to enable when ETER_ENABLE_SANITIZERS is ON. Supported values: address;undefined;leak;thread;memory")
 
+# Option to run clang-tidy as part of the build. Disabled by default because
+# running clang-tidy during every compile can significantly slow incremental builds.
+option(ETER_ENABLE_CLANG_TIDY "Run clang-tidy during build (may slow builds)" OFF)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -97,6 +101,18 @@ set(ETER_REQUIRED_LLVM_NEXT_VERSION "${ETER_REQUIRED_LLVM_NEXT_MAJOR}.0.0")
 find_package(LLVM CONFIG REQUIRED)
 find_package(MLIR CONFIG REQUIRED)
 find_package(Doxygen)
+
+# If requested, find clang-tidy and configure CMake to run it during compilation.
+if(ETER_ENABLE_CLANG_TIDY)
+  find_program(CLANG_TIDY_BIN clang-tidy HINTS /opt/homebrew/opt/llvm/bin /usr/bin)
+  if(CLANG_TIDY_BIN)
+    message(STATUS "Found clang-tidy: ${CLANG_TIDY_BIN}; enabling clang-tidy during build")
+    # Let users control checks via a .clang-tidy file; don't force checks here.
+    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_BIN}")
+  else()
+    message(WARNING "ETER_ENABLE_CLANG_TIDY is ON but clang-tidy was not found on PATH")
+  endif()
+endif()
 
 if(LLVM_PACKAGE_VERSION VERSION_LESS ETER_REQUIRED_LLVM_VERSION OR
    NOT LLVM_PACKAGE_VERSION VERSION_LESS ETER_REQUIRED_LLVM_NEXT_VERSION)

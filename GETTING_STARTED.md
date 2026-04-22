@@ -157,6 +157,36 @@ cmake -S . -B build -G Ninja \
 
 Eter currently expects **LLVM/MLIR 22.x**.
 
+## Clang-Tidy (optional)
+
+To reproduce warnings shown by `clangd`/`clang-tidy` in your editor or to
+run static checks as part of the build, Eter provides an optional CMake
+flag that integrates `clang-tidy` into the compilation pipeline.
+
+- Requirements: have `clang-tidy` installed and available in your `PATH`.
+- Enable: pass `-DETER_ENABLE_CLANG_TIDY=ON` when configuring with CMake.
+- Caveats: enabling `clang-tidy` will slow down builds and may cause the
+  build to fail if `clang-tidy` reports errors or warnings treated as errors.
+
+Example (configure and build):
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DETER_ENABLE_CLANG_TIDY=ON
+cmake --build build
+```
+
+To run `clang-tidy` manually on a single file, use the compilation database in
+`build/` and provide any extra compiler arguments required for your setup
+(for example, include paths or system root flags):
+
+```bash
+clang-tidy -p build path/to/file.cpp -- -Iinclude [other compiler args]
+```
+
+Recommendation: keep `ETER_ENABLE_CLANG_TIDY` off by default and enable it in
+CI or locally when you want stricter checks.
+
+
 ## IDE and LSP Integration
 
 For `clangd`-based IDE or LSP services, it is recommended to keep a `.clangd`
