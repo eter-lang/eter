@@ -42,14 +42,14 @@ Item declaration statements introduce new items into the current scope. The most
 | :--- | :--- | :--- |
 | **Variable Binding** | Binds a value to a new local variable, with a required type annotation. | `let name: String = "Alice";` |
 | **Mutable Binding** | Binds a value to a mutable local variable. | `mut count: i32 = 0;` |
-| **Constant Declaration** | Defines a compile-time constant. | `const MAX_VAL: u32 = 100;` |
+| **Constant Declaration** | Defines a compile-time constant. | `let MAX_VAL: u32 = 100;` |
 
 > [!NOTE]
 > Constant names are typically written in `UPPER_SNAKE_CASE` by convention, but they are not constrained to be uppercase by the language.
 
 #### Nested Items and Scoping
 
-Items (such as `const`,  or nested `let` variables) can be declared inside any block scope. This allows you to restrict the visibility of an item strictly to the block it was declared in, keeping the outer namespace clean.
+Items (such as nested `let` variables) can be declared inside any block scope. This allows you to restrict the visibility of an item strictly to the block it was declared in, keeping the outer namespace clean.
 
 Nested items can be declared inside regular function blocks, unnamed (anonymous) scopes `{ ... }`, and `unsafe { ... }` blocks. They are particularly useful inside functional blocks like `if` or `if-else` expressions to encapsulate temporary logic.
 
@@ -63,12 +63,12 @@ fn main() {
     // that is only needed for a specific branch.
     if condition {
         let inner_val: i32 = 20;
-        const LOCAL_MULTIPLIER: i32 = 5;
+        let LOCAL_MULTIPLIER: i32 = 5;
         let result: i32 = inner_val * LOCAL_MULTIPLIER;
-        print(result);
+        do_something(result);
     } else {
         let fallback_val: i32 = 0;
-        print(fallback_val);
+        do_something(fallback_val);
     }
     // Error! `inner_val`, `LOCAL_MULTIPLIER`, and `fallback_val`
     // are out of scope and cannot be accessed here.
@@ -93,7 +93,7 @@ Common examples include function calls.
 
 | Type | Example | Description |
 | :--- | :--- | :--- |
-| **Function Call** | `print("Hello");` | Executes the function and discards the return value. |
+| **Function Call** | `do_something("Hello");` | Executes the function and discards the return value. |
 
 When a block-based expression (such as `if`, `match`, or a simple `{ ... }` block) is used as an expression statement, the trailing semicolon is optional.
 
@@ -234,7 +234,7 @@ while n > 0 {
 
 for( i: i32 = 0; i < 10; i++){
     if (i % 2 == 0){
-        print(i);
+        do_something(i);
     }
 }
 
@@ -256,7 +256,7 @@ let result: str = if condition {
 
 // if used for side effects (evaluates to ())
 if result == "Success" {
-    print("Everything is fine");
+    do_something("Everything is fine");
 }
 ```
 
@@ -286,10 +286,10 @@ You can also use patterns to destructure types or bind variables:
 let coords: (i32, i32) = (0, 10);
 
 match coords {
-    (0, 0) => print("Origin"),
-    (x, 0) => print("On the X axis"),
-    (0, y) => print("On the Y axis"),
-    (x, y) => print("Somewhere else"),
+    (0, 0) => do_something("Origin"),
+    (x, 0) => do_something("On the X axis"),
+    (0, y) => do_something("On the Y axis"),
+    (x, y) => do_something("Somewhere else"),
 }
 ```
 
