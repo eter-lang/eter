@@ -24,7 +24,12 @@ fi
 
 echo "[eter] Running pre-commit checks..."
 
-git diff --cached --check
+# Run git diff --cached --check without invoking the pager. If there are
+# problems, print them and fail the hook.
+if ! output=$(git --no-pager diff --cached --check 2>&1); then
+  printf '%s\n' "$output"
+  exit 1
+fi
 
 cpp_files=()
 source_files=()

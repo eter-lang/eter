@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This is the main entry point for the Eter compiler. It initializes the
+// compiler driver, parses command-line arguments, and starts the compilation
+// process.
+//
+//===----------------------------------------------------------------------===//
 
 #include "eter/Driver/Driver.h"
 
