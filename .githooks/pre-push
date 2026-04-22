@@ -26,4 +26,7 @@ cmake --build build
 echo "[eter] Running test suite..."
 cmake --build build --target check-eter
 
+echo "[eter] Running the docs build..."
+cmake --build build --target doc-doxygen
+
 echo "[eter] Pre-push checks passed."
