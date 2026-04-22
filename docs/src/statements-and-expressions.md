@@ -94,7 +94,7 @@ Common examples include function calls and method invocations.
 | Type | Example | Description |
 | :--- | :--- | :--- |
 | **Function Call** | `print("Hello");` | Executes the function and discards the return value. |
-| **Member Function Invocation** | `list.append(1);` | Executes a member function for side effects. |
+| **Member Function Invocation** | `list::append(1);` | Executes a member function for side effects. |
 
 When a block-based expression (such as `if`, `match`, or a simple `{ ... }` block) is used as an expression statement, the trailing semicolon is optional.
 
@@ -165,9 +165,18 @@ Access expressions allow you to retrieve specific elements from compound types l
 Array expressions create fixed-size collections of elements. Index expressions retrieve elements from an array or slice using brackets `[]`. Indexing is always zero-based.
 
 ```rust
-let a: arr<i32>[3] = [1, 2, 3];       // Array expression (list of elements)
-let zeros: arr<i32>[5] = [0; 5];        // Array expression (repeated value: [0, 0, 0, 0, 0])
-let first: i32 = arr[0];             // Index expression (accessing the first element)
+let a: [i32; 3] = [1, 2, 3];        // Array expression (list of elements)
+let zeros: [i32; 5] = [0; 5];       // Array expression (repeated value: [0, 0, 0, 0, 0])
+let first: i32 = a[0];              // Index expression (accessing the first element)
+```
+
+#### Tensor and index expressions
+
+Tensor expressions create fixed-size, multi-dimensional collections of homogeneous elements (nD tensors). Tensor literal expressions use nested arrays.
+
+```rust
+let t: [i32; 2, 2] = [[1, 2], [3, 4]]; // Tensor expression (2x2 matrix)
+let element: i32 = t[0, 1];            // Index expression (accessing row 0, col 1)
 ```
 
 #### Tuple and index expressions
