@@ -217,7 +217,7 @@ cmake --build build --target check-eter
 To run the current driver executable directly:
 
 ```bash
-./build/tools/eter/eter --version
+./build/tools/eter/eterc --version
 ```
 
 This is also a simple smoke check that the build completed successfully.

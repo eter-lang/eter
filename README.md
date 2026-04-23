@@ -34,11 +34,11 @@ While [The Eter Reference](https://eter-lang.github.io/eter/) serves as the prim
 // tensor shape integrity and memory residency (e.g., @host, @gpu), ensuring 
 // zero-overhead data transitions and eliminating runtime shape mismatches.
 @model<TF /* TensorFlow */, version = V1>("mobilenet_v2")
-extern fn infer(x: tsor[f32; [1, 224, 224, 3]] @host) -> tsor[f32; [1, 1000]] @host;
+extern fn infer(x: [f32; 1, 224, 224, 3] @host) -> [f32; 1, 1000] @host;
 
 fn main() {
-    let input tsor[f32; [1, 224, 224, 3]] @host = tsor::from_image("dog.jpg");
-    let output tsor[f32; [1, 1000]] = infer(input);
+    let input [f32; 1, 224, 224, 3] @host = tsor::from_image("dog.jpg");
+    let output [f32; 1, 1000] = infer(input);
     print("Inference completed. Output shape: ", output.shape());
 }
 ```
