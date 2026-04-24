@@ -41,4 +41,8 @@ SourceBuffer::makeFromMemoryBuffer(std::unique_ptr<llvm::MemoryBuffer> Buffer,
   return SourceBuffer(Filename.str(), std::move(Buffer));
 }
 
+llvm::StringRef SourceBuffer::getFilename() const { return Filename; }
+
+llvm::StringRef SourceBuffer::getBuffer() const { return Buffer->getBuffer(); }
+
 } // namespace eter

@@ -8,6 +8,7 @@
 
 add_library(EterBase
   SourceBuffer.cpp
+  SourceManager.cpp
 )
 
 add_library(eter::Base ALIAS EterBase)

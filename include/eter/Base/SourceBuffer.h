@@ -43,6 +43,12 @@ public:
   static llvm::Expected<SourceBuffer>
   makeFromFileName(llvm::vfs::FileSystem &FS, llvm::StringRef Filename);
 
+  /// Return the name of the source file associated with this buffer.
+  llvm::StringRef getFilename() const;
+
+  /// Return the contents of the source file as a string reference.
+  llvm::StringRef getBuffer() const;
+
   /// Deleted default constructor to prevent creating an empty `SourceBuffer`.
   /// Use the factory methods (e.g., `makeFromFileName`) to create instances
   /// instead.
