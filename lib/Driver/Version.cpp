@@ -8,8 +8,8 @@
 
 #include "eter/Driver/Version.h"
 
+#include <llvm/ADT/StringRef.h>
 #include <string>
-#include <string_view>
 
 namespace eter {
 
@@ -34,6 +34,6 @@ const std::string CurrentVersionStr =
 
 } // namespace
 
-[[nodiscard]] std::string_view version() noexcept { return CurrentVersionStr; }
+[[nodiscard]] llvm::StringRef version() noexcept { return CurrentVersionStr; }
 
 } // namespace eter

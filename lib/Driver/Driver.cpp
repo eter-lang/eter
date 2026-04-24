@@ -13,7 +13,6 @@
 
 #include <iostream>
 #include <string>
-#include <string_view>
 
 namespace eter {
 
@@ -26,7 +25,7 @@ bool Driver::parseCommandLine(int Argc, char **Argv) {
   }
 
   for (int I = 1; I < Argc; ++I) {
-    const std::string_view Arg(Argv[I]);
+    const llvm::StringRef Arg(Argv[I]);
 
     if (Arg == "--version") {
       Options.ShowVersion = true;
@@ -104,7 +103,7 @@ int Driver::compileFile(const std::string &InputFile) {
 }
 
 void Driver::printHelp() const {
-  std::cout << "Eter Compiler " << eter::version() << "\n"
+  std::cout << "Eter Compiler " << eter::version().str() << "\n"
             << "\nUsage: eter [options] <input-files>\n"
             << "\nOptions:\n"
             << "  -h, --help              Show this help message\n"
@@ -118,7 +117,7 @@ void Driver::printHelp() const {
 }
 
 void Driver::printVersion() const {
-  std::cout << "Eter compiler version " << eter::version() << '\n';
+  std::cout << "Eter compiler version " << eter::version().str() << '\n';
 }
 
 } // namespace eter
