@@ -20,10 +20,22 @@ namespace eter {
 /// Eter source file. It provides utilities for loading the file into memory and
 /// accessing its contents.
 ///
-/// The `SourceBuffer` class is responsible for managing the memory buffer that
-/// holds the source file contents. It provides a static factory method to
-/// create a `SourceBuffer` instance from a file name, using the LLVM virtual
-/// file system (VFS).
+/// The buffer is backed by an `llvm::MemoryBuffer`, which may represent
+/// either:
+///  - heap-allocated memory, or
+///  - a memory-mapped file (mmap), or
+///  - other OS-backed storage provided by LLVM VFS.
+///
+/// Because of this, `SourceBuffer` is move-only and explicitly non-copyable.
+/// Copying would require defining complex ownership semantics for the
+/// underlying memory region (e.g., duplicating or sharing an mmap), which is
+/// intentionally avoided.
+///
+/// Instances must be created through factory methods (e.g. `makeFromFileName`)
+/// to ensure proper initialization and error handling.
+///
+/// The class guarantees that the underlying source text remains valid for the
+/// lifetime of the `SourceBuffer`.
 class SourceBuffer {
 public:
   /// Create a `SourceBuffer` from a file name. On failure, print an error
