@@ -6,26 +6,25 @@
 #
 #===----------------------------------------------------------------------===#
 
-add_library(EterDriver
-  Driver.cpp
-  Version.cpp
+add_library(EterBase
+  SourceBuffer.cpp
 )
 
-add_library(eter::Driver ALIAS EterDriver)
+add_library(eter::Base ALIAS EterBase)
 
-target_link_libraries(EterDriver
+target_link_libraries(EterBase
   PUBLIC
     EterProjectOptions
     LLVM
 )
 
-target_include_directories(EterDriver
+target_include_directories(EterBase
   PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-target_include_directories(EterDriver SYSTEM
+target_include_directories(EterBase SYSTEM
   PRIVATE
     ${LLVM_INCLUDE_DIRS}
 )

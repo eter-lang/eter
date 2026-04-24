@@ -6,15 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ETER_DRIVER_VERSION_H
-#define ETER_DRIVER_VERSION_H
+#ifndef ETER_LEXER_LEXER_H
+#define ETER_LEXER_LEXER_H
 
-#include <llvm/ADT/StringRef.h>
-namespace eter {
+namespace eter::lex {} // namespace eter::lex
 
-/// The current version of the Eter compiler.
-[[nodiscard]] llvm::StringRef version() noexcept;
-
-} // namespace eter
-
-#endif // ETER_DRIVER_VERSION_H
+#endif // ETER_LEXER_LEXER_H
