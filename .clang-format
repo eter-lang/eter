@@ -1,3 +1,15 @@
 ---
 BasedOnStyle: LLVM
 LineEnding: LF
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  # 2. Eter Headers
+  - Regex:           '^"eter/'
+    Priority:        0
+  # 3. LLVM/Clang Headers
+  - Regex:           '^<(llvm|llvm-c|clang|clang-c)/'
+    Priority:        1
+  # 4. System Headers
+  - Regex:           '^(<[^.]*>|(<[^.]*\.h>))'
+    Priority:        2

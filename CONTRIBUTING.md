@@ -172,6 +172,34 @@ When your change is ready:
 
 Small, isolated patches are much easier to review than large mixed changes.
 
+## Debug Output for Developers
+
+Eter uses a custom `ETER_DEBUG` macro (defined in `include/eter/Base/Debug.h`)
+that is independent of LLVM's debug system. When enabled, it supports:
+
+- `--debug` — enable all debug output
+- `--debug-only=<type>` — enable debug output only for the given type
+
+Enable the macro at configure time:
+
+```bash
+cmake -S . -B build -G Ninja -DETER_ENABLE_DEBUG=ON
+```
+
+Or disable it explicitly:
+
+```bash
+cmake -S . -B build -G Ninja -DETER_ENABLE_DEBUG=OFF
+```
+
+Default behavior:
+
+- `Debug` / `RelWithDebInfo` → `ON`
+- `Release` / `MinSizeRel` → `OFF`
+
+When `ETER_ENABLE_DEBUG=OFF`, all `ETER_DEBUG(...)` calls are compiled away and
+impose no runtime cost.
+
 ## Bug Reports and Review Context
 
 When reporting an issue or asking for review, include as much concrete context as

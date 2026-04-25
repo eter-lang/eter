@@ -144,6 +144,36 @@ By default, Eter enables `address`, `undefined`, and `leak`. To customize the
 sanitizers, set `-DETER_SANITIZERS="address;undefined;leak;thread"` or use
 `memory` for MemorySanitizer.
 
+### Debug Output
+
+Eter provides a custom debug output mechanism (`ETER_DEBUG`) that is
+independent of LLVM's debug system. It can be enabled or disabled at CMake
+configure time via the `ETER_ENABLE_DEBUG` option.
+
+**Default behavior:**
+
+- `Debug` / `RelWithDebInfo` builds: `ETER_ENABLE_DEBUG=ON` (debug macros are active)
+- `Release` / `MinSizeRel` builds: `ETER_ENABLE_DEBUG=OFF` (debug macros are stripped)
+
+**Override from the CLI:**
+
+```bash
+# Force debug ON even in a Release build
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DETER_ENABLE_DEBUG=ON
+
+# Force debug OFF even in a Debug build
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DETER_ENABLE_DEBUG=OFF
+```
+
+When debug is enabled, the driver accepts `--debug` and `--debug-only=<type>`:
+
+```bash
+./build/tools/eter/eterc --debug-only=driver program.eter
+```
+
+When `ETER_ENABLE_DEBUG=OFF`, the `ETER_DEBUG(...)` macro expands to nothing and
+the debug code is completely removed from the compiled binary.
+
 ### Pointing CMake at LLVM and MLIR
 
 If CMake does not discover your LLVM/MLIR installation automatically, specify

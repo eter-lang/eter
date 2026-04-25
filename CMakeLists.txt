@@ -14,6 +14,16 @@ include(GNUInstallDirs)
 
 option(ETER_ENABLE_WERROR "Treat warnings as errors" ON)
 option(ETER_ENABLE_ASSERTIONS "Enable assertions in Eter" ON)
+
+# Default: enable debug in Debug/RelWithDebInfo builds, but allow user override.
+if(NOT DEFINED ETER_ENABLE_DEBUG)
+  set(ETER_ENABLE_DEBUG_DEFAULT OFF)
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    set(ETER_ENABLE_DEBUG_DEFAULT ON)
+  endif()
+  option(ETER_ENABLE_DEBUG "Enable debug output macros in Eter" ${ETER_ENABLE_DEBUG_DEFAULT})
+endif()
+
 option(ETER_INCLUDE_TESTS "Enable Eter's lit/FileCheck test suite" ON)
 option(ETER_ENABLE_SANITIZERS "Enable sanitizer instrumentation for supported targets" OFF)
 set(ETER_SANITIZERS "address;undefined;leak" CACHE STRING "Sanitizers to enable when ETER_ENABLE_SANITIZERS is ON. Supported values: address;undefined;leak;thread;memory")
@@ -48,6 +58,10 @@ endif()
 
 if(ETER_ENABLE_ASSERTIONS)
   target_compile_definitions(EterProjectOptions INTERFACE ETER_ENABLE_ASSERTIONS=1)
+endif()
+
+if(ETER_ENABLE_DEBUG)
+  target_compile_definitions(EterProjectOptions INTERFACE ETER_ENABLE_DEBUG=1)
 endif()
 
 if(ETER_ENABLE_SANITIZERS)

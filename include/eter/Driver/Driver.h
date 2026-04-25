@@ -46,11 +46,12 @@ public:
   void printVersion() const;
 
 private:
-  CompilerOptions Options;
-
   /// Process a single source file through the compilation pipeline.
   /// \returns 0 on success, non-zero error code on failure.
   int compileFile(const std::string &InputFile);
+
+private:
+  CompilerOptions Options;
 };
 
 } // namespace eter

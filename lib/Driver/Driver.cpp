@@ -6,11 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define DEBUG_TYPE "driver"
+
+#include "eter/Base/Debug.h"
+#include "eter/Base/DiagnosticEngine.h"
+#include "eter/Base/SourceBuffer.h"
+#include "eter/Base/SourceManager.h"
 #include "eter/Driver/Driver.h"
 #include "eter/Driver/Version.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include <llvm/Support/VirtualFileSystem.h>
+#include <llvm/Support/raw_ostream.h>
 
+#include <cstddef>
 #include <iostream>
 #include <string>
 
@@ -36,12 +44,18 @@ bool Driver::parseCommandLine(int Argc, char **Argv) {
       return true;
     }
 
-    if (Arg == "-O0") {
+    if (Arg == "--debug") {
+      eter::DebugFlag = true;
+    } else if (Arg.starts_with("--debug-only=")) {
+      eter::DebugFlag = true;
+      eter::CurrentDebugType =
+          llvm::StringRef(Arg.data() + sizeof("--debug-only=") - 1);
+    } else if (Arg == "-O0") {
       Options.OptimizationLevel = 0;
     } else if (Arg == "-o" && I + 1 < Argc) {
       Options.OutputFile = Argv[++I];
     } else if (Arg[0] != '-') {
-      // Treat as input file
+      // If an argument does not start with a '-', treat it as an input file.
       Options.InputFiles.push_back(std::string(Arg));
     } else {
       llvm::errs() << "eter: error: Unknown option: " << Arg << "\n\n";
@@ -71,8 +85,8 @@ int Driver::run() {
   }
 
   // Compile each input file
-  for (const auto &InputFile : Options.InputFiles) {
-    const int Result = compileFile(InputFile);
+  for (const auto &InputFilename : Options.InputFiles) {
+    const int Result = compileFile(InputFilename);
     if (Result != 0) {
       return Result;
     }
@@ -81,8 +95,20 @@ int Driver::run() {
   return 0;
 }
 
-int Driver::compileFile(const std::string &InputFile) {
-  llvm::outs() << "eter: remark: Compiling: " << InputFile << "\n";
+int Driver::compileFile(const std::string &InputFilename) {
+  ETER_DEBUG(llvm::dbgs() << "eter: remark: Compiling: " << InputFilename
+                          << "\n");
+
+  const llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
+      llvm::vfs::getRealFileSystem();
+  SimpleDiagnosticEngine SDE;
+  auto ExpectedBuffer = SourceBuffer::makeFromFileName(*FS, InputFilename, SDE);
+  const DiagnosticEngine DE =
+      std::move(SDE).withSourceManager(SourceManager(*ExpectedBuffer));
+  if (!ExpectedBuffer) {
+    DE.printAll();
+    return 1;
+  }
 
   // TODO: Implement the actual compilation pipeline:
   // 1. Lexical analysis (tokenization)
@@ -92,11 +118,12 @@ int Driver::compileFile(const std::string &InputFile) {
   // 5. Optimization passes
   // 6. Code generation
 
-  llvm::outs() << "eter: remark: Optimization level: -O"
-               << Options.OptimizationLevel << "\n";
+  ETER_DEBUG(llvm::dbgs() << "eter: remark: Optimization level: -O "
+                          << Options.OptimizationLevel << "\n");
 
   if (!Options.OutputFile.empty()) {
-    llvm::outs() << "eter: remark: Output file: " << Options.OutputFile << "\n";
+    ETER_DEBUG(llvm::dbgs()
+               << "eter: remark: Output file: " << Options.OutputFile << "\n");
   }
 
   return 0;
@@ -110,6 +137,8 @@ void Driver::printHelp() const {
             << "  --version               Show version information\n"
             << "  -o <output>             Specify output file\n"
             << "  -O0                     No optimization (default)\n"
+            << "  --debug                 Enable debug output\n"
+            << "  --debug-only=<type>     Enable debug output only for <type>\n"
             << "\nExamples:\n"
             << "  eterc --version\n"
             << "  eterc program.eter\n"

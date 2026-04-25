@@ -9,6 +9,8 @@
 #ifndef ETER_BASE_SOURCEBUFFER_H
 #define ETER_BASE_SOURCEBUFFER_H
 
+#include "eter/Base/DiagnosticEngine.h"
+
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/MemoryBuffer.h>
@@ -38,10 +40,14 @@ namespace eter {
 /// lifetime of the `SourceBuffer`.
 class SourceBuffer {
 public:
-  /// Create a `SourceBuffer` from a file name. On failure, print an error
-  /// message and return an `llvm::Error`.
+  /// Create a `SourceBuffer` from a file name.
+  /// \param FS The virtual file system to use for file access.
+  /// \param Filename The name of the file to load.
+  /// \param SDE The simple diagnostic engine for reporting errors.
+  /// \returns The loaded source buffer on success, or an error on failure.
   static llvm::Expected<SourceBuffer>
-  makeFromFileName(llvm::vfs::FileSystem &FS, llvm::StringRef Filename);
+  makeFromFileName(llvm::vfs::FileSystem &FS, llvm::StringRef Filename,
+                   SimpleDiagnosticEngine &SDE);
 
   /// Return the name of the source file associated with this buffer.
   llvm::StringRef getFilename() const;
@@ -56,10 +62,13 @@ public:
 
 private:
   /// Create a `SourceBuffer` from an existing memory buffer.
-  /// On failure, print an error message and return an `llvm::Error`.
+  /// \param Buffer The memory buffer containing the file contents.
+  /// \param Filename The name of the source file.
+  /// \param SDE The simple diagnostic engine for reporting errors.
+  /// \returns The loaded source buffer on success, or an error on failure.
   static llvm::Expected<SourceBuffer>
   makeFromMemoryBuffer(std::unique_ptr<llvm::MemoryBuffer> Buffer,
-                       llvm::StringRef Filename);
+                       llvm::StringRef Filename, SimpleDiagnosticEngine &SDE);
 
   explicit SourceBuffer(std::string Filename,
                         std::unique_ptr<llvm::MemoryBuffer> Buffer)

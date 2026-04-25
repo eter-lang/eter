@@ -7,8 +7,10 @@
 #===----------------------------------------------------------------------===#
 
 add_library(EterBase
+  Debug.cpp
   SourceBuffer.cpp
   SourceManager.cpp
+  DiagnosticEngine.cpp
 )
 
 add_library(eter::Base ALIAS EterBase)

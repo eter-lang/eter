@@ -17,6 +17,7 @@ target_link_libraries(EterDriver
   PUBLIC
     EterProjectOptions
     LLVM
+    eter::Base
 )
 
 target_include_directories(EterDriver

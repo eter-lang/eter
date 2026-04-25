@@ -18,6 +18,7 @@
 
 namespace eter {
 
+/// A source range identified by byte offsets into a source buffer.
 struct Span {
   uint32_t Start = 0;
   uint32_t End = 0;
@@ -26,6 +27,7 @@ struct Span {
   Span(uint32_t Start, uint32_t End) : Start(Start), End(End) {}
 };
 
+/// A line and column position in a source file.
 struct SourceLocation {
   uint32_t Line = 0;
   uint32_t Column = 0;
@@ -33,19 +35,27 @@ struct SourceLocation {
 
 class SourceBuffer;
 
+/// Manages source buffer access and resolves byte offsets to line/column
+/// positions.
 class SourceManager {
 public:
+  /// Construct a source manager from a source buffer.
   explicit SourceManager(const SourceBuffer &Buffer);
 
+  /// Return the full contents of the source buffer.
   llvm::StringRef getBuffer() const;
 
+  /// Return a substring of the source buffer for the given span.
   llvm::StringRef slice(Span Span) const;
 
+  /// Resolve a byte offset to a line and column location.
   SourceLocation getLocation(uint32_t Offset) const;
 
+  /// Return the filename of the source buffer.
   llvm::StringRef getFilename() const;
 
 private:
+  /// Build the line start offset index.
   void buildLineIndex();
 
 private:
