@@ -109,7 +109,7 @@ public:
 
   /// Convert this simple engine to a full DiagnosticEngine with the given
   /// source manager. Calling this method when SimpleDiagnosticEngine is an
-  // rvalue causes the SimpleDiagnosticEngine instance to be invalidated.
+  /// rvalue causes the SimpleDiagnosticEngine instance to be invalidated.
   DiagnosticEngine withSourceManager(const SourceManager &SM) &&;
 
 private:
