@@ -103,12 +103,17 @@ int Driver::compileFile(const std::string &InputFilename) {
       llvm::vfs::getRealFileSystem();
   SimpleDiagnosticEngine SDE;
   auto ExpectedBuffer = SourceBuffer::makeFromFileName(*FS, InputFilename, SDE);
-  const DiagnosticEngine DE =
-      std::move(SDE).withSourceManager(SourceManager(*ExpectedBuffer));
   if (!ExpectedBuffer) {
-    DE.printAll();
+    llvm::errs() << "eter: error: Failed to load source file '" << InputFilename
+                 << "': " << llvm::toString(ExpectedBuffer.takeError()) << "\n";
     return 1;
   }
+
+  ETER_DEBUG(llvm::dbgs() << "eter: remark: Loaded source file: "
+                          << InputFilename << "\n");
+
+  const DiagnosticEngine DE =
+      std::move(SDE).withSourceManager(SourceManager(*ExpectedBuffer));
 
   // TODO: Implement the actual compilation pipeline:
   // 1. Lexical analysis (tokenization)
