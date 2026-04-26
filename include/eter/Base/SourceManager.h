@@ -58,10 +58,12 @@ private:
   /// Build the line start offset index.
   void buildLineIndex();
 
-private:
+  /// Underlying source contents owned elsewhere.
   const SourceBuffer &Buffer;
-
+  /// Byte offsets where each 1-based source line begins.
+  /// Example: "a\nbc\n" -> LineStarts = {0, 2, 5}.
   llvm::SmallVector<uint32_t, 256> LineStarts;
+  /// Memoized offset-to-line/column lookups used by const queries.
   mutable llvm::DenseMap<uint32_t, SourceLocation> Cache;
 };
 

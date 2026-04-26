@@ -112,12 +112,10 @@ void DiagnosticEngine::print(const Diagnostic &Diag) const {
     else
       LineStart += 1;
 
-    size_t LineEnd = Buffer.find('\n', Span.End);
+    size_t LineEnd = Buffer.find('\n', Span.Start);
     if (LineEnd == llvm::StringRef::npos)
       LineEnd = Buffer.size();
-
     const llvm::StringRef Line = Buffer.slice(LineStart, LineEnd);
-
     llvm::outs() << Line << "\n";
     llvm::outs() << "     ";
 
@@ -125,9 +123,10 @@ void DiagnosticEngine::print(const Diagnostic &Diag) const {
     // until the end column
     for (uint32_t I = 1; I < Start.Column; I++)
       llvm::outs() << " ";
-
+    const uint32_t EndCol =
+        (Span.End > LineEnd) ? (LineEnd - LineStart + 1) : End.Column;
     const uint32_t Width =
-        (End.Column >= Start.Column) ? (End.Column - Start.Column + 1) : 1;
+        (EndCol >= Start.Column) ? (EndCol - Start.Column + 1) : 1;
 
     for (uint32_t I = 0; I < Width; I++)
       llvm::outs() << "^";

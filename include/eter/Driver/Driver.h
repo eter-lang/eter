@@ -50,7 +50,6 @@ private:
   /// \returns 0 on success, non-zero error code on failure.
   int compileFile(const std::string &InputFile);
 
-private:
   CompilerOptions Options;
 };
 
