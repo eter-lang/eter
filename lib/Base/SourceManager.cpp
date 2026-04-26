@@ -6,8 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "eter/Base/SourceManager.h"
 #include "eter/Base/SourceBuffer.h"
+#include "eter/Base/SourceManager.h"
+
+#include <algorithm>
+
+#include "llvm/ADT/STLExtras.h"
 
 namespace eter {
 
@@ -38,13 +42,10 @@ SourceLocation SourceManager::getLocation(uint32_t Offset) const {
   if (It != Cache.end())
     return It->second;
 
-  uint32_t Line = 0;
-
-  for (size_t I = 0; I < LineStarts.size(); I++) {
-    if (LineStarts[I] > Offset)
-      break;
-    Line = I;
-  }
+  // O(log N) binary search the offset
+  const uint32_t Line =
+      std::distance(LineStarts.begin(), llvm::upper_bound(LineStarts, Offset)) -
+      1;
 
   SourceLocation Loc;
   Loc.Line = Line + 1;

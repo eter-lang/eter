@@ -15,6 +15,7 @@
 #include "eter/Driver/Driver.h"
 #include "eter/Driver/Version.h"
 
+#include <llvm/Support/Error.h>
 #include <llvm/Support/VirtualFileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 
