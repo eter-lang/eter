@@ -10,6 +10,10 @@ cmake_minimum_required(VERSION 3.20)
 
 project(eter VERSION 0.1.0 LANGUAGES C CXX)
 
+if(NOT DEFINED CMAKE_COLOR_DIAGNOSTICS)
+  set(CMAKE_COLOR_DIAGNOSTICS ON)
+endif()
+
 include(GNUInstallDirs)
 
 option(ETER_ENABLE_WERROR "Treat warnings as errors" ON)
