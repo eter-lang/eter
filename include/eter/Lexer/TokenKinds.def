@@ -1,0 +1,113 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the Eter Project, under the Apache License v2.0 with LLVM Exceptions.
+// See /LICENSE for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef ETER_TOKEN
+#define ETER_TOKEN(X)
+#endif
+
+#ifndef ETER_SYMBOL
+#define ETER_SYMBOL(X, Y) ETER_TOKEN(X)
+#endif
+
+#ifndef ETER_KEYWORD
+#define ETER_KEYWORD(X, Y) ETER_TOKEN(kw_ ## X)
+#endif
+
+//===----------------------------------------------------------------------===//
+// Special Tokens
+//===----------------------------------------------------------------------===//
+ETER_TOKEN(unknown)             // Fallback for error recovery
+ETER_TOKEN(eof)                 // End of file
+
+//===----------------------------------------------------------------------===//
+// Identifiers and Literals
+//===----------------------------------------------------------------------===//
+ETER_TOKEN(identifier)          // e.g., foo, my_var
+ETER_TOKEN(integer_literal)     // e.g., 42, 0x1A
+ETER_TOKEN(float_literal)       // e.g., 3.14
+ETER_TOKEN(char_literal)        // e.g., 'a'
+ETER_TOKEN(string_literal)      // e.g., "hello"
+ETER_TOKEN(c_string_literal)    // e.g., @c"hello"
+
+//===----------------------------------------------------------------------===//
+// Delimiters (from LANGUAGE_SPECIFICATION.md)
+//===----------------------------------------------------------------------===//
+ETER_SYMBOL(l_paren,       "(")
+ETER_SYMBOL(r_paren,       ")")
+ETER_SYMBOL(l_brace,       "{")
+ETER_SYMBOL(r_brace,       "}")
+ETER_SYMBOL(l_square,      "[")
+ETER_SYMBOL(r_square,      "]")
+ETER_SYMBOL(comma,         ",")
+ETER_SYMBOL(semi,          ";")
+ETER_SYMBOL(colon,         ":")
+ETER_SYMBOL(colon_colon,   "::")
+
+//===----------------------------------------------------------------------===//
+// Operators (from LANGUAGE_SPECIFICATION.md)
+//===----------------------------------------------------------------------===//
+ETER_SYMBOL(plus,          "+")
+ETER_SYMBOL(minus,         "-")
+ETER_SYMBOL(star,          "*")
+ETER_SYMBOL(slash,         "/")
+ETER_SYMBOL(percent,       "%")
+ETER_SYMBOL(plus_plus,     "++")
+ETER_SYMBOL(minus_minus,   "--")
+ETER_SYMBOL(amp,           "&")
+ETER_SYMBOL(pipe,          "|")
+ETER_SYMBOL(caret,         "^")
+ETER_SYMBOL(less_less,     "<<")
+ETER_SYMBOL(greater_greater, ">>")
+ETER_SYMBOL(amp_amp,       "&&")
+ETER_SYMBOL(pipe_pipe,     "||")
+ETER_SYMBOL(bang,          "!")
+ETER_SYMBOL(eq_eq,         "==")
+ETER_SYMBOL(bang_eq,       "!=")
+ETER_SYMBOL(less,          "<")
+ETER_SYMBOL(greater,       ">")
+ETER_SYMBOL(less_eq,       "<=")
+ETER_SYMBOL(greater_eq,    ">=")
+ETER_SYMBOL(eq,            "=")
+ETER_SYMBOL(plus_eq,       "+=")
+ETER_SYMBOL(minus_eq,      "-=")
+ETER_SYMBOL(star_eq,       "*=")
+ETER_SYMBOL(slash_eq,      "/=")
+ETER_SYMBOL(dot,           ".")
+ETER_SYMBOL(fat_arrow,     "=>")
+
+//===----------------------------------------------------------------------===//
+// Keywords (from LANGUAGE_SPECIFICATION.md)
+//===----------------------------------------------------------------------===//
+ETER_KEYWORD(as,       "as")
+ETER_KEYWORD(break,    "break")
+ETER_KEYWORD(const,    "const")
+ETER_KEYWORD(continue, "continue")
+ETER_KEYWORD(else,     "else")
+ETER_KEYWORD(enum,     "enum")
+ETER_KEYWORD(false,    "false")
+ETER_KEYWORD(fn,       "fn")
+ETER_KEYWORD(for,      "for")
+ETER_KEYWORD(if,       "if")
+ETER_KEYWORD(let,      "let")
+ETER_KEYWORD(match,    "match")
+ETER_KEYWORD(mod,      "mod")
+ETER_KEYWORD(mut,      "mut")
+ETER_KEYWORD(pub,      "pub")
+ETER_KEYWORD(ref,      "ref")
+ETER_KEYWORD(return,   "return")
+ETER_KEYWORD(struct,   "struct")
+ETER_KEYWORD(true,     "true")
+ETER_KEYWORD(type,     "type")
+ETER_KEYWORD(use,      "use")
+ETER_KEYWORD(where,    "where")
+ETER_KEYWORD(while,    "while")
+
+// Clean up macros at the end of the file
+#undef ETER_KEYWORD
+#undef ETER_SYMBOL
+#undef ETER_TOKEN
