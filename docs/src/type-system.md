@@ -2,11 +2,11 @@
 
 ## Statically sized types
 
-Statically sized types are those stored with static (immutable) and fixed amount of contiguous space. The amount of space occupied solely depends on the type of the variable and not the value represented.
+Statically sized types are those stored with static (immutable) and fixed amount of contiguous space. The amount of space occupied solely depends on the type and not the value represented.
 
 
 ### Boolean type
-Booleans can represent one of two distinct values: `true` or `false`. Each boolean occupy 1 bit.
+Booleans can represent one of two distinct values: `true` or `false`. Each boolean occupies 8 bits.
 
 ```rust
 let rain: bool = true;
@@ -45,7 +45,7 @@ Integer types represents integer numbers, both positive and negative. Integer nu
 | `i128` | 16 bytes (128 bits) | $-2^{127}$| $2^{127}-1$|
 
 - #### Float
-Float types represents numbers in floating point (thus numbers with decimal) both positive and negative following the [IEEE 754 standard](https://en.wikipedia.org/wiki/IEEE_754). Float numbers are declared with the letter `f`. The only possible sizes are `32` or `64`. Thus the two possible types are `f32` (single precision) and `f64` (double precision).
+Float types represent non integer numerals (both positive and negative) following the [IEEE 754 standard](https://en.wikipedia.org/wiki/IEEE_754). Float numbers are declared with the letter `f`. The only possible sizes are `32` or `64` bits. Thus the two possible types are `f32` (single precision) and `f64` (double precision).
 | Type | Byte Size (bit) | Min Value (Normalized) | Min Value (Subnormal)| Max Value|
 |-:|-:|:-:|:-:|:-|
 | `f32` | 4 byte (32 bits) | $1.0×2^{−126}$|$2^{−149}$| $(2−2^{−23})×2^{127}$|
@@ -89,14 +89,14 @@ Textual types represents strings, thus sequences of characters.
  ```
 
  - #### C-Strings
-C-strings are Null-terminated string literal identified by the `@c` qualifier.
+C-strings are a sequence of characters (non unicode encoded) terminated by a null character ('\0'). They are identified by prefixing the literal declaration with the qualifier `@c`.
 
  ```rust
  let say : str = @c"Hello";
  ```
 ### Array types 
 
-Arrays represent 1D homogeneous product types. They are statically sized, contiguous blocks of memory containing elements of a single type `T`. 
+Arrays represent 1D homogeneous product types. They are a statically sized, contiguous blocks of memory containing elements of a single type `T`. 
 
 The syntax for an array type is `[T; SIZE]`.
 
@@ -218,7 +218,7 @@ let discr : isize = a as isize //discr contains 10
   > [!NOTE]
   > This is an example note.
   
-Union types (also known as [sum types](https://en.wikipedia.org/wiki/Tagged_union)) are types that can store different types of values but only one at a time. Unions types are declared similar to structs but with the `union` kayword(comma separated). 
+Union types (also known as [sum types](https://en.wikipedia.org/wiki/Tagged_union)) can store different types of values but only one at a time. Unions are declared similar to structs but with use of the `union` keyword (comma separated). 
 ```rust
 union MyUnion {
     f1: u32,
