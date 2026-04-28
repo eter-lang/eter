@@ -73,7 +73,29 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
       continue;
     }
 
-    // 4. Symbols and Operators
+    // 4. Character Literals
+    // If the token starts with a single quote, parse it as a character literal.
+    if (C == '\'') {
+      Token Result(Token::Kind::char_literal, eter::Span(0, 0));
+      lexCharacterLiteral(Result, TokStart);
+      LexerItems.push_back(Result);
+      continue;
+    }
+
+    // 5. C-Style Strings
+    // If the token is @c", parse it as a C-style string literal.
+    if (C == '@') {
+      if (CurPtr < BufferEnd && *CurPtr == 'c' && CurPtr + 1 < BufferEnd && CurPtr[1] == '"') {
+        CurPtr += 2; // Consume 'c' and '"'
+        Token Result(Token::Kind::c_string_literal, eter::Span(0, 0));
+        lexStringLiteral(Result, TokStart);
+        Result.TokenKind = Token::Kind::c_string_literal; // override what lexStringLiteral sets
+        LexerItems.push_back(Result);
+        continue;
+      }
+    }
+
+    // 6. Symbols and Operators
     // Resolve single-character and multi-character operators.
     Token::Kind Kind = Token::Kind::unknown;
 
@@ -152,7 +174,12 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
       }
       break;
     case '%':
-      Kind = Token::Kind::percent;
+      if (CurPtr < BufferEnd && *CurPtr == '=') {
+        CurPtr++;
+        Kind = Token::Kind::percent_eq;
+      } else {
+        Kind = Token::Kind::percent;
+      }
       break;
 
     // --- Logical and Bitwise Operators ---
@@ -160,6 +187,9 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
       if (CurPtr < BufferEnd && *CurPtr == '&') {
         CurPtr++;
         Kind = Token::Kind::amp_amp;
+      } else if (CurPtr < BufferEnd && *CurPtr == '=') {
+        CurPtr++;
+        Kind = Token::Kind::amp_eq;
       } else {
         Kind = Token::Kind::amp;
       }
@@ -168,19 +198,32 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
       if (CurPtr < BufferEnd && *CurPtr == '|') {
         CurPtr++;
         Kind = Token::Kind::pipe_pipe;
+      } else if (CurPtr < BufferEnd && *CurPtr == '=') {
+        CurPtr++;
+        Kind = Token::Kind::pipe_eq;
       } else {
         Kind = Token::Kind::pipe;
       }
       break;
     case '^':
-      Kind = Token::Kind::caret;
+      if (CurPtr < BufferEnd && *CurPtr == '=') {
+        CurPtr++;
+        Kind = Token::Kind::caret_eq;
+      } else {
+        Kind = Token::Kind::caret;
+      }
       break;
 
     // --- Relational and Assignment Operators ---
     case '<':
       if (CurPtr < BufferEnd && *CurPtr == '<') {
         CurPtr++;
-        Kind = Token::Kind::less_less;
+        if (CurPtr < BufferEnd && *CurPtr == '=') {
+          CurPtr++;
+          Kind = Token::Kind::less_less_eq;
+        } else {
+          Kind = Token::Kind::less_less;
+        }
       } else if (CurPtr < BufferEnd && *CurPtr == '=') {
         CurPtr++;
         Kind = Token::Kind::less_eq;
@@ -191,7 +234,12 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     case '>':
       if (CurPtr < BufferEnd && *CurPtr == '>') {
         CurPtr++;
-        Kind = Token::Kind::greater_greater;
+        if (CurPtr < BufferEnd && *CurPtr == '=') {
+          CurPtr++;
+          Kind = Token::Kind::greater_greater_eq;
+        } else {
+          Kind = Token::Kind::greater_greater;
+        }
       } else if (CurPtr < BufferEnd && *CurPtr == '=') {
         CurPtr++;
         Kind = Token::Kind::greater_eq;
@@ -300,7 +348,7 @@ void Lexer::lexIdentifier(Token &Result, const char *TokStart) {
     CurPtr++;
   }
 
-  
+
   llvm::StringRef Str(TokStart, CurPtr - TokStart);
 
   // Use StringSwitch for O(1) keyword resolution via X-macros.
@@ -316,31 +364,51 @@ void Lexer::lexIdentifier(Token &Result, const char *TokStart) {
 /// Lexes a numeric literal (integer or floating-point).
 /// Assumes `CurPtr` is pointing to the first digit.
 void Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
-  // Consume the integer part.
-  while (CurPtr < BufferEnd && std::isdigit(*CurPtr))
+  bool IsHex = false;
+  if (TokStart[0] == '0' && CurPtr < BufferEnd && (*CurPtr == 'x' || *CurPtr == 'X')) {
     CurPtr++;
+    IsHex = true;
+  }
 
-  if (CurPtr < BufferEnd && *CurPtr == '.') {
+  // Consume the integer part.
+  while (CurPtr < BufferEnd) {
+    if (IsHex && std::isxdigit(*CurPtr)) {
+      CurPtr++;
+    } else if (!IsHex && std::isdigit(*CurPtr)) {
+      CurPtr++;
+    } else if (*CurPtr == '_') {
+      CurPtr++;
+    } else {
+      break;
+    }
+  }
+
+  if (!IsHex && CurPtr < BufferEnd && *CurPtr == '.') {
     // Check if the next character is a digit to differentiate a float literal
     // (e.g., 3.14) from a method call on an integer (e.g., 1.method()).
     if (CurPtr + 1 < BufferEnd && std::isdigit(CurPtr[1])) {
       CurPtr++; // Consume '.'
-      while (CurPtr < BufferEnd && std::isdigit(*CurPtr))
-        CurPtr++;
-      
+      while (CurPtr < BufferEnd) {
+        if (std::isdigit(*CurPtr) || *CurPtr == '_') {
+          CurPtr++;
+        } else {
+          break;
+        }
+      }
+
       // Optional 'f' suffix for floating point literals.
       if (CurPtr < BufferEnd && *CurPtr == 'f')
         CurPtr++;
-        
+
       Result.TokenKind = Token::Kind::float_literal;
       Result.TokenSpan =
           eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
       return;
     }
   }
-  
+
   // Handle optional 'f' suffix without a decimal point (e.g., 1f).
-  if (CurPtr < BufferEnd && *CurPtr == 'f') {
+  if (!IsHex && CurPtr < BufferEnd && *CurPtr == 'f') {
     CurPtr++;
     Result.TokenKind = Token::Kind::float_literal;
     Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
@@ -377,6 +445,33 @@ void Lexer::lexStringLiteral(Token &Result, const char *TokStart) {
   // We emit it as a string literal anyway to facilitate error recovery
   // in the parser, even though it is malformed.
   Result.TokenKind = Token::Kind::string_literal;
+  Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+}
+
+/// Lexes a character literal enclosed in single quotes.
+/// Handles basic escape sequences.
+void Lexer::lexCharacterLiteral(Token &Result, const char *TokStart) {
+  while (CurPtr < BufferEnd) {
+    char C = *CurPtr++;
+    if (C == '\\') {
+      // Skip the escaped character.
+      if (CurPtr < BufferEnd) {
+        CurPtr++;
+      }
+    } else if (C == '\'') {
+      // Character literal successfully terminated.
+      Result.TokenKind = Token::Kind::char_literal;
+      Result.TokenSpan =
+          eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+      return;
+    } else if (C == '\n' || C == '\r') {
+      // Unterminated character literal on this line.
+      break;
+    }
+  }
+
+  // Unterminated character literal
+  Result.TokenKind = Token::Kind::char_literal;
   Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
 }
 

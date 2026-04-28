@@ -52,6 +52,7 @@ private:
   void lexIdentifier(Token &Result, const char *TokStart);
   void lexNumericLiteral(Token &Result, const char *TokStart);
   void lexStringLiteral(Token &Result, const char *TokStart);
+  void lexCharacterLiteral(Token &Result, const char *TokStart);
 
   //===--------------------------------------------------------------------===//
   // Internal Traversal State
