@@ -64,6 +64,9 @@ let c: char = 'a';
 let emoji: char = '😀';
 let unicode: char = '\u{1F600}';
 ```
+### Pointer types 
+  > [!NOTE]
+  > This is an example note.
 
 ## Compound data types
 The following types still have a static (immutable) amount of space allocated but it depends both on the types and the amount of values to store.
@@ -107,8 +110,6 @@ let matrix: [f32; 2, 2] = [[1.0, 0.0], [0.0, 1.0]];
 > [!NOTE]  
 > Compound types like arrays and tensors are not "objects". Dynamic, heap-allocated collections (such as vectors or dynamic tensors) are managed through the standard library or via gradual typing features, rather than being built into the static compound type syntax.
 
-### Pointer types
-### Union types
 ### Tuple types
 
 Tuples are Cartesian product types. They are ordered, statically sized, heterogeneous collections of values where each element can be of a different type.
@@ -118,6 +119,8 @@ The syntax for a tuple type uses parentheses `()` containing a comma-separated l
 ```rust
 let record: (i32, f64, str) = (42, 3.14, "hello");
 ```
+### Struct types
+### Enum types
 
 ## Static types layout
  
@@ -125,8 +128,20 @@ let record: (i32, f64, str) = (42, 3.14, "hello");
 
 ---
 
-### Struct types
-### Enum types
+
+### Union types
+  > [!NOTE]
+  > This is an example note.
+  
+Union types (also known as [sum types](https://en.wikipedia.org/wiki/Tagged_union)) are types that can store different types of values but only one at a time. Unions types are declared similar to structs but with the `union` kayword(comma separated). 
+```rust
+union MyUnion {
+    f1: u32,
+    f2: f32,
+}
+```
+An example of two identically declared Unions with differently stored values.
+
 ### View types
 
 
