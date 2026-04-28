@@ -74,9 +74,8 @@ public:
   std::vector<LexerItem> lex(SourceBuffer &SourceBuffer, Span Span);
 
 private:
-  /// Advances the internal cursor past any consecutive whitespace characters
-  /// and comments (handling nested /* */ block comments as per spec).
-  void skipWhitespaceAndComments(std::vector<LexerItem> &LexerItems);
+  /// Advances the internal cursor past any consecutive whitespace characters.
+  void skipWhitespace();
 
   /// Specialized lexing routines for extracting specific token categories.
   /// These functions assume `CurPtr` is pointing to the start of the token,

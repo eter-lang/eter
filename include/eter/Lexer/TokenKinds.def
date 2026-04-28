@@ -42,6 +42,8 @@
 //===----------------------------------------------------------------------===//
 ETER_TOKEN(unknown)             ///< Fallback for error recovery
 ETER_TOKEN(eof)                 ///< End of file
+ETER_TOKEN(doc_comment)         ///< Documentation comment
+ETER_TOKEN(comment)             ///< Regular comment
 
 //===----------------------------------------------------------------------===//
 // Identifiers and Literals

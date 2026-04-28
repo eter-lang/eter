@@ -14,7 +14,7 @@
 
 namespace eter::lexer {
 
-static bool isHexDigit(char C) {
+bool isHexDigit(char C) {
   return std::isxdigit(static_cast<unsigned char>(C)) != 0;
 }
 
@@ -48,8 +48,8 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
   // Main lexing loop: consume characters until we reach the end of the span.
   while (CurPtr < BufferEnd) {
-    // Skip any irrelevant whitespace or comments before parsing the next token.
-    skipWhitespaceAndComments(LexerItems);
+    // Skip any irrelevant whitespace before parsing the next token.
+    skipWhitespace();
     if (CurPtr >= BufferEnd) {
       break;
     }
@@ -57,6 +57,61 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     const char *TokStart = CurPtr;
     char C = *CurPtr++;
     unsigned char UC = static_cast<unsigned char>(C);
+
+    if (C == '/' && CurPtr < BufferEnd) {
+      if (*CurPtr == '/') {
+        // Line comment (either doc comment or regular comment)
+        if (CurPtr + 1 < BufferEnd && CurPtr[1] == '/' &&
+            (CurPtr + 2 >= BufferEnd || CurPtr[2] != '/')) {
+          // Doc comment
+          CurPtr += 2; // Consume the other two slashes
+          while (CurPtr < BufferEnd && *CurPtr != '\n' && *CurPtr != '\r') {
+            CurPtr++;
+          }
+          LexerItems.push_back(
+              Token(Token::Kind::doc_comment,
+                    eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
+          continue;
+        } else {
+          // Regular line comment
+          CurPtr++; // Consume the second slash
+          while (CurPtr < BufferEnd && *CurPtr != '\n' && *CurPtr != '\r') {
+            CurPtr++;
+          }
+          LexerItems.push_back(
+              Token(Token::Kind::comment,
+                    eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
+          continue;
+        }
+      } else if (*CurPtr == '*') {
+        // Block comment
+        CurPtr++; // Consume '*'
+        int NestingDepth = 1;
+        while (CurPtr < BufferEnd && NestingDepth > 0) {
+          if (CurPtr + 1 < BufferEnd && *CurPtr == '/' && CurPtr[1] == '*') {
+            NestingDepth++;
+            CurPtr += 2;
+          } else if (CurPtr + 1 < BufferEnd && *CurPtr == '*' && CurPtr[1] == '/') {
+            NestingDepth--;
+            CurPtr += 2;
+          } else {
+            CurPtr++;
+          }
+        }
+        
+        if (NestingDepth > 0) {
+          LexerItems.push_back(LexerError{
+              LexerError::Kind::UnterminatedBlockComment,
+              eter::Span(TokStart - BufferStart, CurPtr - BufferStart)});
+          // Optional: break or continue? Let's just return to stop lexing
+          return LexerItems;
+        }
+        LexerItems.push_back(
+            Token(Token::Kind::comment,
+                  eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
+        continue;
+      }
+    }
 
     // 1. Identifiers and Keywords
     // If the token starts with a letter or underscore, it's an identifier or keyword.
@@ -342,49 +397,14 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
   return LexerItems;
 }
 
-/// Advances the internal cursor past whitespace characters and comments.
-/// Handles both line comments (//) and nested block comments (/* */).
-void Lexer::skipWhitespaceAndComments(std::vector<LexerItem> &LexerItems) {
+/// Advances the internal cursor past whitespace characters.
+void Lexer::skipWhitespace() {
   while (CurPtr < BufferEnd) {
     char C = *CurPtr;
     if (C == ' ' || C == '\t' || C == '\n' || C == '\r') {
       CurPtr++;
-    } else if (C == '/' && CurPtr + 1 < BufferEnd) {
-      if (CurPtr[1] == '/') {
-        // Single-line comment: skip until the end of the line.
-        CurPtr += 2;
-        while (CurPtr < BufferEnd && *CurPtr != '\n' && *CurPtr != '\r') {
-          CurPtr++;
-        }
-      } else if (CurPtr[1] == '*') {
-        // Multi-line block comment: support nesting to adhere to language spec.
-        const char *CommentStart = CurPtr;
-        CurPtr += 2;
-        int NestingDepth = 1;
-        while (CurPtr < BufferEnd && NestingDepth > 0) {
-          if (CurPtr + 1 < BufferEnd && *CurPtr == '/' && CurPtr[1] == '*') {
-            NestingDepth++;
-            CurPtr += 2;
-          } else if (CurPtr + 1 < BufferEnd && *CurPtr == '*' &&
-                     CurPtr[1] == '/') {
-            NestingDepth--;
-            CurPtr += 2;
-          } else {
-            CurPtr++;
-          }
-        }
-
-        if (NestingDepth > 0) {
-          LexerItems.push_back(LexerError{
-              LexerError::Kind::UnterminatedBlockComment,
-              eter::Span(CommentStart - BufferStart, CurPtr - BufferStart)});
-          return;
-        }
-      } else {
-        break; // It's a division operator, not a comment.
-      }
     } else {
-      break; // Not whitespace and not a comment.
+      break; // Not whitespace.
     }
   }
 }

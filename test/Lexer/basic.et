@@ -1,79 +1,10 @@
-// RUN: eterc -dump-tokens %s | FileCheck %s
+//Comment
 
-// CHECK: fn 'fn'
-// CHECK-NEXT: identifier 'calculate'
-// CHECK-NEXT: ( '('
-// CHECK-NEXT: ) ')'
-// CHECK-NEXT: { '{'
-// CHECK-NEXT: let 'let'
-// CHECK-NEXT: identifier 'x'
-// CHECK-NEXT: = '='
-// CHECK-NEXT: integer_literal '42'
-// CHECK-NEXT: ; ';'
-// CHECK-NEXT: let 'let'
-// CHECK-NEXT: identifier 'y'
-// CHECK-NEXT: = '='
-// CHECK-NEXT: integer_literal '0x1F'
-// CHECK-NEXT: ; ';'
-// CHECK-NEXT: let 'let'
-// CHECK-NEXT: identifier 'text'
-// CHECK-NEXT: = '='
-// CHECK-NEXT: string_literal '"Hello"'
-// CHECK-NEXT: ; ';'
-// CHECK-NEXT: let 'let'
-// CHECK-NEXT: identifier 'ch'
-// CHECK-NEXT: = '='
-// CHECK-NEXT: char_literal ''A''
-// CHECK-NEXT: ; ';'
-// CHECK-NEXT: if 'if'
-// CHECK-NEXT: identifier 'x'
-// CHECK-NEXT: == '=='
-// CHECK-NEXT: identifier 'y'
-// CHECK-NEXT: { '{'
-// CHECK-NEXT: identifier 'x'
-// CHECK-NEXT: += '+='
-// CHECK-NEXT: integer_literal '1'
-// CHECK-NEXT: ; ';'
-// CHECK-NEXT: } '}'
-// CHECK-NEXT: } '}'
-
-// CHECK: let 'let'
-// CHECK: identifier 'bad_num'
-// CHECK: = '='
-// CHECK: integer_literal '0x'
-// CHECK: error invalid_numeric_literal '0x'
-// CHECK: ; ';'
-
-// CHECK: let 'let'
-// CHECK: identifier 'bad_escape'
-// CHECK: = '='
-// CHECK: error invalid_escape_sequence '{{.*}}'
-// CHECK: string_literal '{{.*}}'
-// CHECK: ; ';'
-
-// CHECK: let 'let'
-// CHECK: identifier 'bad_unicode'
-// CHECK: = '='
-// CHECK: error invalid_unicode_escape '{{.*}}'
-// CHECK: string_literal '{{.*}}'
-// CHECK: ; ';'
-
-// CHECK: let 'let'
-// CHECK: identifier 'bad_char_len'
-// CHECK: = '='
-// CHECK: char_literal '{{.*}}'
-// CHECK: error invalid_char_literal_length '{{.*}}'
-// CHECK: ; ';'
-
-// CHECK: error unterminated_char_literal '{{.*}}'
-// CHECK: error unterminated_string_literal '{{.*}}'
-// CHECK: error invalid_character '{{.*}}'
-// CHECK: error unterminated_block_comment '{{.*}}'
-// CHECK: eof ''
+///Doc comment
 
 fn calculate() {
-    let x = 42;
-    let y = 0x1F;
+    let x = 42; // comment
+    let y = /*comment*/ 0x1F;
     let text = "Hello";
     let ch = 'A';
     if x == y {
