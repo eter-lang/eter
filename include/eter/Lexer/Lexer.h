@@ -27,18 +27,24 @@ namespace eter::lexer {
 /// an IDE/Language Server environment.
 class Lexer {
 public:
+  /// Default constructor.
   Lexer() = default;
 
   /// Lexes the entire contents of the provided source buffer from start to finish.
+  /// \param SourceBuffer The source buffer to lex.
+  /// \returns A vector of tokens extracted from the source buffer.
   std::vector<Token> lex(SourceBuffer &SourceBuffer){
       return lex(SourceBuffer, Span(0, SourceBuffer.getBuffer().size()));
   }
 
   /// Lexes a specific byte range within the source buffer.
   ///
-  /// This is the core engine for incremental lexing. It allows the caller
+  /// Core engine for incremental lexing. It allows the caller
   /// to re-lex only the spans of text that have been modified, avoiding the
   /// overhead of re-lexing the entire file.
+  /// \param SourceBuffer The source buffer to lex.
+  /// \param Span The byte range within the source buffer to lex.
+  /// \returns A vector of tokens extracted from the specified span.
   std::vector<Token> lex(SourceBuffer &SourceBuffer, Span Span);
 
 private:
@@ -49,9 +55,20 @@ private:
   /// Specialized lexing routines for extracting specific token categories.
   /// These functions assume `CurPtr` is pointing to the start of the token,
   /// and they advance `CurPtr` to the token's end upon completion.
+  /// \param Result The token to populate with the lexed information.
+  /// \param TokStart A pointer to the start of the token in the source buffer.
   void lexIdentifier(Token &Result, const char *TokStart);
+  
+  /// \param Result The token to populate with the lexed information.
+  /// \param TokStart A pointer to the start of the token in the source buffer.
   void lexNumericLiteral(Token &Result, const char *TokStart);
+  
+  /// \param Result The token to populate with the lexed information.
+  /// \param TokStart A pointer to the start of the token in the source buffer.
   void lexStringLiteral(Token &Result, const char *TokStart);
+  
+  /// \param Result The token to populate with the lexed information.
+  /// \param TokStart A pointer to the start of the token in the source buffer.
   void lexCharacterLiteral(Token &Result, const char *TokStart);
 
   //===--------------------------------------------------------------------===//
