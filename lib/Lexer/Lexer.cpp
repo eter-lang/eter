@@ -14,11 +14,22 @@
 
 namespace eter::lexer {
 
-/// Lexes a specific byte range within the source buffer and returns a list of tokens.
+static bool isHexDigit(char C) {
+  return std::isxdigit(static_cast<unsigned char>(C)) != 0;
+}
+
+static void pushLexerError(std::vector<LexerItem> &Items,
+                           LexerError::Kind Kind, const char *Start,
+                           const char *End, const char *BufferStart) {
+  Items.push_back(
+      LexerError{Kind, eter::Span(Start - BufferStart, End - BufferStart)});
+}
+
+/// Lexes a specific byte range within the source buffer and returns a list of lexer items.
 /// This is the core engine for incremental lexing.
-std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
+std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
   llvm::StringRef Buffer = SourceBuffer.getBuffer();
-  std::vector<Token> LexerItems;
+  std::vector<LexerItem> LexerItems;
 
   // Validate the span to prevent out-of-bounds memory access.
   if (Span.Start > Buffer.size() || Span.End > Buffer.size() ||
@@ -38,17 +49,18 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
   // Main lexing loop: consume characters until we reach the end of the span.
   while (CurPtr < BufferEnd) {
     // Skip any irrelevant whitespace or comments before parsing the next token.
-    skipWhitespaceAndComments();
+    skipWhitespaceAndComments(LexerItems);
     if (CurPtr >= BufferEnd) {
       break;
     }
 
     const char *TokStart = CurPtr;
     char C = *CurPtr++;
+    unsigned char UC = static_cast<unsigned char>(C);
 
     // 1. Identifiers and Keywords
     // If the token starts with a letter or underscore, it's an identifier or keyword.
-    if (std::isalpha(C) || C == '_') {
+    if (std::isalpha(UC) || C == '_') {
       Token Result(Token::Kind::identifier, eter::Span(0, 0));
       lexIdentifier(Result, TokStart);
       LexerItems.push_back(Result);
@@ -57,10 +69,14 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
     // 2. Numeric Literals
     // If the token starts with a digit, it's an integer or floating-point literal.
-    if (std::isdigit(C)) {
+    if (std::isdigit(UC)) {
       Token Result(Token::Kind::integer_literal, eter::Span(0, 0));
-      lexNumericLiteral(Result, TokStart);
+      bool Valid = lexNumericLiteral(Result, TokStart);
       LexerItems.push_back(Result);
+      if (!Valid) {
+        LexerItems.push_back(LexerError{LexerError::Kind::InvalidNumericLiteral,
+                                        Result.TokenSpan});
+      }
       continue;
     }
 
@@ -68,8 +84,12 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     // If the token starts with a quote, parse it as a string literal.
     if (C == '"') {
       Token Result(Token::Kind::string_literal, eter::Span(0, 0));
-      lexStringLiteral(Result, TokStart);
+      bool Terminated = lexStringLiteral(Result, TokStart, LexerItems);
       LexerItems.push_back(Result);
+      if (!Terminated) {
+        LexerItems.push_back(LexerError{
+            LexerError::Kind::UnterminatedStringLiteral, Result.TokenSpan});
+      }
       continue;
     }
 
@@ -77,20 +97,34 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     // If the token starts with a single quote, parse it as a character literal.
     if (C == '\'') {
       Token Result(Token::Kind::char_literal, eter::Span(0, 0));
-      lexCharacterLiteral(Result, TokStart);
+      size_t CharCount = 0;
+      bool Terminated =
+          lexCharacterLiteral(Result, TokStart, LexerItems, CharCount);
       LexerItems.push_back(Result);
+      if (!Terminated) {
+        LexerItems.push_back(LexerError{
+            LexerError::Kind::UnterminatedCharLiteral, Result.TokenSpan});
+      } else if (CharCount != 1) {
+        LexerItems.push_back(LexerError{
+            LexerError::Kind::InvalidCharLiteralLength, Result.TokenSpan});
+      }
       continue;
     }
 
     // 5. C-Style Strings
     // If the token is @c", parse it as a C-style string literal.
     if (C == '@') {
-      if (CurPtr < BufferEnd && *CurPtr == 'c' && CurPtr + 1 < BufferEnd && CurPtr[1] == '"') {
+      if (CurPtr < BufferEnd && *CurPtr == 'c' && CurPtr + 1 < BufferEnd &&
+          CurPtr[1] == '"') {
         CurPtr += 2; // Consume 'c' and '"'
         Token Result(Token::Kind::c_string_literal, eter::Span(0, 0));
-        lexStringLiteral(Result, TokStart);
+        bool Terminated = lexStringLiteral(Result, TokStart, LexerItems);
         Result.TokenKind = Token::Kind::c_string_literal; // override what lexStringLiteral sets
         LexerItems.push_back(Result);
+        if (!Terminated) {
+          LexerItems.push_back(LexerError{
+              LexerError::Kind::UnterminatedStringLiteral, Result.TokenSpan});
+        }
         continue;
       }
     }
@@ -277,10 +311,11 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
       LexerItems.push_back(Token(
           Kind, eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
     } else {
-      // Emit an unknown token to allow the parser to attempt error recovery.
+      struct Span ErrorSpan(TokStart - BufferStart, CurPtr - BufferStart);
       LexerItems.push_back(
-          Token(Token::Kind::unknown,
-                eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
+          LexerError{LexerError::Kind::InvalidCharacter, ErrorSpan});
+      // Emit an unknown token to allow the parser to attempt error recovery.
+      LexerItems.push_back(Token(Token::Kind::unknown, ErrorSpan));
     }
   }
 
@@ -288,7 +323,13 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
   // This simplifies parser logic by guaranteeing an explicit end marker.
   if (Span.Start == 0 && Span.End == Buffer.size()) {
     if (!LexerItems.empty()) {
-      if (LexerItems.back().TokenKind != Token::Kind::eof) {
+      if (const auto *Tok = std::get_if<Token>(&LexerItems.back())) {
+        if (Tok->TokenKind != Token::Kind::eof) {
+          LexerItems.push_back(
+              Token(Token::Kind::eof,
+                    eter::Span(Buffer.size(), Buffer.size())));
+        }
+      } else {
         LexerItems.push_back(
             Token(Token::Kind::eof, eter::Span(Buffer.size(), Buffer.size())));
       }
@@ -303,7 +344,7 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
 /// Advances the internal cursor past whitespace characters and comments.
 /// Handles both line comments (//) and nested block comments (/* */).
-void Lexer::skipWhitespaceAndComments() {
+void Lexer::skipWhitespaceAndComments(std::vector<LexerItem> &LexerItems) {
   while (CurPtr < BufferEnd) {
     char C = *CurPtr;
     if (C == ' ' || C == '\t' || C == '\n' || C == '\r') {
@@ -317,6 +358,7 @@ void Lexer::skipWhitespaceAndComments() {
         }
       } else if (CurPtr[1] == '*') {
         // Multi-line block comment: support nesting to adhere to language spec.
+        const char *CommentStart = CurPtr;
         CurPtr += 2;
         int NestingDepth = 1;
         while (CurPtr < BufferEnd && NestingDepth > 0) {
@@ -331,6 +373,13 @@ void Lexer::skipWhitespaceAndComments() {
             CurPtr++;
           }
         }
+
+        if (NestingDepth > 0) {
+          LexerItems.push_back(LexerError{
+              LexerError::Kind::UnterminatedBlockComment,
+              eter::Span(CommentStart - BufferStart, CurPtr - BufferStart)});
+          return;
+        }
       } else {
         break; // It's a division operator, not a comment.
       }
@@ -344,10 +393,14 @@ void Lexer::skipWhitespaceAndComments() {
 /// Assumes `CurPtr` is pointing to the start of the token.
 void Lexer::lexIdentifier(Token &Result, const char *TokStart) {
   // Consume alphanumeric characters and underscores.
-  while (CurPtr < BufferEnd && (std::isalnum(*CurPtr) || *CurPtr == '_')) {
-    CurPtr++;
+  while (CurPtr < BufferEnd) {
+    unsigned char C = static_cast<unsigned char>(*CurPtr);
+    if (std::isalnum(C) || *CurPtr == '_') {
+      CurPtr++;
+    } else {
+      break;
+    }
   }
-
 
   llvm::StringRef Str(TokStart, CurPtr - TokStart);
 
@@ -363,18 +416,21 @@ void Lexer::lexIdentifier(Token &Result, const char *TokStart) {
 
 /// Lexes a numeric literal (integer or floating-point).
 /// Assumes `CurPtr` is pointing to the first digit.
-void Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
+bool Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
   bool IsHex = false;
-  if (TokStart[0] == '0' && CurPtr < BufferEnd && (*CurPtr == 'x' || *CurPtr == 'X')) {
+  size_t HexDigits = 0;
+  if (TokStart[0] == '0' && CurPtr < BufferEnd &&
+      (*CurPtr == 'x' || *CurPtr == 'X')) {
     CurPtr++;
     IsHex = true;
   }
 
   // Consume the integer part.
   while (CurPtr < BufferEnd) {
-    if (IsHex && std::isxdigit(*CurPtr)) {
+    if (IsHex && isHexDigit(*CurPtr)) {
+      HexDigits++;
       CurPtr++;
-    } else if (!IsHex && std::isdigit(*CurPtr)) {
+    } else if (!IsHex && std::isdigit(static_cast<unsigned char>(*CurPtr))) {
       CurPtr++;
     } else if (*CurPtr == '_') {
       CurPtr++;
@@ -386,10 +442,12 @@ void Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
   if (!IsHex && CurPtr < BufferEnd && *CurPtr == '.') {
     // Check if the next character is a digit to differentiate a float literal
     // (e.g., 3.14) from a method call on an integer (e.g., 1.method()).
-    if (CurPtr + 1 < BufferEnd && std::isdigit(CurPtr[1])) {
+    if (CurPtr + 1 < BufferEnd &&
+        std::isdigit(static_cast<unsigned char>(CurPtr[1]))) {
       CurPtr++; // Consume '.'
       while (CurPtr < BufferEnd) {
-        if (std::isdigit(*CurPtr) || *CurPtr == '_') {
+        if (std::isdigit(static_cast<unsigned char>(*CurPtr)) ||
+            *CurPtr == '_') {
           CurPtr++;
         } else {
           break;
@@ -403,7 +461,7 @@ void Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
       Result.TokenKind = Token::Kind::float_literal;
       Result.TokenSpan =
           eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
-      return;
+      return true;
     }
   }
 
@@ -412,29 +470,94 @@ void Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
     CurPtr++;
     Result.TokenKind = Token::Kind::float_literal;
     Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
-    return;
+    return true;
   }
 
   Result.TokenKind = Token::Kind::integer_literal;
   Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+  return !(IsHex && HexDigits == 0);
+}
+
+static bool lexUnicodeEscape(const char *EscapeStart, const char *&CurPtr,
+                             const char *BufferEnd,
+                             std::vector<LexerItem> &LexerItems,
+                             const char *BufferStart) {
+  if (CurPtr >= BufferEnd || *CurPtr != 'u') {
+    return false;
+  }
+  if (CurPtr + 1 >= BufferEnd || CurPtr[1] != '{') {
+    return false;
+  }
+
+  CurPtr += 2; // consume 'u' and '{'
+  const char *DigitsStart = CurPtr;
+  while (CurPtr < BufferEnd && isHexDigit(*CurPtr)) {
+    CurPtr++;
+  }
+
+  bool HasDigits = CurPtr > DigitsStart;
+  if (CurPtr >= BufferEnd) {
+    pushLexerError(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+                   EscapeStart, CurPtr, BufferStart);
+    return true;
+  }
+
+  if (*CurPtr != '}') {
+    pushLexerError(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+                   EscapeStart, CurPtr, BufferStart);
+    return true;
+  }
+
+  CurPtr++; // consume '}'
+  if (!HasDigits) {
+    pushLexerError(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+                   EscapeStart, CurPtr, BufferStart);
+  }
+  return true;
 }
 
 /// Lexes a string literal enclosed in double quotes.
 /// Handles basic escape sequences.
-void Lexer::lexStringLiteral(Token &Result, const char *TokStart) {
+bool Lexer::lexStringLiteral(Token &Result, const char *TokStart,
+                             std::vector<LexerItem> &LexerItems) {
   while (CurPtr < BufferEnd) {
     char C = *CurPtr++;
     if (C == '\\') {
-      // Skip the escaped character (e.g., \n, \", \\).
-      if (CurPtr < BufferEnd) {
+      const char *EscapeStart = CurPtr - 1;
+      if (CurPtr >= BufferEnd) {
+        pushLexerError(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+                       EscapeStart, CurPtr, BufferStart);
+        break;
+      }
+
+      if (lexUnicodeEscape(EscapeStart, CurPtr, BufferEnd, LexerItems,
+                           BufferStart)) {
+        continue;
+      }
+
+      char Next = *CurPtr;
+      switch (Next) {
+      case 'n':
+      case 't':
+      case 'r':
+      case '0':
+      case '\\':
+      case '"':
+      case '\'':
         CurPtr++;
+        break;
+      default:
+        CurPtr++;
+        pushLexerError(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+                       EscapeStart, CurPtr, BufferStart);
+        break;
       }
     } else if (C == '"') {
       // String successfully terminated.
       Result.TokenKind = Token::Kind::string_literal;
       Result.TokenSpan =
           eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
-      return;
+      return true;
     } else if (C == '\n' || C == '\r') {
       // Unterminated string literal on this line.
       break;
@@ -446,33 +569,67 @@ void Lexer::lexStringLiteral(Token &Result, const char *TokStart) {
   // in the parser, even though it is malformed.
   Result.TokenKind = Token::Kind::string_literal;
   Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+  return false;
 }
 
 /// Lexes a character literal enclosed in single quotes.
 /// Handles basic escape sequences.
-void Lexer::lexCharacterLiteral(Token &Result, const char *TokStart) {
+bool Lexer::lexCharacterLiteral(Token &Result, const char *TokStart,
+                                std::vector<LexerItem> &LexerItems,
+                                size_t &CharCount) {
   while (CurPtr < BufferEnd) {
     char C = *CurPtr++;
     if (C == '\\') {
-      // Skip the escaped character.
-      if (CurPtr < BufferEnd) {
+      const char *EscapeStart = CurPtr - 1;
+      if (CurPtr >= BufferEnd) {
+        pushLexerError(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+                       EscapeStart, CurPtr, BufferStart);
+        break;
+      }
+
+      if (lexUnicodeEscape(EscapeStart, CurPtr, BufferEnd, LexerItems,
+                           BufferStart)) {
+        CharCount++;
+        continue;
+      }
+
+      char Next = *CurPtr;
+      switch (Next) {
+      case 'n':
+      case 't':
+      case 'r':
+      case '0':
+      case '\\':
+      case '"':
+      case '\'':
         CurPtr++;
+        CharCount++;
+        break;
+      default:
+        CurPtr++;
+        CharCount++;
+        pushLexerError(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+                       EscapeStart, CurPtr, BufferStart);
+        break;
       }
     } else if (C == '\'') {
       // Character literal successfully terminated.
       Result.TokenKind = Token::Kind::char_literal;
       Result.TokenSpan =
           eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
-      return;
+      return true;
     } else if (C == '\n' || C == '\r') {
       // Unterminated character literal on this line.
       break;
+    } else {
+      CharCount++;
     }
   }
 
   // Unterminated character literal
   Result.TokenKind = Token::Kind::char_literal;
   Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+  return false;
 }
 
 } // namespace eter::lexer

@@ -116,4 +116,3 @@ add_custom_target(check-eter
   DEPENDS eterc
   COMMENT "Running Eter lit test suite"
 )
-

@@ -23,7 +23,7 @@
 
 /// \def ETER_SYMBOL(X, Y)
 /// \brief Macro used to define a punctuation or symbol token.
-/// \param X The internal name of the symbol token.
+/// \param X The interna
 /// \param Y The string literal representation of the symbol.
 #ifndef ETER_SYMBOL
 #define ETER_SYMBOL(X, Y) ETER_TOKEN(X)

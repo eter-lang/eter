@@ -15,14 +15,40 @@
 #include <llvm/ADT/StringRef.h>
 
 #include <cstddef>
+#include <cstdint>
+#include <variant>
 #include <vector>
 
 namespace eter::lexer {
 
+struct LexerError {
+  enum class Kind : uint8_t {
+#define ETER_LEXER_ERROR(X, Y) X,
+#include "eter/Lexer/LexerErrors.def"
+#undef ETER_LEXER_ERROR
+  };
+
+  Kind ErrorKind;
+  Span ErrorSpan;
+
+  static const char *getErrorName(Kind K) {
+    switch (K) {
+#define ETER_LEXER_ERROR(X, Y)                                                \
+  case Kind::X:                                                                \
+    return Y;
+#include "eter/Lexer/LexerErrors.def"
+#undef ETER_LEXER_ERROR
+    }
+    return "unknown";
+  }
+};
+
+using LexerItem = std::variant<Token, LexerError>;
+
 /// A high-performance, incremental-ready lexer.
 ///
 /// The lexer converts a raw character stream from a `SourceBuffer` into a
-/// sequence of `Token`s. It is designed to be highly stateless and operates
+/// sequence of `LexerItem`s. It is designed to be highly stateless and operates
 /// via zero-copy string references to support fast, incremental updates in
 /// an IDE/Language Server environment.
 class Lexer {
@@ -32,9 +58,9 @@ public:
 
   /// Lexes the entire contents of the provided source buffer from start to finish.
   /// \param SourceBuffer The source buffer to lex.
-  /// \returns A vector of tokens extracted from the source buffer.
-  std::vector<Token> lex(SourceBuffer &SourceBuffer){
-      return lex(SourceBuffer, Span(0, SourceBuffer.getBuffer().size()));
+  /// \returns A vector of lexer items extracted from the source buffer.
+  std::vector<LexerItem> lex(SourceBuffer &SourceBuffer) {
+    return lex(SourceBuffer, Span(0, SourceBuffer.getBuffer().size()));
   }
 
   /// Lexes a specific byte range within the source buffer.
@@ -44,13 +70,13 @@ public:
   /// overhead of re-lexing the entire file.
   /// \param SourceBuffer The source buffer to lex.
   /// \param Span The byte range within the source buffer to lex.
-  /// \returns A vector of tokens extracted from the specified span.
-  std::vector<Token> lex(SourceBuffer &SourceBuffer, Span Span);
+  /// \returns A vector of lexer items extracted from the specified span.
+  std::vector<LexerItem> lex(SourceBuffer &SourceBuffer, Span Span);
 
 private:
   /// Advances the internal cursor past any consecutive whitespace characters
   /// and comments (handling nested /* */ block comments as per spec).
-  void skipWhitespaceAndComments();
+  void skipWhitespaceAndComments(std::vector<LexerItem> &LexerItems);
 
   /// Specialized lexing routines for extracting specific token categories.
   /// These functions assume `CurPtr` is pointing to the start of the token,
@@ -58,18 +84,27 @@ private:
   /// \param Result The token to populate with the lexed information.
   /// \param TokStart A pointer to the start of the token in the source buffer.
   void lexIdentifier(Token &Result, const char *TokStart);
-  
+
   /// \param Result The token to populate with the lexed information.
   /// \param TokStart A pointer to the start of the token in the source buffer.
-  void lexNumericLiteral(Token &Result, const char *TokStart);
-  
+  /// \returns true if the numeric literal is valid, false otherwise.
+  bool lexNumericLiteral(Token &Result, const char *TokStart);
+
   /// \param Result The token to populate with the lexed information.
   /// \param TokStart A pointer to the start of the token in the source buffer.
-  void lexStringLiteral(Token &Result, const char *TokStart);
-  
+  /// \param LexerItems The output list to append lexer errors to.
+  /// \returns true if the string was properly terminated, false otherwise.
+  bool lexStringLiteral(Token &Result, const char *TokStart,
+                        std::vector<LexerItem> &LexerItems);
+
   /// \param Result The token to populate with the lexed information.
   /// \param TokStart A pointer to the start of the token in the source buffer.
-  void lexCharacterLiteral(Token &Result, const char *TokStart);
+  /// \param LexerItems The output list to append lexer errors to.
+  /// \param CharCount The number of logical characters consumed.
+  /// \returns true if the character literal was properly terminated, false otherwise.
+  bool lexCharacterLiteral(Token &Result, const char *TokStart,
+                           std::vector<LexerItem> &LexerItems,
+                           size_t &CharCount);
 
   //===--------------------------------------------------------------------===//
   // Internal Traversal State

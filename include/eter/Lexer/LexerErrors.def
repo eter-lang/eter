@@ -1,0 +1,30 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the Eter Project, under the Apache License v2.0 with LLVM Exceptions.
+// See /LICENSE for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+/// \file
+/// This file defines the various lexer error kinds used by the Eter lexer.
+///
+/// It uses the "X-Macro" pattern to allow generating enums, string tables,
+/// and other error-related logic without duplicating the list of errors.
+/// To use this file, define the `ETER_LEXER_ERROR` macro before including it.
+/// The macro takes two arguments: the enum name and its string representation.
+
+#ifndef ETER_LEXER_ERROR
+#define ETER_LEXER_ERROR(X, Y)
+#endif
+
+ETER_LEXER_ERROR(UnterminatedStringLiteral, "unterminated_string_literal")
+ETER_LEXER_ERROR(UnterminatedCharLiteral, "unterminated_char_literal")
+ETER_LEXER_ERROR(UnterminatedBlockComment, "unterminated_block_comment")
+ETER_LEXER_ERROR(InvalidCharacter, "invalid_character")
+ETER_LEXER_ERROR(InvalidEscapeSequence, "invalid_escape_sequence")
+ETER_LEXER_ERROR(InvalidUnicodeEscape, "invalid_unicode_escape")
+ETER_LEXER_ERROR(InvalidCharLiteralLength, "invalid_char_literal_length")
+ETER_LEXER_ERROR(InvalidNumericLiteral, "invalid_numeric_literal")
+
+#undef ETER_LEXER_ERROR
