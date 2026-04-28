@@ -20,6 +20,7 @@ struct CompilerOptions {
   std::string OutputFile;
   bool ShowVersion = false;
   bool ShowHelp = false;
+  bool DumpTokens = false;
   int OptimizationLevel = 0; // -O0
 };
 

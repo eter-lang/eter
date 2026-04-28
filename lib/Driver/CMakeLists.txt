@@ -18,6 +18,7 @@ target_link_libraries(EterDriver
     EterProjectOptions
     LLVM
     eter::Base
+    eter::Lexer
 )
 
 target_include_directories(EterDriver
