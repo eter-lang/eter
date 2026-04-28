@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "eter/Lexer/Lexer.h"
+
 #include <llvm/ADT/StringSwitch.h>
+
 #include <cctype>
 
 namespace eter::lexer {
@@ -16,13 +18,10 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
   llvm::StringRef Buffer = SourceBuffer.getBuffer();
   std::vector<Token> LexerItems;
 
-  if (Span.Start > Buffer.size() || Span.End > Buffer.size() || Span.Start > Span.End) {
+  if (Span.Start >= Buffer.size() || Span.End > Buffer.size() ||
+      Span.Start > Span.End) {
     return LexerItems;
   }
-
-  // Pre-allocate memory to avoid multiple reallocations
-  // A rough heuristic of 1 token per 8 characters
-  LexerItems.reserve((Span.End - Span.Start) / 8 + 1);
 
   BufferStart = Buffer.data();
   CurPtr = BufferStart + Span.Start;
@@ -38,21 +37,21 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     char C = *CurPtr++;
 
     if (std::isalpha(C) || C == '_') {
-      Token Result(Token::Kind::identifier, eter::Span(0,0));
+      Token Result(Token::Kind::identifier, eter::Span(0, 0));
       lexIdentifier(Result, TokStart);
       LexerItems.push_back(Result);
       continue;
     }
 
     if (std::isdigit(C)) {
-      Token Result(Token::Kind::integer_literal, eter::Span(0,0));
+      Token Result(Token::Kind::integer_literal, eter::Span(0, 0));
       lexNumericLiteral(Result, TokStart);
       LexerItems.push_back(Result);
       continue;
     }
 
     if (C == '"') {
-      Token Result(Token::Kind::string_literal, eter::Span(0,0));
+      Token Result(Token::Kind::string_literal, eter::Span(0, 0));
       lexStringLiteral(Result, TokStart);
       LexerItems.push_back(Result);
       continue;
@@ -61,14 +60,30 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     Token::Kind Kind = Token::Kind::unknown;
 
     switch (C) {
-    case '(': Kind = Token::Kind::l_paren; break;
-    case ')': Kind = Token::Kind::r_paren; break;
-    case '{': Kind = Token::Kind::l_brace; break;
-    case '}': Kind = Token::Kind::r_brace; break;
-    case '[': Kind = Token::Kind::l_square; break;
-    case ']': Kind = Token::Kind::r_square; break;
-    case ',': Kind = Token::Kind::comma; break;
-    case ';': Kind = Token::Kind::semi; break;
+    case '(':
+      Kind = Token::Kind::l_paren;
+      break;
+    case ')':
+      Kind = Token::Kind::r_paren;
+      break;
+    case '{':
+      Kind = Token::Kind::l_brace;
+      break;
+    case '}':
+      Kind = Token::Kind::r_brace;
+      break;
+    case '[':
+      Kind = Token::Kind::l_square;
+      break;
+    case ']':
+      Kind = Token::Kind::r_square;
+      break;
+    case ',':
+      Kind = Token::Kind::comma;
+      break;
+    case ';':
+      Kind = Token::Kind::semi;
+      break;
     case ':':
       if (CurPtr < BufferEnd && *CurPtr == ':') {
         CurPtr++;
@@ -115,7 +130,9 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
         Kind = Token::Kind::slash;
       }
       break;
-    case '%': Kind = Token::Kind::percent; break;
+    case '%':
+      Kind = Token::Kind::percent;
+      break;
     case '&':
       if (CurPtr < BufferEnd && *CurPtr == '&') {
         CurPtr++;
@@ -132,7 +149,9 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
         Kind = Token::Kind::pipe;
       }
       break;
-    case '^': Kind = Token::Kind::caret; break;
+    case '^':
+      Kind = Token::Kind::caret;
+      break;
     case '<':
       if (CurPtr < BufferEnd && *CurPtr == '<') {
         CurPtr++;
@@ -174,14 +193,19 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
         Kind = Token::Kind::bang;
       }
       break;
-    case '.': Kind = Token::Kind::dot; break;
+    case '.':
+      Kind = Token::Kind::dot;
+      break;
     }
 
     if (Kind != Token::Kind::unknown) {
-      LexerItems.push_back(Token(Kind, eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
+      LexerItems.push_back(Token(
+          Kind, eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
     } else {
       // Emit an unknown token
-      LexerItems.push_back(Token(Token::Kind::unknown, eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
+      LexerItems.push_back(
+          Token(Token::Kind::unknown,
+                eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
     }
   }
 
@@ -189,10 +213,12 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     // Append EOF token if we parsed the whole buffer
     if (!LexerItems.empty()) {
       if (LexerItems.back().TokenKind != Token::Kind::eof) {
-        LexerItems.push_back(Token(Token::Kind::eof, eter::Span(Buffer.size(), Buffer.size())));
+        LexerItems.push_back(
+            Token(Token::Kind::eof, eter::Span(Buffer.size(), Buffer.size())));
       }
     } else {
-      LexerItems.push_back(Token(Token::Kind::eof, eter::Span(Buffer.size(), Buffer.size())));
+      LexerItems.push_back(
+          Token(Token::Kind::eof, eter::Span(Buffer.size(), Buffer.size())));
     }
   }
 
@@ -217,7 +243,8 @@ void Lexer::skipWhitespaceAndComments() {
           if (CurPtr + 1 < BufferEnd && *CurPtr == '/' && CurPtr[1] == '*') {
             NestingDepth++;
             CurPtr += 2;
-          } else if (CurPtr + 1 < BufferEnd && *CurPtr == '*' && CurPtr[1] == '/') {
+          } else if (CurPtr + 1 < BufferEnd && *CurPtr == '*' &&
+                     CurPtr[1] == '/') {
             NestingDepth--;
             CurPtr += 2;
           } else {
@@ -243,27 +270,34 @@ void Lexer::lexIdentifier(Token &Result, const char *TokStart) {
   Result.TokenKind = llvm::StringSwitch<Token::Kind>(Str)
 #define ETER_KEYWORD(X, Y) .Case(Y, Token::Kind::kw_##X)
 #include "eter/Lexer/TokenKinds.def"
-      .Default(Token::Kind::identifier);
+                         .Default(Token::Kind::identifier);
 
   Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
 }
 
 void Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
-  while (CurPtr < BufferEnd && std::isdigit(*CurPtr)) {
+  while (CurPtr < BufferEnd && std::isdigit(*CurPtr))
     CurPtr++;
-  }
 
   if (CurPtr < BufferEnd && *CurPtr == '.') {
-    // Check if the next char is a digit to differentiate from a method call (e.g. `1.method()`)
+    // Check if the next char is a digit to differentiate from a method call
+    // (e.g. `1.method()`)
     if (CurPtr + 1 < BufferEnd && std::isdigit(CurPtr[1])) {
       CurPtr++; // Consume '.'
-      while (CurPtr < BufferEnd && std::isdigit(*CurPtr)) {
+      while (CurPtr < BufferEnd && std::isdigit(*CurPtr))
         CurPtr++;
-      }
+      if (CurPtr < BufferEnd && *CurPtr == 'f')
+        CurPtr++;
       Result.TokenKind = Token::Kind::float_literal;
-      Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+      Result.TokenSpan =
+          eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
       return;
     }
+  }
+  if (CurPtr < BufferEnd && *CurPtr == 'f') {
+    CurPtr++;
+    Result.TokenKind = Token::Kind::float_literal;
+    Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
   }
 
   Result.TokenKind = Token::Kind::integer_literal;
@@ -281,7 +315,8 @@ void Lexer::lexStringLiteral(Token &Result, const char *TokStart) {
     } else if (C == '"') {
       // String successfully terminated
       Result.TokenKind = Token::Kind::string_literal;
-      Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+      Result.TokenSpan =
+          eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
       return;
     } else if (C == '\n' || C == '\r') {
       // Unterminated string literal on this line
