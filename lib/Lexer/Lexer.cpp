@@ -14,20 +14,30 @@
 
 namespace eter::lexer {
 
+/// Lexes a specific byte range within the source buffer and returns a list of tokens.
+/// This is the core engine for incremental lexing.
 std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
   llvm::StringRef Buffer = SourceBuffer.getBuffer();
   std::vector<Token> LexerItems;
 
-  if (Span.Start >= Buffer.size() || Span.End > Buffer.size() ||
+  // Validate the span to prevent out-of-bounds memory access.
+  if (Span.Start > Buffer.size() || Span.End > Buffer.size() ||
       Span.Start > Span.End) {
     return LexerItems;
   }
 
+  // Pre-allocate memory to avoid multiple reallocations
+  // A rough heuristic of 1 token per 8 characters
+  LexerItems.reserve((Span.End - Span.Start) / 8 + 1);
+
+  // Initialize the sliding window pointers for this lexing session.
   BufferStart = Buffer.data();
   CurPtr = BufferStart + Span.Start;
   BufferEnd = BufferStart + Span.End;
 
+  // Main lexing loop: consume characters until we reach the end of the span.
   while (CurPtr < BufferEnd) {
+    // Skip any irrelevant whitespace or comments before parsing the next token.
     skipWhitespaceAndComments();
     if (CurPtr >= BufferEnd) {
       break;
@@ -36,6 +46,8 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     const char *TokStart = CurPtr;
     char C = *CurPtr++;
 
+    // 1. Identifiers and Keywords
+    // If the token starts with a letter or underscore, it's an identifier or keyword.
     if (std::isalpha(C) || C == '_') {
       Token Result(Token::Kind::identifier, eter::Span(0, 0));
       lexIdentifier(Result, TokStart);
@@ -43,6 +55,8 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
       continue;
     }
 
+    // 2. Numeric Literals
+    // If the token starts with a digit, it's an integer or floating-point literal.
     if (std::isdigit(C)) {
       Token Result(Token::Kind::integer_literal, eter::Span(0, 0));
       lexNumericLiteral(Result, TokStart);
@@ -50,6 +64,8 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
       continue;
     }
 
+    // 3. String Literals
+    // If the token starts with a quote, parse it as a string literal.
     if (C == '"') {
       Token Result(Token::Kind::string_literal, eter::Span(0, 0));
       lexStringLiteral(Result, TokStart);
@@ -57,9 +73,12 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
       continue;
     }
 
+    // 4. Symbols and Operators
+    // Resolve single-character and multi-character operators.
     Token::Kind Kind = Token::Kind::unknown;
 
     switch (C) {
+    // --- Punctuation and Grouping ---
     case '(':
       Kind = Token::Kind::l_paren;
       break;
@@ -92,6 +111,8 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
         Kind = Token::Kind::colon;
       }
       break;
+
+    // --- Arithmetic Operators ---
     case '+':
       if (CurPtr < BufferEnd && *CurPtr == '+') {
         CurPtr++;
@@ -133,6 +154,8 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     case '%':
       Kind = Token::Kind::percent;
       break;
+
+    // --- Logical and Bitwise Operators ---
     case '&':
       if (CurPtr < BufferEnd && *CurPtr == '&') {
         CurPtr++;
@@ -152,6 +175,8 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     case '^':
       Kind = Token::Kind::caret;
       break;
+
+    // --- Relational and Assignment Operators ---
     case '<':
       if (CurPtr < BufferEnd && *CurPtr == '<') {
         CurPtr++;
@@ -193,6 +218,8 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
         Kind = Token::Kind::bang;
       }
       break;
+
+    // --- Object/Member Access ---
     case '.':
       Kind = Token::Kind::dot;
       break;
@@ -202,15 +229,16 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
       LexerItems.push_back(Token(
           Kind, eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
     } else {
-      // Emit an unknown token
+      // Emit an unknown token to allow the parser to attempt error recovery.
       LexerItems.push_back(
           Token(Token::Kind::unknown,
                 eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
     }
   }
 
+  // If we lexed the entire buffer (not just a chunk), append an EOF token.
+  // This simplifies parser logic by guaranteeing an explicit end marker.
   if (Span.Start == 0 && Span.End == Buffer.size()) {
-    // Append EOF token if we parsed the whole buffer
     if (!LexerItems.empty()) {
       if (LexerItems.back().TokenKind != Token::Kind::eof) {
         LexerItems.push_back(
@@ -225,6 +253,8 @@ std::vector<Token> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
   return LexerItems;
 }
 
+/// Advances the internal cursor past whitespace characters and comments.
+/// Handles both line comments (//) and nested block comments (/* */).
 void Lexer::skipWhitespaceAndComments() {
   while (CurPtr < BufferEnd) {
     char C = *CurPtr;
@@ -232,11 +262,13 @@ void Lexer::skipWhitespaceAndComments() {
       CurPtr++;
     } else if (C == '/' && CurPtr + 1 < BufferEnd) {
       if (CurPtr[1] == '/') {
+        // Single-line comment: skip until the end of the line.
         CurPtr += 2;
         while (CurPtr < BufferEnd && *CurPtr != '\n' && *CurPtr != '\r') {
           CurPtr++;
         }
       } else if (CurPtr[1] == '*') {
+        // Multi-line block comment: support nesting to adhere to language spec.
         CurPtr += 2;
         int NestingDepth = 1;
         while (CurPtr < BufferEnd && NestingDepth > 0) {
@@ -252,21 +284,27 @@ void Lexer::skipWhitespaceAndComments() {
           }
         }
       } else {
-        break;
+        break; // It's a division operator, not a comment.
       }
     } else {
-      break;
+      break; // Not whitespace and not a comment.
     }
   }
 }
 
+/// Lexes an identifier or keyword.
+/// Assumes `CurPtr` is pointing to the start of the token.
 void Lexer::lexIdentifier(Token &Result, const char *TokStart) {
+  // Consume alphanumeric characters and underscores.
   while (CurPtr < BufferEnd && (std::isalnum(*CurPtr) || *CurPtr == '_')) {
     CurPtr++;
   }
 
+  
   llvm::StringRef Str(TokStart, CurPtr - TokStart);
 
+  // Use StringSwitch for O(1) keyword resolution via X-macros.
+  // Defaults to a standard identifier if no keyword matches.
   Result.TokenKind = llvm::StringSwitch<Token::Kind>(Str)
 #define ETER_KEYWORD(X, Y) .Case(Y, Token::Kind::kw_##X)
 #include "eter/Lexer/TokenKinds.def"
@@ -275,57 +313,69 @@ void Lexer::lexIdentifier(Token &Result, const char *TokStart) {
   Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
 }
 
+/// Lexes a numeric literal (integer or floating-point).
+/// Assumes `CurPtr` is pointing to the first digit.
 void Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
+  // Consume the integer part.
   while (CurPtr < BufferEnd && std::isdigit(*CurPtr))
     CurPtr++;
 
   if (CurPtr < BufferEnd && *CurPtr == '.') {
-    // Check if the next char is a digit to differentiate from a method call
-    // (e.g. `1.method()`)
+    // Check if the next character is a digit to differentiate a float literal
+    // (e.g., 3.14) from a method call on an integer (e.g., 1.method()).
     if (CurPtr + 1 < BufferEnd && std::isdigit(CurPtr[1])) {
       CurPtr++; // Consume '.'
       while (CurPtr < BufferEnd && std::isdigit(*CurPtr))
         CurPtr++;
+      
+      // Optional 'f' suffix for floating point literals.
       if (CurPtr < BufferEnd && *CurPtr == 'f')
         CurPtr++;
+        
       Result.TokenKind = Token::Kind::float_literal;
       Result.TokenSpan =
           eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
       return;
     }
   }
+  
+  // Handle optional 'f' suffix without a decimal point (e.g., 1f).
   if (CurPtr < BufferEnd && *CurPtr == 'f') {
     CurPtr++;
     Result.TokenKind = Token::Kind::float_literal;
     Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+    return;
   }
 
   Result.TokenKind = Token::Kind::integer_literal;
   Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
 }
 
+/// Lexes a string literal enclosed in double quotes.
+/// Handles basic escape sequences.
 void Lexer::lexStringLiteral(Token &Result, const char *TokStart) {
   while (CurPtr < BufferEnd) {
     char C = *CurPtr++;
     if (C == '\\') {
-      // Skip escaped character
+      // Skip the escaped character (e.g., \n, \", \\).
       if (CurPtr < BufferEnd) {
         CurPtr++;
       }
     } else if (C == '"') {
-      // String successfully terminated
+      // String successfully terminated.
       Result.TokenKind = Token::Kind::string_literal;
       Result.TokenSpan =
           eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
       return;
     } else if (C == '\n' || C == '\r') {
-      // Unterminated string literal on this line
+      // Unterminated string literal on this line.
       break;
     }
   }
 
-  // If we reach here, the string is unterminated (hit EOF or newline)
-  // Emit string literal anyway for recovery
+  // If we reach here, the string is unterminated (hit EOF or a newline).
+  // We emit it as a string literal anyway to facilitate error recovery
+  // in the parser, even though it is malformed.
   Result.TokenKind = Token::Kind::string_literal;
   Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
 }
