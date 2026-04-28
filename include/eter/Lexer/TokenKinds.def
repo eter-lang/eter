@@ -6,14 +6,33 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// \file
+/// This file defines the various token kinds used by the Eter lexer.
+///
+/// It uses the "X-Macro" pattern to allow generating enums, string tables,
+/// and other token-related logic without duplicating the list of tokens.
+/// To use this file, you should define one or more of the `ETER_TOKEN`,
+/// `ETER_SYMBOL`, or `ETER_KEYWORD` macros before including it.
+
+/// \def ETER_TOKEN(X)
+/// \brief Macro used to define a base token kind.
+/// \param X The internal name of the token.
 #ifndef ETER_TOKEN
 #define ETER_TOKEN(X)
 #endif
 
+/// \def ETER_SYMBOL(X, Y)
+/// \brief Macro used to define a punctuation or symbol token.
+/// \param X The internal name of the symbol token.
+/// \param Y The string literal representation of the symbol.
 #ifndef ETER_SYMBOL
 #define ETER_SYMBOL(X, Y) ETER_TOKEN(X)
 #endif
 
+/// \def ETER_KEYWORD(X, Y)
+/// \brief Macro used to define a keyword token.
+/// \param X The base name of the keyword. The token name will be prefixed with `kw_`.
+/// \param Y The string literal representation of the keyword.
 #ifndef ETER_KEYWORD
 #define ETER_KEYWORD(X, Y) ETER_TOKEN(kw_ ## X)
 #endif
@@ -21,18 +40,18 @@
 //===----------------------------------------------------------------------===//
 // Special Tokens
 //===----------------------------------------------------------------------===//
-ETER_TOKEN(unknown)             // Fallback for error recovery
-ETER_TOKEN(eof)                 // End of file
+ETER_TOKEN(unknown)             ///< Fallback for error recovery
+ETER_TOKEN(eof)                 ///< End of file
 
 //===----------------------------------------------------------------------===//
 // Identifiers and Literals
 //===----------------------------------------------------------------------===//
-ETER_TOKEN(identifier)          // e.g., foo, my_var
-ETER_TOKEN(integer_literal)     // e.g., 42, 0x1A
-ETER_TOKEN(float_literal)       // e.g., 3.14
-ETER_TOKEN(char_literal)        // e.g., 'a'
-ETER_TOKEN(string_literal)      // e.g., "hello"
-ETER_TOKEN(c_string_literal)    // e.g., @c"hello"
+ETER_TOKEN(identifier)          ///< e.g., foo, my_var
+ETER_TOKEN(integer_literal)     ///< e.g., 42, 0x1A
+ETER_TOKEN(float_literal)       ///< e.g., 3.14
+ETER_TOKEN(char_literal)        ///< e.g., 'a'
+ETER_TOKEN(string_literal)      ///< e.g., "hello"
+ETER_TOKEN(c_string_literal)    ///< e.g., @c"hello"
 
 //===----------------------------------------------------------------------===//
 // Delimiters (from LANGUAGE_SPECIFICATION.md)
