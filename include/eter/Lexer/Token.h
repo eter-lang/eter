@@ -9,6 +9,8 @@
 #ifndef ETER_LEXER_TOKEN_H
 #define ETER_LEXER_TOKEN_H
 
+#include "eter/Base/SourceManager.h"
+
 #include <llvm/ADT/StringRef.h>
 
 namespace eter::lexer {
@@ -17,22 +19,20 @@ namespace eter::lexer {
 struct Token {
   /// The kind of token (identifier, number, string, keyword, symbol, etc.)
   enum class Kind : uint16_t {
-#define TOK(X) X,
+#define ETER_TOKEN(X) X,
 #include "eter/Lexer/TokenKinds.def"
 #undef TOK
   };
 
-  /// The kind of the token.
-  Kind TokenKind;
-  /// The actual text of the token as it appears in the source code.
-  llvm::StringRef Lexeme;
-  /// The position of the token in the source code (e.g., byte offset).
-  uint32_t StartPosition;
-
-  explicit Token(Kind TokenKind, llvm::StringRef Lexeme, uint32_t StartPosition)
-      : TokenKind(TokenKind), Lexeme(Lexeme), StartPosition(StartPosition) {}
+  explicit Token(Kind TokenKind, Span TokenSpan)
+      : TokenKind(TokenKind), TokenSpan(TokenSpan) {}
 
   static const char *getTokenName(Kind K);
+
+  /// The kind of the token.
+  Kind TokenKind;
+  /// The position of the token in the source code (e.g., byte offset).
+  Span TokenSpan;
 };
 
 } // namespace eter::lexer

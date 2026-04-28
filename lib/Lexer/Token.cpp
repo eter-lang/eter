@@ -12,19 +12,19 @@ namespace eter::lexer {
 
 const char *Token::getTokenName(Kind K) {
   switch (K) {
-#define TOK(X)                                                                 \
+#define ETER_TOKEN(X)                                                          \
   case Kind::X:                                                                \
     return #X;
-#define PUNCTUATOR(X, Y)                                                       \
+#define ETER_SYMBOL(X, Y)                                                      \
   case Kind::X:                                                                \
     return Y;
-#define KEYWORD(X, Y)                                                          \
+#define ETER_KEYWORD(X, Y)                                                     \
   case Kind::kw_##X:                                                           \
     return Y;
 #include "eter/Lexer/TokenKinds.def"
-#undef KEYWORD
-#undef PUNCTUATOR
-#undef TOK
+#undef ETER_KEYWORD
+#undef ETER_SYMBOL
+#undef ETER_TOKEN
   }
   return "unknown";
 }
