@@ -4,6 +4,6 @@
 ## External block
 ## Use declarations
 ## Functions
-## Unions
 ## Structs
 ## Enumerations
+## Unions

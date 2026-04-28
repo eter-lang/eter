@@ -57,7 +57,14 @@ let y : f64 = 10.5f;
 ```
 As seen in the example both the declarations are valid.
 
- ### Character
+- #### Usize and Isize
+The `usize` type is an unsigned integer type with the same number of bits as the platform’s pointer type. It can represent every memory address in the process.
+
+The `isize` type is a signed two’s complement integer type with the same number of bits as the platform’s pointer type. The theoretical upper bound on object and array size is the maximum isize value. Thus isize can be used to calculate differences between pointers into an object or array and can address every byte within an object along with one byte past the end.
+
+> Both `usize` and `isize` haves at leas 16 bit lenght.
+ 
+### Character
 A character represents a [Unicode scalar value](https://en.wikipedia.org/wiki/List_of_Unicode_characters). Characters are declared as `char` and the declared value must be enclosed in single quotes. Every character is stored in 4 bytes (32 bit), thus a sort of alias to `u32` type.
 ```rust
 let c: char = 'a';
@@ -120,8 +127,86 @@ The syntax for a tuple type uses parentheses `()` containing a comma-separated l
 let record: (i32, f64, str) = (42, 3.14, "hello");
 ```
 ### Struct types
-### Enum types
+Structs are heterogeneous product of other types (called _fields_). Structs must be declarated with a name to refer to and the type and the name for eah of it's fields. 
+```rust
+struct AName{
+  //fields of AName
+  x : i32,
+  y : f64,
+}
+let aStruct = AName(15,10.4);
+```
+Structs fields can be accessed with `.` followed by the field name.
 
+```rust
+let aVar : i32 = aStruct.x; //15
+```
+- #### Unit-like structs
+Unit-like structs are structs with no fields. Those structs can be initialized with only the name.
+```rust
+struct AStruct{}    //Unit-like struct declaration
+
+let a : AStruct;               //AStruct variable initialization
+let b : AStruct = AStruct{};   //Equivalent initialization
+```
+
+### Enum types
+Enum is a type which defines a new enumerated type domain. Each Enum is declared with a name (like for structs) and the allowed values. Enum constructors (or _variants_) are assignable to variables using the Enum name as the type of the variable.
+
+Each variant can be declared with just name to refer to (_Unit-like_) or have the same syntax of structs, tuple or unions.
+```rust
+enum Animals{
+  Dog(str, i32),
+  Cat{name : str, age : i32},
+  Spider{eyes : i32, poisonous : bool},
+  Reptile,
+}
+
+let a : Animal = Animal::Spider{eyes : 8, poisonous : false};
+let b : Animal = Animal::Reptile;
+```
+Variants defined inside Enum declaration cannot be used as a type specifier.
+```rust
+let b : Cat = Animals::Cat{..}  //Compiling error. Cat not defined
+let c : Animals::Cat = Animals::Cat{..}  //Another compiling error
+```
+- #### Unit-Only (or _Field-less_) Enums
+A constructor with no fields is called _Unit-Like_. When all the constructors in an enum are Unit-Like, then the enum is called **Unit-Only Enum** (or _Field-less_). 
+
+```rust
+enum Balls{
+  Tennis,
+  Golf,
+  Soccer,
+}
+
+let a : Balls = Balls::Tennis 
+```
+
+Each Enum instance has an associated _dicriminant_, an integer (`isize`) that determines which variant of the enum it holds. A discriminant value can be assigned to only one variant and a variant can have only one discriminant.
+Discriminants can be manually assigned in Enum declaration as it follows:
+
+```rust
+enum Balls{
+  Tennis = 4,
+  Golf = 1,
+  Soccer = 2,
+}
+```
+Non specified discriminant are automatically assigned as the discriminant of the previous constructor in the declaration increased by 1. (If it's the first constructor then it's  set to 0)
+```rust
+enum Balls{
+  Tennis,     //Unspecified discriminant for first variant. set to 0
+  Golf = 10,
+  Soccer,     //Discriminant will be 11
+}
+```
+
+Discriminant of a variant can be accessed casting the enum to an `isize`.
+```rust
+let a : Balls = Balls::Golf;
+let discr : isize = a as isize //discr contains 10
+```
 ## Static types layout
  
 ## Dinamically sized types
