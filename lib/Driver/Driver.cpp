@@ -14,7 +14,6 @@
 #include "eter/Base/SourceManager.h"
 #include "eter/Driver/Driver.h"
 #include "eter/Driver/Version.h"
-#include "eter/Driver/DumpTokens.h"
 
 #include <llvm/Support/Error.h>
 #include <llvm/Support/VirtualFileSystem.h>
@@ -116,10 +115,6 @@ int Driver::compileFile(const std::string &InputFilename) {
 
   const DiagnosticEngine DE =
       std::move(SDE).withSourceManager(SourceManager(*ExpectedBuffer));
-  
-  // Dump tokens if requested (for now we always dump tokens to satisfy requirement)
-  // Or we can just call dumpTokens and comment it out or keep it simple.
-  dumpTokens(*ExpectedBuffer);
 
   return 0;
 
