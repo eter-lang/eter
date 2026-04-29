@@ -15,7 +15,7 @@
 namespace eter::lexer {
 
 namespace {
-static void PushLexerErrork(std::vector<LexerItem> &Items,
+static void pushLexerErrork(std::vector<LexerItem> &Items,
                             LexerError::Kind Kind, const char *Start,
                             const char *End, const char *BufferStart) {
   Items.push_back(
@@ -125,8 +125,9 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     if (std::isdigit(UC)) {
       Token Result(Token::Kind::integer_literal, eter::Span(0, 0));
       bool const Valid = lexNumericLiteral(Result, TokStart);
-      LexerItems.push_back(Result);
-      if (!Valid) {
+      if (Valid) {
+        LexerItems.push_back(Result);
+      } else {
         LexerItems.push_back(LexerError{LexerError::Kind::InvalidNumericLiteral,
                                         Result.TokenSpan});
       }
@@ -136,9 +137,10 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     // 3. String Literals
     if (C == '"') {
       Token Result(Token::Kind::string_literal, eter::Span(0, 0));
-      bool Terminated = lexStringLiteral(Result, TokStart, LexerItems);
-      LexerItems.push_back(Result);
-      if (!Terminated) {
+      bool const Terminated = lexStringLiteral(Result, TokStart, LexerItems);
+      if (Terminated) {
+        LexerItems.push_back(Result);
+      } else {
         LexerItems.push_back(LexerError{
             LexerError::Kind::UnterminatedStringLiteral, Result.TokenSpan});
       }
@@ -149,18 +151,21 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     if (C == '\'') {
       Token Result(Token::Kind::char_literal, eter::Span(0, 0));
       size_t CharCount = 0;
-      bool Terminated =
+      bool const Terminated =
           lexCharacterLiteral(Result, TokStart, LexerItems, CharCount);
-      LexerItems.push_back(Result);
-      if (!Terminated) {
-        LexerItems.push_back(LexerError{
-            LexerError::Kind::UnterminatedCharLiteral, Result.TokenSpan});
-      } else if (CharCount == 0) {
-        LexerItems.push_back(
-            LexerError{LexerError::Kind::EmptyCharLiteral, Result.TokenSpan});
-      } else if (CharCount > 1) {
-        LexerItems.push_back(LexerError{LexerError::Kind::MultiCharCharLiteral,
-                                        Result.TokenSpan});
+      if (Terminated && CharCount == 1) {
+        LexerItems.push_back(Result);
+      } else {
+        if (!Terminated) {
+          LexerItems.push_back(LexerError{
+              LexerError::Kind::UnterminatedCharLiteral, Result.TokenSpan});
+        } else if (CharCount == 0) {
+          LexerItems.push_back(
+              LexerError{LexerError::Kind::EmptyCharLiteral, Result.TokenSpan});
+        } else {
+          LexerItems.push_back(LexerError{
+              LexerError::Kind::MultiCharCharLiteral, Result.TokenSpan});
+        }
       }
       continue;
     }
@@ -494,7 +499,9 @@ bool Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
 
   return true;
 }
+namespace {
 static bool lexUnicodeEscape(const char *EscapeStart, const char *&CurPtr,
+
                              const char *BufferEnd,
                              std::vector<LexerItem> &LexerItems,
                              const char *BufferStart) {
@@ -513,24 +520,25 @@ static bool lexUnicodeEscape(const char *EscapeStart, const char *&CurPtr,
 
   bool HasDigits = CurPtr > DigitsStart;
   if (CurPtr >= BufferEnd) {
-    PushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
                     EscapeStart, CurPtr, BufferStart);
     return true;
   }
 
   if (*CurPtr != '}') {
-    PushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
                     EscapeStart, CurPtr, BufferStart);
     return true;
   }
 
   CurPtr++; // consume '}'
   if (!HasDigits) {
-    PushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
                     EscapeStart, CurPtr, BufferStart);
   }
   return true;
 }
+} // namespace
 
 /// Lexes a string literal enclosed in double quotes.
 /// Handles basic escape sequences.
@@ -541,7 +549,7 @@ bool Lexer::lexStringLiteral(Token &Result, const char *TokStart,
     if (C == '\\') {
       const char *EscapeStart = CurPtr - 1;
       if (CurPtr >= BufferEnd) {
-        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+        pushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
                         EscapeStart, CurPtr, BufferStart);
         break;
       }
@@ -564,7 +572,7 @@ bool Lexer::lexStringLiteral(Token &Result, const char *TokStart,
         break;
       default:
         CurPtr++;
-        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+        pushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
                         EscapeStart, CurPtr, BufferStart);
         break;
       }
@@ -594,7 +602,7 @@ bool Lexer::lexCharacterLiteral(Token &Result, const char *TokStart,
     if (C == '\\') {
       const char *EscapeStart = CurPtr - 1;
       if (CurPtr >= BufferEnd) {
-        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+        pushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
                         EscapeStart, CurPtr, BufferStart);
         break;
       }
@@ -620,7 +628,7 @@ bool Lexer::lexCharacterLiteral(Token &Result, const char *TokStart,
       default:
         CurPtr++;
         CharCount++;
-        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+        pushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
                         EscapeStart, CurPtr, BufferStart);
         break;
       }
