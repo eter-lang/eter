@@ -167,8 +167,8 @@ let b: Animal = Animal::Reptile;
 ```
 Variants defined inside Enum declaration cannot be used as a type specifier.
 ```rust
-let b: Cat = Animals::Cat{..}  //Compiler error. Cat not defined
-let c: Animals::Cat = Animals::Cat{..}  //Another compiling error
+let b: Cat = Animals::Cat{..}  // Compiler error. Cat not defined
+let c: Animals::Cat = Animals::Cat{..}  // Another compiler error
 ```
 - #### Unit-Only (or _Field-less_) Enums
 A constructor with no fields is called _Unit-Like_. When all the constructors in an enum are Unit-Like, then the enum is called **Unit-Only Enum** (or _Field-less_). 
