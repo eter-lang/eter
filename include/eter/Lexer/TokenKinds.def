@@ -53,7 +53,6 @@ ETER_TOKEN(integer_literal)     ///< e.g., 42, 0x1A
 ETER_TOKEN(float_literal)       ///< e.g., 3.14
 ETER_TOKEN(char_literal)        ///< e.g., 'a'
 ETER_TOKEN(string_literal)      ///< e.g., "hello"
-ETER_TOKEN(c_string_literal)    ///< e.g., @c"hello"
 
 //===----------------------------------------------------------------------===//
 // Delimiters (from LANGUAGE_SPECIFICATION.md)
