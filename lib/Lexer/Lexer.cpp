@@ -20,6 +20,11 @@ void Lexer::pushLexerError(std::vector<LexerItem> &Items, LexerError::Kind Kind,
   Items.push_back(
       LexerError{Kind, eter::Span(Start - BufferStart, End - BufferStart)});
 }
+
+eter::Span Lexer::makeTokenSpan(const char *TokStart) const {
+  return eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+}
+
 bool Lexer::isHexDigit(char C) {
   return std::isxdigit(static_cast<unsigned char>(C)) != 0;
 }
@@ -28,6 +33,21 @@ bool Lexer::isReservedKeyword(llvm::StringRef Str) {
 #define ETER_RESERVED_KEYWORD(X, Y) .Case(Y, true)
 #include "eter/Lexer/TokenKinds.def"
       .Default(false);
+}
+bool Lexer::isReservedSymbolKind(Token::Kind K) {
+#define ETER_TOKEN(X)
+#define ETER_SYMBOL(X, Y)
+#define ETER_KEYWORD(X, Y)
+#define ETER_RESERVED_KEYWORD(X, Y)
+#undef ETER_RESERVED_SYMBOL
+#define ETER_RESERVED_SYMBOL(X, Y)                                             \
+  case Token::Kind::reserved_##X:                                              \
+    return true;
+  switch (K) {
+#include "eter/Lexer/TokenKinds.def"
+  default:
+    return false;
+  }
 }
 bool Lexer::lexUnicodeEscape(const char *EscapeStart, const char *&CurPtr,
                              const char *BufferEnd,
@@ -238,6 +258,9 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
       } else if (CurPtr < BufferEnd && *CurPtr == '=') {
         CurPtr++;
         Kind = Token::Kind::minus_eq;
+      } else if (CurPtr < BufferEnd && *CurPtr == '>') {
+        CurPtr++;
+        Kind = Token::Kind::reserved_arrow;
       } else {
         Kind = Token::Kind::minus;
       }
@@ -278,7 +301,7 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
         CurPtr++;
         Kind = Token::Kind::amp_eq;
       } else {
-        Kind = Token::Kind::amp;
+        Kind = Token::Kind::reserved_amp;
       }
       break;
     case '|':
@@ -368,11 +391,16 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
     }
 
     if (Kind != Token::Kind::unknown) {
-      LexerItems.push_back(Token(
-          Kind, eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
+      auto TokenSpan = makeTokenSpan(TokStart);
+      if (isReservedSymbolKind(Kind)) {
+        LexerItems.push_back(
+            LexerError{LexerError::Kind::ReservedSymbol, TokenSpan});
+      } else {
+        LexerItems.push_back(Token(Kind, TokenSpan));
+      }
     } else {
       // Emit error and unknown token for unrecognized characters
-      const struct Span ErrorSpan(TokStart - BufferStart, CurPtr - BufferStart);
+      const struct Span ErrorSpan = makeTokenSpan(TokStart);
       LexerItems.push_back(
           LexerError{LexerError::Kind::InvalidCharacter, ErrorSpan});
       LexerItems.push_back(Token(Token::Kind::unknown, ErrorSpan));
@@ -420,7 +448,7 @@ void Lexer::lexIdentifier(Token &Result, const char *TokStart) {
 #include "eter/Lexer/TokenKinds.def"
                          .Default(Token::Kind::identifier);
 
-  Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+  Result.TokenSpan = makeTokenSpan(TokStart);
 }
 
 /// Lexes a numeric literal (integer or floating-point).
@@ -454,7 +482,7 @@ bool Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
   if (HasLeadingUnderscore && HexDigits == 0 && !IsHex) {
     // Handle single underscore or leading underscore without digits
     Result.TokenKind = Token::Kind::identifier;
-    Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+    Result.TokenSpan = makeTokenSpan(TokStart);
     return true;
   }
 
@@ -477,8 +505,7 @@ bool Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
         CurPtr++;
 
       Result.TokenKind = Token::Kind::float_literal;
-      Result.TokenSpan =
-          eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+      Result.TokenSpan = makeTokenSpan(TokStart);
       return true;
     }
   }
@@ -487,12 +514,12 @@ bool Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
   if (!IsHex && CurPtr < BufferEnd && *CurPtr == 'f') {
     CurPtr++;
     Result.TokenKind = Token::Kind::float_literal;
-    Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+    Result.TokenSpan = makeTokenSpan(TokStart);
     return true;
   }
 
   Result.TokenKind = Token::Kind::integer_literal;
-  Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+  Result.TokenSpan = makeTokenSpan(TokStart);
 
   // Invalid: hex literal with no digits, or leading/trailing separators
   if (IsHex && HexDigits == 0) {
@@ -547,8 +574,7 @@ bool Lexer::lexStringLiteral(Token &Result, const char *TokStart,
       }
     } else if (C == '"') {
       Result.TokenKind = Token::Kind::string_literal;
-      Result.TokenSpan =
-          eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+      Result.TokenSpan = makeTokenSpan(TokStart);
       return true;
     } else if (C == '\n' || C == '\r') {
       break;
@@ -557,7 +583,7 @@ bool Lexer::lexStringLiteral(Token &Result, const char *TokStart,
 
   // Emit token even if unterminated for error recovery
   Result.TokenKind = Token::Kind::string_literal;
-  Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+  Result.TokenSpan = makeTokenSpan(TokStart);
   return false;
 }
 
@@ -605,8 +631,7 @@ bool Lexer::lexCharacterLiteral(Token &Result, const char *TokStart,
       }
     } else if (C == '\'') {
       Result.TokenKind = Token::Kind::char_literal;
-      Result.TokenSpan =
-          eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+      Result.TokenSpan = makeTokenSpan(TokStart);
       return true;
     } else if (C == '\n' || C == '\r') {
       break;
@@ -617,7 +642,7 @@ bool Lexer::lexCharacterLiteral(Token &Result, const char *TokStart,
 
   // Unterminated character literal
   Result.TokenKind = Token::Kind::char_literal;
-  Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+  Result.TokenSpan = makeTokenSpan(TokStart);
   return false;
 }
 
@@ -652,8 +677,7 @@ bool Lexer::lexComment(Token &Result, const char *TokStart,
       }
 
       Result.TokenKind = Token::Kind::comment;
-      Result.TokenSpan =
-          eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+      Result.TokenSpan = makeTokenSpan(TokStart);
       return true;
     }
     return false;
@@ -677,7 +701,7 @@ bool Lexer::lexComment(Token &Result, const char *TokStart,
     Result.TokenKind = Token::Kind::comment;
   }
 
-  Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+  Result.TokenSpan = makeTokenSpan(TokStart);
   return true;
 }
 
