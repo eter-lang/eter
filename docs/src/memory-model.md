@@ -15,6 +15,7 @@ A regime implies:
 - **Stability**: A regime defines a _persistent semantic context_ under which a value operates.
 - **Internal Coherence**: A regime enforces a _consistent set of invariants_ that all operations must respect.
 - **Governance**: A regime determines the _allowed transformations_ on values and their cost model.
+
 In Eter, values conceptually denote independent entities, but may share or transfer underlying memory locations depending on the regime.
 Values can be transferred between different regimes that govern their ownership, mutability, and memory semantics.
 This eliminates the need for a GC or ARC and allows for efficient memory usage while maintaining the benefits of value semantics.
@@ -40,7 +41,7 @@ Eter's memory model ensures that all memory locations are either disjoint or one
 ### The Eter's Regimes
 
 Different types of variables in Eter have different ownership, mutability, and memory semantics, which determine how they interact with memory and how they can be used in the program. 
-There are three main types of variables in Eter's memory model: `let`, `let mut`, and `let proj`. 
+Eter's memory model is based on three main types of variables: `let`, `let mut`, and `let proj`.
 Each of these variable defines a different **regime** for how values are owned, mutated, and accessed in memory.
 One can think of these **regimes** as governing how values flow through the program and how they are stored and accessed in memory.
 
