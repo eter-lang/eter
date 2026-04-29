@@ -4,113 +4,21 @@
 
 Racordon _et al._ introduced the [Mutable Value Semantics] (MVS) as a new memory model for high-performance programming languages.[^1]
 Both [Swift] and [Hylo] (formerly Val) adopt this model in their design, but in different ways.  The former tries to make values look like safe references, while the latter treats everything as a pure value, eliminating the need for a Garbage Collector (GC) or Atomic Reference Counting (ARC) altogether.
+In addition to the resources mentioned above,[^1] we recommend reading [The Mutable Value Semantics (MVS): A Personal Study], the study that led to the development of the semantic model on which Eter is based.
 
-<details>
-
-<summary>A deeper dive into the differences between Swift's and Hylo's MVS</summary>
-
-### Swift's MVS
-
-In Swift, for **value types** (structs), the MVS is implemented via a copy-on-write (CoW) mechanism. When you assign an array to a new variable, Swift does not immediately copy the data; both variables point to the same memory. The copy only occurs if one of the instances is modified. This requires hidden reference counting (ARC) to track how many _owners_ there are. If the count is greater than 1, a copy is performed. This introduces some latency, as every mutation involves a small ARC check, which can cause overhead in high-performance contexts.
-To illustrate this, consider the following Swift code:
-```swift
-var a = [1, 2, 3] // 'a' owns the array
-var b = a         // 'b' shares ownership with 'a', no copy yet
-b.append(4)       // 'b' mutates the array, triggers a copy due to ARC check
-print(a)          // Output: [1, 2, 3]
-print(b)          // Output: [1, 2, 3, 4]
-```
-Additionally, Swift's MVS allows for **reference types** (classes) that can be shared and mutated without copying, which can lead to confusion and bugs if not used carefully — i.e., it allows aliasing and mutation, which can break local reasoning about code.
-Consider the following example:
-```swift
-class MyClass {
-    var value: Int
-    init(value: Int) { self.value = value }
-}
-var obj1 = MyClass(value: 10) // 'obj1' owns the instance
-var obj2 = obj1               // 'obj2' shares ownership with 'obj1', no copy, both point to the same instance
-obj2.value = 20               // Mutating 'obj2' also mutates 'obj1' due to shared reference
-print(obj1.value)             // Output: 20
-print(obj2.value)             // Output: 20
-```
-
-Over the years, Swift has added various keywords to manage mutability and ownership, such as `mutating` for value types, `inout` for function parameters, and `consuming` for move semantics. However, these features can be complex and may not always provide the performance benefits that MVS aims to achieve, especially in scenarios where fine-grained control over memory is required.
-
-### Hylo's MVS
-
-Hylo takes a more radical approach to MVS. It removes the CoW mechanism in favor of an _ownership model_ where values are truly independent and an _in-place mutation_ semantics that allows for efficient updates without copying. The language statically guarantees that there are no shared mutable references, which eliminates the need for a GC or ARC. Consider the following Hylo code:
-```rust
-let a = [1, 2, 3] // 'a' owns the array
-var b = a         // 'b' is a new value, a copy of 'a', no shared ownership
-b.append(4)       // 'b' mutates its mov copy, no effect on 'a'
-print(a)          // Output: [1, 2, 3]
-print(b)          // Output: [1, 2, 3, 4]
-```
-Note that, if `a` is not used after `b` is created, the compiler can **move** the array from `a` to `b` without copying, since `a` is no longer needed. This allows for efficient memory usage while maintaining the benefits of value semantics.
-
-Hylo has no reference types but allows, via `inout` and `sink` keywords, for efficient mutation of values without copying. 
-To provide two examples of this, consider the following Hylo code:
-```rust
-var point = (x: 0.0, y: 1.0) // 'point' owns the tuple
-inout x = &point.x           // 'x' is a mutable reference to 'point.x', no copy, but safe due to ownership rules
-&x = 3.14                    // Mutating 'x' updates 'point.x' directly, no copy, and safe due to ownership rules
-print(point)                 // Output: (x: 3.14, y: 1.0)
-```
-```rust
-fun offset_sink(_ base: sink Vector2, by delta: Vector2) -> Vector2 {
-  &base.x += delta.x 
-  &base.y += delta.y
-  return base        // Escaping the sink value allows it to be returned without copying, as ownership is transferred to the caller
-}
-
-fun main() {
-  let v = (x: 1, y: 2)
-  print(offset_sink(v, (x: 3, y: 5)))  // Output: (x: 4, y: 7)
-  print(v)                             // Error: 'v' has been moved and cannot be used after being passed as a sink
-}
-```
-
-</details>
-
-To show the power of MVS, let's consider how Rust's ownership and borrowing system compares to Hylo's MVS model.
-
-Rust's ownership and borrowing system is a powerful tool for ensuring memory safety, but it can be complex and may not always provide the benefits that MVS aims to achieve. Consider the following Rust code:
-```rust
-struct T;
-fn own_t(t: T) {}
-
-fn ref_mut_t(t: &mut T) {
-    own_t(*t); // cannot move out of `*t` which 
-               // is behind a mutable reference
-    *t = T;
-}
-```
-In this example, the `ref_mut_t` function attempts to move the value `t` out of the mutable reference, which is not allowed in Rust. This is because Rust's ownership system does not allow dereferencing a mutable reference to move the value it points to, as it would violate Rust's guarantees about memory safety. To work around this, you would need to copy the value or use some other mechanism to transfer ownership, which can introduce overhead and complexity.
-
-In Hylo, the same code would be valid and would not require any special handling, as the language's MVS model allows for efficient mutation of values without copying.
-```rust
-type T {}
-fun own_t(_ t: sink T) {}
-
-fun ref_mut_t(_ t: inout T) {
-    // In Hylo, we can pass `inout t` as a sink to `own_t`,
-    // which allows us to transfer ownership without copying.
-    own_t(t) 
-    
-    // `t` cannot be used after being passed as a 
-    // sink parameter, as it has been moved.
-
-    t = T()
-}
-```
-In this example, the `ref_mut_t` function can pass `t` as a sink to `own_t`, which allows for efficient mutation of the value without copying. After `own_t` is called, `t` is considered "moved" and cannot be used until it is re-initialized, which is a safe and efficient way to manage memory.
 
 
 ## Eter's memory model
 
-Eter embraces the MVS as a core part of its memory model, but introduces a unique twist by introducing the concept of **circuits** to manage how values are stored, accessed, and mutated in memory.
-In Eter, all values are treated as independent entities with their own memory locations, and can be transferred between different circuits that govern their ownership, mutability, and memory semantics.
+Eter embraces the MVS as a core part of its memory model, but introduces a unique twist by introducing the concept of **regimes** to manage how values are stored, accessed, and mutated in memory.
+A regime implies:
+- **Stability**: A regime defines a _persistent semantic context_ under which a value operates.
+- **Internal Coherence**: A regime enforces a _consistent set of invariants_ that all operations must respect.
+- **Governance**: A regime determines the _allowed transformations_ on values and their cost model.
+In Eter, values conceptually denote independent entities, but may share or transfer underlying memory locations depending on the regime.
+Values can be transferred between different regimes that govern their ownership, mutability, and memory semantics.
 This eliminates the need for a GC or ARC and allows for efficient memory usage while maintaining the benefits of value semantics.
+
 
 ### The building blocks of memory
 
@@ -129,14 +37,14 @@ Eter's memory model ensures that all memory locations are either disjoint or one
 > [!WARNING]
 > TODO
 
-### The Eter's Circuits
+### The Eter's Regimes
 
 Different types of variables in Eter have different ownership, mutability, and memory semantics, which determine how they interact with memory and how they can be used in the program. 
 There are three main types of variables in Eter's memory model: `let`, `let mut`, and `let proj`. 
-Each of these variable defines a different **circuit** for how values are owned, mutated, and accessed in memory.
-One can think of these **circuits** as governing how values flow through the program and how they are stored and accessed in memory.
+Each of these variable defines a different **regime** for how values are owned, mutated, and accessed in memory.
+One can think of these **regimes** as governing how values flow through the program and how they are stored and accessed in memory.
 
-The Eter programming language uses these circuits consistently. 
+The Eter programming language uses these regimes consistently.
 It means that the same rules apply to all types of values, whether they are simple scalars, complex structs, or even functions.
 Additionally, the semantic is consistent across all operations, including variable assignment, function calls, and field access.
 
@@ -152,22 +60,22 @@ Additionally, the semantic is consistent across all operations, including variab
 
 
 
-#### The `let` circuit
+#### The `let` regime
 
 | Ownership | Mutability | Memory semantics |
 | :--- | :--- | :--- |
 | **Yes** (Shared) | **No** (Read-Only) | **Alias** (Reference Linked) |
 
-The `let` circuit consists of immutable `let` variables that retain ownership of their values.
+The `let` regime consists of immutable `let` variables that retain ownership of their values.
 A `let` variable is an immutable value that cannot be modified after it is initialized. 
-When a `let` variable is assigned a value, it creates a new memory location within the `let` circuit to store that value.
+When a `let` variable is assigned a value, it creates a new memory location within the `let` regime to store that value.
 A `let` variable is valid as long as it is in scope, i.e., cannot be moved to another variable or function without copying the value, since it is immutable and cannot be modified after initialization.[^2]
 The ownership of a `let` variable is shared, meaning that multiple `let` variables can reference the same memory location and the memory location is not deallocated until all `let` variables that reference it go out of scope.
 
 
-##### From `let` to `let` circuit
+##### From `let` to `let` regime
 
-If a `let` variable is assigned another `let` variable it remains in the `let` circuit, and both variables reference the same memory location.
+If a `let` variable is assigned another `let` variable it remains in the `let` regime, and both variables reference the same memory location.
 If a `let` variable is assigned another `let` variable, the compiler can optimize this assignment by creating a reference to the original memory location instead of copying the value, since both variables are immutable and cannot be modified. 
 For example, consider the following code:
 ```rust
@@ -179,10 +87,10 @@ let y: i32 = x; // 'y' is a new let variable that
 // and since they are immutable, they cannot be modified.
 ```
 
-##### From `let` to `mut` circuit
+##### From `let` to `mut` regime
 
-If a `let` variable is assigned to a `mut` variable, it is moved to the `mut` circuit. 
-However, since the `let` circuit allows for shared views (multiple variables referencing the same memory location) and the `let` variables must be valid in scope, the compiler performs an implicit copy to ensure that the new `mut` variable has its own independent and exclusive memory location.
+If a `let` variable is assigned to a `mut` variable, it is moved to the `mut` regime.
+However, since the `let` regime allows for shared views (multiple variables referencing the same memory location) and the `let` variables must be valid in scope, the compiler performs an implicit copy to ensure that the new `mut` variable has its own independent and exclusive memory location.
 This ensures that any subsequent modifications to the `mut` variable do not affect the original `let` variable or any other variables that might be referencing the same data.
 The following example illustrates this behavior:
 ```rust
@@ -211,32 +119,32 @@ second.join().or_else(|_| panic("Thread 2 panicked"));
 ```
 
 
-##### From `let` to `mov` circuit
+##### From `let` to `mov` regime
 
 The transition from a `let` variable to a `mov` variable is prohibited by the compiler.
-The reason for this restriction is rooted in the fundamental guarantee of the `mov` circuit: exclusive, unique ownership.
+The reason for this restriction is rooted in the fundamental guarantee of the `mov` regime: exclusive, unique ownership.
 To _promote_ a shared `let` value to an exclusive `mov` value without a copy would violate the safety of all other `let` variables currently viewing that memory. 
 
 Therefore, if you need to transform a `let` value into a `mov` value, you must perform an explicit two-step process:
-1. First, copy the value into the `mut` circuit (which creates a new, independent memory location).
-2. Then, move that `mut` variable into the `mov` circuit.
+1. First, copy the value into the `mut` regime (which creates a new, independent memory location).
+2. Then, move that `mut` variable into the `mov` regime.
 
 ```rust
 let x: i32 = 1;
 
 // let mov y: i32 = x; // ❌ ERROR: Cannot move an immutable 'let' variable 
-                       // into the exclusive 'mov' circuit.
+                       // into the exclusive 'mov' regime.
 
 let mut tmp = x;       // 1. Implicit copy to create independence.
-let mov y = tmp;       // 2. Transfer ownership to the mov circuit.
+let mov y = tmp;       // 2. Transfer ownership to the mov regime.
 ```
 
-##### From `let` to `proj` circuit
+##### From `let` to `proj` regime
 
 The transition from a `let` variable to a `proj` variable is prohibited by the compiler.
-By definition, a projection grants mutable access to a memory location. The `let` circuit, however, operates on the guarantee of immutability. Allowing a projection to be created from a `let` source would create a _backdoor_ to modify data that is supposed to be read-only, potentially affecting all other `let` variables that share (view) the same memory location.
+By definition, a projection grants mutable access to a memory location. The `let` regime, however, operates on the guarantee of immutability. Allowing a projection to be created from a `let` source would create a _backdoor_ to modify data that is supposed to be read-only, potentially affecting all other `let` variables that share (view) the same memory location.
 
-To obtain a projection from a value currently in the `let` circuit, you must first transition into a circuit that supports exclusive ownership and mutation:
+To obtain a projection from a value currently in the `let` regime, you must first transition into a regime that supports exclusive ownership and mutation:
 1. First, copy the `let` value into a `mut` or `mov` variable (creating a new, independent memory location).
 2. Then, project from that new variable.
 ```rust
@@ -251,27 +159,27 @@ let proj p = &tmp;  // 2. Now you can project and mutate safely.
 ```
 
 
-#### The `mut` circuit
+#### The `mut` regime
 
 | Ownership | Mutability | Memory semantics |
 | :--- | :--- | :--- |
 | **Yes** (Independent) | **Yes** (Mutable) | **Copy** (Independent) |
 
-The `mut` circuit consists of mutable `mut` variables that retain ownership of their values.
+The `mut` regime consists of mutable `mut` variables that retain ownership of their values.
 A `mut` variable is a mutable value that can be modified after it is initialized. 
 When a `mut` variable is assigned a value, it creates a new memory location to store that value.
-The core principle of this circuit is _physical independence_: the compiler guarantees that every `mut` variable owns a disjoint block of memory.
-While this circuit creates a clear boundary for mutation, it also needs to perform a several copies to maintain the value-isolated semantics, which can lead to performance overhead if not optimized properly.
-However, modern optimizing compilers perform various optimizations to minimize the cost of the copies resulting from the `mut` circuit, such as
+The core principle of this regime is _physical independence_: the compiler guarantees that every `mut` variable owns a disjoint block of memory.
+While this regime creates a clear boundary for mutation, it also needs to perform a several copies to maintain the value-isolated semantics, which can lead to performance overhead if not optimized properly.
+However, modern optimizing compilers perform various optimizations to minimize the cost of the copies resulting from the `mut` regime, such as
 1. **Scalar Promotion**: for small, fixed-size types (like `i32`, `bool`, or `f64`), the copy is often just a single CPU register operation, such as a `mov` instruction. In these cases, the cost of an implicit copy is negligible and effectively $O(1)$ at the hardware level. 
 2. **Copy Elision & SSA**: if the compiler's static analysis (often via Static Single Assignment form) determines that the source variable is never used again after the assignment, it can _elide_ the copy entirely. The destination variable simply takes over the existing memory location, effectively transforming the `mut`-to-`mut` assignment into a zero-cost move.
 3. **Constant & Copy Propagation**: if a `mut` variable is assigned a value that is known at compile-time, or is a copy of another variable that hasn't changed, the compiler can propagate that value directly to all usage points, bypassing the need to allocate and copy physical memory locations until absolutely necessary for a mutation.
 4. **Dead Store Elimination**: if a `mut` variable is copied but the destination is overwritten (e.g., `y = x; y = 10;`) before being read, the compiler will identify the first copy as a _dead store_ and remove it entirely from the generated machine code.
 
 
-##### From `mut` to `mut` circuit
+##### From `mut` to `mut` regime
 
-If a `mut` variable is assigned to another `mut` variable, they remain within the `mut` circuit, but the compiler must create a full copy of the value.
+If a `mut` variable is assigned to another `mut` variable, they remain within the `mut` regime, but the compiler must create a full copy of the value.
 This ensures that both variables have their own disjoint memory locations. 
 Since both are mutable, this _value-isolated_ semantic is what prevents shared mutable state: changing one variable will never side-effect the other.
 For example, consider the following code:
@@ -279,16 +187,16 @@ For example, consider the following code:
 let mut x: i32 = 42; 
 let mut y = x; // ⚠️ O(N) Copy: 'y' is a fresh clone of 'x'
 
-// Both exist independently in the mut circuit.
+// Both exist independently in the mut regime.
 y = 100; 
 
 // x: 42 (Unchanged)
 // y: 100 (Independent)
 ```
 
-##### From `mut` to `let` circuit
+##### From `mut` to `let` regime
 
-Assigning a `mut` variable to a `let` variable moves the value into the `let` circuit. This operation effectively _freezes_ the current state of the data, transforming a private, mutable resource into a shared, read-only one.
+Assigning a `mut` variable to a `let` variable moves the value into the `let` regime. This operation effectively _freezes_ the current state of the data, transforming a private, mutable resource into a shared, read-only one.
 Depending on whether the original `mut` variable is used afterwards, the compiler applies two different strategies:
 1. Freeze Optimization: if the source `mut` variable is no longer used after the assignment, the compiler performs a zero-cost $O(1)$ transfer. The memory location is simply re-labeled as immutable.
 ```rust
@@ -307,13 +215,13 @@ x = 100; // Mutating 'x' does not affect 'y'.
 // y: 42 (Snapshot, unchanged)
 ```
 
-##### From `mut` to `mov` circuit
+##### From `mut` to `mov` regime
 
-The transition from a `mut` variable to a `mov` variable is an _ownership promotion_ in the exclusive `mov` circuit.
+The transition from a `mut` variable to a `mov` variable is an _ownership promotion_ in the exclusive `mov` regime.
 This is always an $O(1)$ operation that freezes the current state of the data.
 Since the `mut` variable already possessed its own independent memory location, the compiler simply transfers the _exclusive key_ of that memory to the new `mov` variable.
 The original `mut` variable is immediately invalidated (consumed). 
-This is crucial for performance: you can build a complex object in the `mut` circuit and then _freeze_ its exclusivity by moving it to the `mov` circuit without any reallocation.
+This is crucial for performance: you can build a complex object in the `mut` regime and then _freeze_ its exclusivity by moving it to the `mov` regime without any reallocation.
 For example, consider the following code:
 ```rust
 let mut x: i32 = 42; // 'x' is a mut variable that owns the integer value.
@@ -324,9 +232,9 @@ let mov y: i32 = x; // 'y' is a new mov variable that takes ownership
 // 'x' is no longer valid and cannot be used, while 'y' now owns the integer value.
 ```
 
-##### From `mut` to `proj` circuit
+##### From `mut` to `proj` regime
 
-Transitioning from a `mut` variable to a `proj` variable allows you to _borrow_ mutable access to a value without triggering the independent copy logic inherent to the `mut` circuit. While a `mut` variable owns its memory independently, a `proj` acts as a temporary, high-performance window into that memory.
+Transitioning from a `mut` variable to a `proj` variable allows you to _borrow_ mutable access to a value without triggering the independent copy logic inherent to the `mut` regime. While a `mut` variable owns its memory independently, a `proj` acts as a temporary, high-performance window into that memory.
 This transition is an $O(1)$ operation that establishes a shadow. The original `mut` variable remains the owner but is temporarily _frozen_ (shadowed) until the projection is no longer in use.
 The compiler can optimize this assignment by creating a reference to the original memory location without copying the value, since the `proj` variable can mutate the same memory location as the `mut` variable.
 For example, consider the following code:
@@ -353,7 +261,7 @@ This snippet could be reasonably rewritten without a `proj` variable, by directl
 
 
 The utility of `proj` when starting from a `mut` source is twofold:
-- In the `mut` circuit, passing a variable to a function or another scope might trigger a copy to preserve value independence. By using a projection, you explicitly tell the compiler: "Don't copy the data; let this secondary path modify the existing bytes directly."
+- In the `mut` regime, passing a variable to a function or another scope might trigger a copy to preserve value independence. By using a projection, you explicitly tell the compiler: "Don't copy the data; let this secondary path modify the existing bytes directly."
 ```rust
 fn do_something(proj x: i32) { &x += 20; }
 
@@ -395,20 +303,20 @@ fn main() {
 }
 ```
 
-#### The `mov` circuit
+#### The `mov` regime
 
 | Ownership | Mutability | Memory semantics |
 | :--- | :--- | :--- |
 | **Yes** (Exclusive) | **Yes** (Mutable) | **Move** (Transfer) |
 
-The `mov` circuit consists of mutable `mov` variables that have exclusive ownership of their values.
+The `mov` regime consists of mutable `mov` variables that have exclusive ownership of their values.
 A `mov` variable is a mutable value that has exclusive ownership of its memory location. 
-When a `mov` variable is assigned a value, it creates a new memory location within the `mov` circuit to store that value.
+When a `mov` variable is assigned a value, it creates a new memory location within the `mov` regime to store that value.
 In general, a `mov` variable is not valid in scope after it has been moved to another variable or function, since it has exclusive ownership of its memory location and cannot be shared or modified after the transfer.
 
-##### From `mov` to `mov` circuit
+##### From `mov` to `mov` regime
 
-If a `mov` variable is assigned another `mov` variable it remains in the `mov` circuit, but the ownership of the value is transferred from the source variable to the destination variable.
+If a `mov` variable is assigned another `mov` variable it remains in the `mov` regime, but the ownership of the value is transferred from the source variable to the destination variable.
 The compiler can optimize this assignment by transferring ownership of the memory location from the source variable to the destination variable without copying the value, since the source variable will no longer be valid after the transfer. 
 For example, consider the following code:
 ```rust
@@ -425,9 +333,9 @@ y = 10;
                        // after being moved to 'y'.
 ```
 
-##### From `mov` to `let` circuit
+##### From `mov` to `let` regime
 
-If a `mov` variable is assigned to a `let` variable it is moved to the `let` circuit, and the ownership of the value is transferred from the `mov` variable to the `let` variable.
+If a `mov` variable is assigned to a `let` variable it is moved to the `let` regime, and the ownership of the value is transferred from the `mov` variable to the `let` variable.
 The compiler can optimize this assignment by transferring ownership of the memory location from the `mov` variable to the `let` variable without copying the value, since the `mov` variable will no longer be valid after the transfer. 
 Since the `let` variable is immutable, it cannot be modified after the transfer, and the `mov` variable is no longer valid in scope. 
 The following example illustrates this behavior:
@@ -445,12 +353,12 @@ let y: i32 = x; // 'y' is a new let variable that takes
 ```
 
 One might wonder why we would transfer ownership from a powerful mov variable to a restricted let variable. The reason lies in _contract enforcement_ and _parallelism_:
-- In large systems, you often want to perform a series of high-speed mutations (in the `mov` circuit) and then _lock_ the result. By moving the value to a `let` variable, you guarantee that no one, not even the original logic, can accidentally modify the data after it has reached its _final_ state.
-- A `mov` variable is exclusive and cannot be shared. By moving it into the `let` circuit, you transform a _hot_ exclusive resource into a _cold_ shared value. This allows the compiler to safely share the data across multiple threads or views, knowing it will never change again.
+- In large systems, you often want to perform a series of high-speed mutations (in the `mov` regime) and then _lock_ the result. By moving the value to a `let` variable, you guarantee that no one, not even the original logic, can accidentally modify the data after it has reached its _final_ state.
+- A `mov` variable is exclusive and cannot be shared. By moving it into the `let` regime, you transform a _hot_ exclusive resource into a _cold_ shared value. This allows the compiler to safely share the data across multiple threads or views, knowing it will never change again.
 
-##### From `mov` to `mut` circuit
+##### From `mov` to `mut` regime
 
-If a `mov` variable is assigned to a `mut` variable it is moved to the `mut` circuit, and the ownership of the value is transferred from the `mov` variable to the `mut` variable.
+If a `mov` variable is assigned to a `mut` variable it is moved to the `mut` regime, and the ownership of the value is transferred from the `mov` variable to the `mut` variable.
 The compiler can optimize this assignment by transferring ownership of the memory location from the `mov` variable to the `mut` variable without copying the value, since the `mov` variable will no longer be valid after the transfer.
 The following example illustrates this behavior:
 ```rust
@@ -467,7 +375,7 @@ let mut y: i32 = x; // 'y' is a new mut variable that takes
 ```
 
 
-Since the `mov` variable is already mutable, one may wonder why it is necessary to transfer ownership to a `mut` variable instead of keeping it in the `mov` circuit. The reason is that the `mut` circuit allows for a more flexible management of the variable's lifecycle within the local scope. While a `mov` variable is strictly tied to a _use-it-and-lose-it_ philosophy (where every assignment or pass-to-function terminates the original binding), a `mut` variable acts as a stable container. As mentioned in the previous section, once the value enters the `mut` circuit:
+Since the `mov` variable is already mutable, one may wonder why it is necessary to transfer ownership to a `mut` variable instead of keeping it in the `mov` regime. The reason is that the `mut` regime allows for a more flexible management of the variable's lifecycle within the local scope. While a `mov` variable is strictly tied to a _use-it-and-lose-it_ philosophy (where every assignment or pass-to-function terminates the original binding), a `mut` variable acts as a stable container. As mentioned in the previous section, once the value enters the `mut` regime:
 - The variable y can be passed to multiple functions as a view (`let`) or a projection (`proj`) without ever losing its name or its ability to be mutated further down in the code.
 
 ```rust
@@ -491,14 +399,14 @@ fn main() {
 }
 ```
 
-- If the programmer performs an operation that would normally require a copy (like assigning y to another `mut` variable), the `mut` circuit allows the compiler to perform that copy to preserve both variables. In the `mov` circuit, this would simply be a compiler error.
+- If the programmer performs an operation that would normally require a copy (like assigning y to another `mut` variable), the `mut` regime allows the compiler to perform that copy to preserve both variables. In the `mov` regime, this would simply be a compiler error.
 
 ```rust
 fn main() {
     let mov a: i32 = 1; // 'a' is a mov variable that owns 
                         // the integer value.
 
-    // Within the mov circuit, we cannot decouple the ownership 
+    // Within the mov regime, we cannot decouple the ownership
     // of 'a' into multiple variables.
     // let mut x: i32 = a; 
     // let mut y: i32 = a; // ❌ ERROR: 'a' is no longer valid after 
@@ -512,9 +420,9 @@ fn main() {
 }
 ```
 
-##### From `mov` to `proj` circuit
+##### From `mov` to `proj` regime
 
-If a `mov` variable is assigned to a `proj` variable, it enters the `proj` circuit. Unlike the previous transitions, the `mov` variable is not consumed and does not lose ownership. Instead, it becomes temporarily shadowed (or locked) while the projection is active.
+If a `mov` variable is assigned to a `proj` variable, it enters the `proj` regime. Unlike the previous transitions, the `mov` variable is not consumed and does not lose ownership. Instead, it becomes temporarily shadowed (or locked) while the projection is active.
 The compiler establishes a direct link to the original memory location. Through the `proj` variable, the data can be mutated in-place, but the `proj` variable itself does not own the memory; it is merely a loan that allows for efficient mutation without copying.
 The compiler can optimize this assignment by creating a reference to the original memory location without copying the value, since the `proj` variable can mutate the same memory location as the `mov` variable.
 For example, consider the following code:
@@ -539,7 +447,7 @@ fn main() {
 ```
 Note that, this snippet could be reasonably rewritten without a `proj` variable, by directly mutating `a` in place: `&a = 0;`. 
 
-At this point, the question arises: why do we need a `proj` variable at all? Why not just keep the variable in the `mov` circuit and allow it to be mutated directly?
+At this point, the question arises: why do we need a `proj` variable at all? Why not just keep the variable in the `mov` regime and allow it to be mutated directly?
 The reason lies in abstraction and modular mutation:
 - By projecting individual fields of a structure, you can precisely define which part of a resource is being modified. Additionally, it allows you to mutate multiple times without losing the original variable's name or ownership, as long as the projections are active.
 ```rust
@@ -618,7 +526,7 @@ fn main() {
 ---
 ---
 
-#### The `proj` circuit
+#### The `proj` regime
 
 | Ownership | Mutability | Memory semantics |
 | :--- | :--- | :--- |
@@ -799,4 +707,5 @@ The constraints of the `proj` system ensure that this pattern is safe and does n
 [appear in person]: https://link.springer.com/article/10.1023/A:1010000313106
 [Hylo]: https://hylo-lang.org/
 [Swift]: https://swift.org/
+[The Mutable Value Semantics (MVS): A Personal Study]: https://federicobruzzone.github.io/posts/eter/MVS.html
 
