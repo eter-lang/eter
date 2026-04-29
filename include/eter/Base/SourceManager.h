@@ -9,6 +9,8 @@
 #ifndef ETER_BASE_SOURCEMANAGER_H
 #define ETER_BASE_SOURCEMANAGER_H
 
+#include "eter/Base/Span.h"
+
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
@@ -17,15 +19,6 @@
 #include <llvm/Support/VirtualFileSystem.h>
 
 namespace eter {
-
-/// A source range identified by byte offsets into a source buffer.
-struct Span {
-  uint32_t Start = 0;
-  uint32_t End = 0;
-
-  Span() = default;
-  Span(uint32_t Start, uint32_t End) : Start(Start), End(End) {}
-};
 
 /// A line and column position in a source file.
 struct SourceLocation {
