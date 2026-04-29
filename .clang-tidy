@@ -8,8 +8,8 @@ Checks: >
   readability-identifier-naming,
   -misc-non-private-member-variables-in-classes,
   -misc-include-cleaner,
+  -misc-const-correctness
 
-# -misc-const-correctness,
 # -misc-no-recursion,
 # -misc-unused-parameters,
 # -misc-use-anonymous-namespace,

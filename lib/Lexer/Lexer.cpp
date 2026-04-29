@@ -14,24 +14,22 @@
 
 namespace eter::lexer {
 
-// NOLINTBEGIN(misc-use-anonymous-namespace,
-// llvm-prefer-static-over-anonymous-namespace)
-static void PushLexerErrork(std::vector<LexerItem> &Items,
-                            LexerError::Kind Kind, const char *Start,
-                            const char *End, const char *BufferStart) {
+void Lexer::pushLexerError(std::vector<LexerItem> &Items, LexerError::Kind Kind,
+                           const char *Start, const char *End,
+                           const char *BufferStart) {
   Items.push_back(
       LexerError{Kind, eter::Span(Start - BufferStart, End - BufferStart)});
 }
-static bool isHexDigit(char C) {
+bool Lexer::isHexDigit(char C) {
   return std::isxdigit(static_cast<unsigned char>(C)) != 0;
 }
-static bool isReservedKeyword(llvm::StringRef Str) {
+bool Lexer::isReservedKeyword(llvm::StringRef Str) {
   return llvm::StringSwitch<bool>(Str)
 #define ETER_RESERVED_KEYWORD(X, Y) .Case(Y, true)
 #include "eter/Lexer/TokenKinds.def"
       .Default(false);
 }
-static bool lexUnicodeEscape(const char *EscapeStart, const char *&CurPtr,
+bool Lexer::lexUnicodeEscape(const char *EscapeStart, const char *&CurPtr,
                              const char *BufferEnd,
                              std::vector<LexerItem> &LexerItems,
                              const char *BufferStart) {
@@ -50,26 +48,24 @@ static bool lexUnicodeEscape(const char *EscapeStart, const char *&CurPtr,
 
   bool const HasDigits = CurPtr > DigitsStart;
   if (CurPtr >= BufferEnd) {
-    PushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
-                    EscapeStart, CurPtr, BufferStart);
+    Lexer::pushLexerError(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+                          EscapeStart, CurPtr, BufferStart);
     return true;
   }
 
   if (*CurPtr != '}') {
-    PushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
-                    EscapeStart, CurPtr, BufferStart);
+    Lexer::pushLexerError(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+                          EscapeStart, CurPtr, BufferStart);
     return true;
   }
 
   CurPtr++; // consume '}'
   if (!HasDigits) {
-    PushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
-                    EscapeStart, CurPtr, BufferStart);
+    Lexer::pushLexerError(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+                          EscapeStart, CurPtr, BufferStart);
   }
   return true;
 }
-// NOLINTEND(misc-use-anonymous-namespace,
-// llvm-prefer-static-over-anonymous-namespace)
 
 /// Lexes a specific byte range within the source buffer and returns a list of
 /// lexer items. This is the core engine for incremental lexing.
@@ -104,7 +100,7 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
     // 0. Comment handling (doc comments, regular comments, block comments)
     if (C == '/') {
-      // NOLINTNEXTLINE(misc-const-correctness): modified by lexComment
+
       Token Result(Token::Kind::comment, eter::Span(0, 0));
       if (lexComment(Result, TokStart, LexerItems)) {
         LexerItems.push_back(Result);
@@ -115,7 +111,7 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
     // 1. Identifiers and Keywords
     if (std::isalpha(UC) || C == '_') {
-      // NOLINTNEXTLINE(misc-const-correctness): modified by lexIdentifier
+
       Token Result(Token::Kind::identifier, eter::Span(0, 0));
       lexIdentifier(Result, TokStart);
       if (isReservedKeyword(
@@ -130,7 +126,7 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
     // 2. Numeric Literals
     if (std::isdigit(UC)) {
-      // NOLINTNEXTLINE(misc-const-correctness): modified by lexNumericLiteral
+
       Token Result(Token::Kind::integer_literal, eter::Span(0, 0));
       bool const Valid = lexNumericLiteral(Result, TokStart);
       if (Valid) {
@@ -144,7 +140,7 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
     // 3. String Literals
     if (C == '"') {
-      // NOLINTNEXTLINE(misc-const-correctness): modified by lexStringLiteral
+
       Token Result(Token::Kind::string_literal, eter::Span(0, 0));
       bool const Terminated = lexStringLiteral(Result, TokStart, LexerItems);
       if (Terminated) {
@@ -158,9 +154,9 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
     // 4. Character Literals
     if (C == '\'') {
-      // NOLINTNEXTLINE(misc-const-correctness): modified by lexCharacterLiteral
+
       Token Result(Token::Kind::char_literal, eter::Span(0, 0));
-      // NOLINTNEXTLINE(misc-const-correctness): modified by lexCharacterLiteral
+
       size_t CharCount = 0;
       bool const Terminated =
           lexCharacterLiteral(Result, TokStart, LexerItems, CharCount);
@@ -520,8 +516,9 @@ bool Lexer::lexStringLiteral(Token &Result, const char *TokStart,
     if (C == '\\') {
       const char *EscapeStart = CurPtr - 1;
       if (CurPtr >= BufferEnd) {
-        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
-                        EscapeStart, CurPtr, BufferStart);
+        Lexer::pushLexerError(LexerItems,
+                              LexerError::Kind::InvalidEscapeSequence,
+                              EscapeStart, CurPtr, BufferStart);
         break;
       }
 
@@ -543,8 +540,9 @@ bool Lexer::lexStringLiteral(Token &Result, const char *TokStart,
         break;
       default:
         CurPtr++;
-        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
-                        EscapeStart, CurPtr, BufferStart);
+        Lexer::pushLexerError(LexerItems,
+                              LexerError::Kind::InvalidEscapeSequence,
+                              EscapeStart, CurPtr, BufferStart);
         break;
       }
     } else if (C == '"') {
@@ -573,8 +571,9 @@ bool Lexer::lexCharacterLiteral(Token &Result, const char *TokStart,
     if (C == '\\') {
       const char *EscapeStart = CurPtr - 1;
       if (CurPtr >= BufferEnd) {
-        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
-                        EscapeStart, CurPtr, BufferStart);
+        Lexer::pushLexerError(LexerItems,
+                              LexerError::Kind::InvalidEscapeSequence,
+                              EscapeStart, CurPtr, BufferStart);
         break;
       }
 
@@ -599,8 +598,9 @@ bool Lexer::lexCharacterLiteral(Token &Result, const char *TokStart,
       default:
         CurPtr++;
         CharCount++;
-        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
-                        EscapeStart, CurPtr, BufferStart);
+        Lexer::pushLexerError(LexerItems,
+                              LexerError::Kind::InvalidEscapeSequence,
+                              EscapeStart, CurPtr, BufferStart);
         break;
       }
     } else if (C == '\'') {
@@ -646,8 +646,9 @@ bool Lexer::lexComment(Token &Result, const char *TokStart,
       }
 
       if (NestingDepth > 0) {
-        PushLexerErrork(LexerItems, LexerError::Kind::UnterminatedBlockComment,
-                        TokStart, CurPtr, BufferStart);
+        Lexer::pushLexerError(LexerItems,
+                              LexerError::Kind::UnterminatedBlockComment,
+                              TokStart, CurPtr, BufferStart);
       }
 
       Result.TokenKind = Token::Kind::comment;

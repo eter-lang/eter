@@ -21,6 +21,9 @@
 
 namespace eter::lexer {
 
+/// Represents a lexer error with a specific kind and the source span where it
+/// occurred. Errors are non-fatal and are collected alongside valid tokens
+/// during lexing.
 struct LexerError {
   enum class Kind : uint8_t {
 #define ETER_LEXER_ERROR(X, Y) X,
@@ -43,6 +46,10 @@ struct LexerError {
   }
 };
 
+/// A variant type representing either a successfully lexed token or a lexer
+/// error. This allows the lexer to report errors without aborting the lexing
+/// process, enabling incremental re-lexing even in the presence of malformed
+/// input.
 using LexerItem = std::variant<Token, LexerError>;
 
 /// A high-performance, incremental-ready lexer.
@@ -52,7 +59,27 @@ using LexerItem = std::variant<Token, LexerError>;
 /// via zero-copy string references to support fast, incremental updates.
 class Lexer {
 public:
-  /// Default constructor.
+  /// Checks if a character is a valid hexadecimal digit (0-9, a-f, A-F).
+  static bool isHexDigit(char C);
+
+  /// Determines whether a given identifier string is a reserved keyword.
+  static bool isReservedKeyword(llvm::StringRef Str);
+
+  /// Lexes a Unicode escape sequence (e.g., \uXXXX or \UXXXXXXXX).
+  /// \param EscapeStart Pointer to the start of the escape sequence (the '\').
+  /// \param CurPtr Reference to the current pointer, advanced past the escape.
+  /// \param BufferEnd Pointer to the end of the buffer to prevent overreads.
+  /// \param LexerItems Output list to append errors if the escape is malformed.
+  /// \param BufferStart Pointer to the start of the buffer for span
+  /// calculation.
+  /// \returns true if the escape was successfully parsed, false otherwise.
+  static bool lexUnicodeEscape(const char *EscapeStart, const char *&CurPtr,
+                               const char *BufferEnd,
+                               std::vector<LexerItem> &LexerItems,
+                               const char *BufferStart);
+
+  /// Default constructor. Internal state pointers are initialized to nullptr
+  /// and set during each `lex` call.
   Lexer() = default;
 
   /// Lexes the entire contents of the provided source buffer from start to
@@ -76,6 +103,17 @@ public:
   std::vector<LexerItem> lex(SourceBuffer &SourceBuffer, Span Span);
 
 private:
+  /// Constructs a `LexerError` and appends it to the output items list.
+  /// \param Items The output list to append the error to.
+  /// \param Kind The specific category of the lexer error.
+  /// \param Start Pointer to the start of the erroneous token/sequence.
+  /// \param End Pointer to the end of the erroneous token/sequence.
+  /// \param BufferStart Pointer to the start of the buffer for span
+  /// calculation.
+  static void pushLexerError(std::vector<LexerItem> &Items,
+                             LexerError::Kind Kind, const char *Start,
+                             const char *End, const char *BufferStart);
+
   /// Advances the internal cursor past any consecutive whitespace characters.
   void skipWhitespace();
 
