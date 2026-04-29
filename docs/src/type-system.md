@@ -16,8 +16,8 @@ let sunny: bool = false;
 ### Numeric types
 Numeric types represents numbers. A numeric type must be declared with a character (representing the type of number) and a number (representing the size of the variable)
 ```rust
-let number : cXY = ... //c = the char of the type
-                       //XY = the size to allocate
+let number: cXY = ... // c = the char of the type
+                       // XY = the size to allocate
 ```
 - #### Unsigned
 Unsigned types represents absolute numbers (which, by convention are treated as positive numbers). Unsigned numbers are declared with the letter `u`. The following table shows the possible sizes.
@@ -30,8 +30,8 @@ Unsigned types represents absolute numbers (which, by convention are treated as 
 | `u64` | 8 bytes (64 bits)| $0$| $2^{64}-1$|
 | `u128` | 16 bytes (128 bits) | $0$| $2^{128}-1$|
 ```rust
-let x1 : u8 = 10;
-let x2 : u8 = 300; // compiling error. The variable type has not enough size to represent the value
+let x1: u8 = 10;
+let x2: u8 = 300; // compiler error. The variable type has not enough size to represent the value
 ```
 
 - #### Integer
@@ -52,8 +52,8 @@ Float types represent non integer numerals (both positive and negative) followin
 | `f64` | 8 bytes (64 bits) | $1.0×2^{−1022}$|$2^{−1074}$| $(2−2^{−52})×2^{1023}$|
 
 ```rust
-let x : f32 = 10.5;
-let y : f64 = 10.5f;
+let x: f32 = 10.5;
+let y: f64 = 10.5f;
 ```
 As seen in the example both the declarations are valid.
 
@@ -85,14 +85,14 @@ Textual types represents strings, thus sequences of characters.
  Strings are declared as `str`and the value enclosed in double quotes.
 
  ```rust
- let say : str = "Hello";
+ let say: str = "Hello";
  ```
 
  - #### C-Strings
 C-strings are a sequence of characters (non unicode encoded) terminated by a null character ('\0'). They are identified by prefixing the literal declaration with the qualifier `@c`.
 
  ```rust
- let say : str = @c"Hello";
+ let say: str = @c"Hello";
  ```
 ### Array types 
 
@@ -129,25 +129,25 @@ let record: (i32, f64, str) = (42, 3.14, "hello");
 ### Struct types
 Structs are heterogeneous product of other types (called _fields_). Structs must be declarated with a name to refer to and the type and the name for eah of it's fields. 
 ```rust
-struct AName{
-  //fields of AName
-  x : i32,
-  y : f64,
+struct AName {
+  // fields of AName
+  x: i32,
+  y: f64,
 }
-let aStruct = AName(15,10.4);
+let aStruct = AName ( x: 15, y: 10.4 );
 ```
 Structs fields can be accessed with `.` followed by the field name.
 
 ```rust
-let aVar : i32 = aStruct.x; //15
+let aVar : i32 = aStruct.x; // 15
 ```
 - #### Unit-like structs
 Unit-like structs are structs with no fields. Those structs can be initialized with only the name.
 ```rust
-struct AStruct{}    //Unit-like struct declaration
+struct AStruct{}    // Unit-like struct declaration
 
-let a : AStruct;               //AStruct variable initialization
-let b : AStruct = AStruct{};   //Equivalent initialization
+let a: AStruct;               // AStruct variable initialization
+let b: AStruct = AStruct{};   // Equivalent initialization
 ```
 
 ### Enum types
@@ -156,19 +156,19 @@ Enum is a type which defines a new enumerated type domain. Each Enum is declared
 Each variant can be declared with just name to refer to (_Unit-like_) or have the same syntax of structs, tuple or unions.
 ```rust
 enum Animals{
-  Dog(str, i32),
-  Cat{name : str, age : i32},
-  Spider{eyes : i32, poisonous : bool},
+  Dog( str, i32 ),
+  Cat{ name: str, age: i32 },
+  Spider{ eyes: i32, poisonous: bool },
   Reptile,
 }
 
-let a : Animal = Animal::Spider{eyes : 8, poisonous : false};
-let b : Animal = Animal::Reptile;
+let a: Animal = Animal::Spider{ eyes: 8, poisonous: false };
+let b: Animal = Animal::Reptile;
 ```
 Variants defined inside Enum declaration cannot be used as a type specifier.
 ```rust
-let b : Cat = Animals::Cat{..}  //Compiling error. Cat not defined
-let c : Animals::Cat = Animals::Cat{..}  //Another compiling error
+let b: Cat = Animals::Cat{..}  //Compiler error. Cat not defined
+let c: Animals::Cat = Animals::Cat{..}  //Another compiling error
 ```
 - #### Unit-Only (or _Field-less_) Enums
 A constructor with no fields is called _Unit-Like_. When all the constructors in an enum are Unit-Like, then the enum is called **Unit-Only Enum** (or _Field-less_). 
@@ -180,7 +180,7 @@ enum Balls{
   Soccer,
 }
 
-let a : Balls = Balls::Tennis 
+let a: Balls = Balls::Tennis 
 ```
 
 Each Enum instance has an associated _dicriminant_, an integer (`isize`) that determines which variant of the enum it holds. A discriminant value can be assigned to only one variant and a variant can have only one discriminant.
@@ -196,16 +196,16 @@ enum Balls{
 Non specified discriminant are automatically assigned as the discriminant of the previous constructor in the declaration increased by 1. (If it's the first constructor then it's  set to 0)
 ```rust
 enum Balls{
-  Tennis,     //Unspecified discriminant for first variant. set to 0
+  Tennis,     // Unspecified discriminant for first variant. set to 0
   Golf = 10,
-  Soccer,     //Discriminant will be 11
+  Soccer,     // Discriminant will be 11
 }
 ```
 
 Discriminant of a variant can be accessed casting the enum to an `isize`.
 ```rust
-let a : Balls = Balls::Golf;
-let discr : isize = a as isize //discr contains 10
+let a: Balls = Balls::Golf;
+let discr: isize = a as isize // discr contains 10
 ```
 ## Static types layout
  
