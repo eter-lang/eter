@@ -1,5 +1,7 @@
 [book]
 title = "The Eter Reference"
-authors = ["Federico Bruzzone"]
+authors = ["Federico Bruzzone, Riccardo Marantonio, Federico Tabellini"]
 language = "en"
 # description = "The Eter Reference"
+[output.html]
+mathjax-support = true

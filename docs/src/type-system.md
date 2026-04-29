@@ -24,11 +24,11 @@ Unsigned types represents absolute numbers (which, by convention are treated as 
 
 | Type | Byte Size (bit) | Min Value | Max Value|
 |-:|-:|:-:|:-|
-| `u8` | 1 byte (8 bits) | $0$| $2^{8}-1$|
-| `u16` | 2 bytes (16 bits) | $0$| $2^{16}-1$|
-| `u32` | 4 bytes (32 bits) | $0$| $2^{32}-1$|
-| `u64` | 8 bytes (64 bits)| $0$| $2^{64}-1$|
-| `u128` | 16 bytes (128 bits) | $0$| $2^{128}-1$|
+| `u8` | 1 byte (8 bits) | \\(0\\)| \\(2^{8}-1\\)|
+| `u16` | 2 bytes (16 bits) | \\(0\\)| \\(2^{16}-1\\)|
+| `u32` | 4 bytes (32 bits) | \\(0\\)| \\(2^{32}-1\\)|
+| `u64` | 8 bytes (64 bits)| \\(0\\)| \\(2^{64}-1\\)|
+| `u128` | 16 bytes (128 bits) | \\(0\\)| \\(2^{128}-1\\)|
 ```rust
 let x1: u8 = 10;
 let x2: u8 = 300; // compiler error. The variable type has not enough size to represent the value
@@ -38,18 +38,18 @@ let x2: u8 = 300; // compiler error. The variable type has not enough size to re
 Integer types represents integer numbers, both positive and negative. Integer numbers are declared with the letter `i`. The following table shows the possible sizes.
 | Type | Byte Size (bit) | Min Value | Max Value|
 |-:|-:|:-:|:-|
-| `i8` | 1 byte (8 bits) | $-2^{7}$| $2^{7}-1$|
-| `i16` | 2 bytes (16 bits) | $-2^{15}$| $2^{15}-1$|
-| `i32` | 4 bytes (32 bits) | $-2^{31}$| $2^{31}-1$|
-| `i64` | 8 bytes (64 bits)| $-2^{63}$| $2^{63}-1$|
-| `i128` | 16 bytes (128 bits) | $-2^{127}$| $2^{127}-1$|
+| `i8` | 1 byte (8 bits) | \\(-2^{7}\\)| \\(2^{7}-1\\)|
+| `i16` | 2 bytes (16 bits) | \\(-2^{15}\\)| \\(2^{15}-1\\)|
+| `i32` | 4 bytes (32 bits) | \\(-2^{31}\\)| \\(2^{31}-1\\)|
+| `i64` | 8 bytes (64 bits)| \\(-2^{63}\\)| \\(2^{63}-1\\)|
+| `i128` | 16 bytes (128 bits) | \\(-2^{127}\\)| \\(2^{127}-1\\)|
 
 - #### Float
 Float types represent non integer numerals (both positive and negative) following the [IEEE 754 standard](https://en.wikipedia.org/wiki/IEEE_754). Float numbers are declared with the letter `f`. The only possible sizes are `32` or `64` bits. Thus the two possible types are `f32` (single precision) and `f64` (double precision).
 | Type | Byte Size (bit) | Min Value (Normalized) | Min Value (Subnormal)| Max Value|
 |-:|-:|:-:|:-:|:-|
-| `f32` | 4 byte (32 bits) | $1.0×2^{−126}$|$2^{−149}$| $(2−2^{−23})×2^{127}$|
-| `f64` | 8 bytes (64 bits) | $1.0×2^{−1022}$|$2^{−1074}$| $(2−2^{−52})×2^{1023}$|
+| `f32` | 4 byte (32 bits) | \\(1.0×2^{−126}\\)|\\(2^{−149}\\)| \\((2−2^{−23})×2^{127}\\)|
+| `f64` | 8 bytes (64 bits) | \\(1.0×2^{−1022}\\)|\\(2^{−1074}\\)| \\((2−2^{−52})×2^{1023}\\)|
 
 ```rust
 let x: f32 = 10.5;
@@ -62,7 +62,7 @@ The `usize` type is an unsigned integer type with the same number of bits as the
 
 The `isize` type is a signed two’s complement integer type with the same number of bits as the platform’s pointer type. The theoretical upper bound on object and array size is the maximum isize value. Thus isize can be used to calculate differences between pointers into an object or array and can address every byte within an object along with one byte past the end.
 
-> Both `usize` and `isize` haves at leas 16 bit lenght.
+> Both `usize` and `isize` are at least 16 bit lenght.
  
 ### Character
 A character represents a [Unicode scalar value](https://en.wikipedia.org/wiki/List_of_Unicode_characters). Characters are declared as `char` and the declared value must be enclosed in single quotes. Every character is stored in 4 bytes (32 bit), thus a sort of alias to `u32` type.
