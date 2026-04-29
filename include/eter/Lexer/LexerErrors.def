@@ -24,7 +24,9 @@ ETER_LEXER_ERROR(UnterminatedBlockComment, "unterminated_block_comment")
 ETER_LEXER_ERROR(InvalidCharacter, "invalid_character")
 ETER_LEXER_ERROR(InvalidEscapeSequence, "invalid_escape_sequence")
 ETER_LEXER_ERROR(InvalidUnicodeEscape, "invalid_unicode_escape")
-ETER_LEXER_ERROR(InvalidCharLiteralLength, "invalid_char_literal_length")
+ETER_LEXER_ERROR(EmptyCharLiteral, "empty_char_literal")
+ETER_LEXER_ERROR(MultiCharCharLiteral, "multi_char_literal")
 ETER_LEXER_ERROR(InvalidNumericLiteral, "invalid_numeric_literal")
+ETER_LEXER_ERROR(TrailingNumericSeparator, "trailing_numeric_separator")
 
 #undef ETER_LEXER_ERROR

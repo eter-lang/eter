@@ -10,7 +10,7 @@
 
 namespace eter::lexer {
 
-const char *Token::getTokenName(Kind K) {
+const llvm::StringRef Token::getTokenName(Kind K) {
   switch (K) {
 #define ETER_TOKEN(X)                                                          \
   case Kind::X:                                                                \
