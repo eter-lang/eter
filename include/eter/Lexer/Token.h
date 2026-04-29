@@ -26,14 +26,16 @@ struct Token {
 
   /// Create a Token with the given kind and span.
   /// \param TokenKind The kind of the token.
-  /// \param TokenSpan The span representing the token's position in the source code.
+  /// \param TokenSpan The span representing the token's position in the source
+  /// code.
   explicit Token(Kind TokenKind, Span TokenSpan)
       : TokenKind(TokenKind), TokenSpan(TokenSpan) {}
 
   /// Return the string representation of a token kind.
   /// \param K The token kind to get the name for.
   /// \returns A null-terminated C string with the name of the token kind.
-  static const char *getTokenName(Kind K);
+  [[nodiscard]]
+  static const llvm::StringRef getTokenName(Kind K);
 
   /// The kind of the token.
   Kind TokenKind;
