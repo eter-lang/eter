@@ -59,11 +59,16 @@ using LexerItem = std::variant<Token, LexerError>;
 /// via zero-copy string references to support fast, incremental updates.
 class Lexer {
 public:
+  Span makeTokenSpan(const char *TokStart) const;
+
   /// Checks if a character is a valid hexadecimal digit (0-9, a-f, A-F).
   static bool isHexDigit(char C);
 
   /// Determines whether a given identifier string is a reserved keyword.
   static bool isReservedKeyword(llvm::StringRef Str);
+
+  /// Determines whether a given token kind is a reserved symbol.
+  static bool isReservedSymbolKind(Token::Kind K);
 
   /// Lexes a Unicode escape sequence (e.g., \uXXXX or \UXXXXXXXX).
   /// \param EscapeStart Pointer to the start of the escape sequence (the '\').

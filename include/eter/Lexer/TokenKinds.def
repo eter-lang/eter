@@ -48,6 +48,10 @@
 #define ETER_RESERVED_KEYWORD(X, Y) ETER_TOKEN(reserved_##X)
 #endif
 
+#ifndef ETER_RESERVED_SYMBOL
+#define ETER_RESERVED_SYMBOL(X, Y) ETER_TOKEN(reserved_##X)
+#endif
+
 //===----------------------------------------------------------------------===//
 // Special Tokens
 //===----------------------------------------------------------------------===//
@@ -87,11 +91,10 @@ ETER_SYMBOL(minus, "-")
 ETER_SYMBOL(star, "*")
 ETER_SYMBOL(slash, "/")
 ETER_SYMBOL(percent, "%")
+ETER_SYMBOL(caret, "^")
 ETER_SYMBOL(plus_plus, "++")
 ETER_SYMBOL(minus_minus, "--")
-ETER_SYMBOL(amp, "&")
 ETER_SYMBOL(pipe, "|")
-ETER_SYMBOL(caret, "^")
 ETER_SYMBOL(less_less, "<<")
 ETER_SYMBOL(greater_greater, ">>")
 ETER_SYMBOL(amp_amp, "&&")
@@ -128,7 +131,7 @@ ETER_KEYWORD(else, "else")
 ETER_KEYWORD(enum, "enum")
 ETER_KEYWORD(false, "false")
 ETER_KEYWORD(fn, "fn")
-ETER_KEYWORD(for,      "for")
+ETER_KEYWORD(for, "for")
 ETER_KEYWORD(if, "if")
 ETER_KEYWORD(let, "let")
 ETER_KEYWORD(match, "match")
@@ -139,7 +142,6 @@ ETER_KEYWORD(ret, "ret")
 ETER_KEYWORD(struct, "struct")
 ETER_KEYWORD(true, "true")
 ETER_KEYWORD(use, "use")
-ETER_KEYWORD(where, "where")
 ETER_KEYWORD(while, "while")
 
 //===----------------------------------------------------------------------===//
@@ -148,9 +150,17 @@ ETER_KEYWORD(while, "while")
 ETER_RESERVED_KEYWORD(type, "type")
 ETER_RESERVED_KEYWORD(return, "return")
 ETER_RESERVED_KEYWORD(ref, "ref")
+ETER_RESERVED_KEYWORD(where, "where")
+
+//===----------------------------------------------------------------------===//
+// Reserved Symbols (produce lexer errors when encountered)
+//===----------------------------------------------------------------------===//
+ETER_RESERVED_SYMBOL(arrow, "->")
+ETER_RESERVED_SYMBOL(amp, "&")
 
 // Clean up macros at the end of the file
 #undef ETER_KEYWORD
 #undef ETER_RESERVED_KEYWORD
+#undef ETER_RESERVED_SYMBOL
 #undef ETER_SYMBOL
 #undef ETER_TOKEN
