@@ -14,17 +14,18 @@
 
 namespace eter::lexer {
 
-namespace {
-static void pushLexerErrork(std::vector<LexerItem> &Items,
+// NOLINTBEGIN(misc-use-anonymous-namespace,
+// llvm-prefer-static-over-anonymous-namespace)
+static void PushLexerErrork(std::vector<LexerItem> &Items,
                             LexerError::Kind Kind, const char *Start,
                             const char *End, const char *BufferStart) {
   Items.push_back(
       LexerError{Kind, eter::Span(Start - BufferStart, End - BufferStart)});
 }
-bool isHexDigit(char C) {
+static bool isHexDigit(char C) {
   return std::isxdigit(static_cast<unsigned char>(C)) != 0;
 }
-bool isReservedKeyword(llvm::StringRef Str) {
+static bool isReservedKeyword(llvm::StringRef Str) {
   return llvm::StringSwitch<bool>(Str)
 #define ETER_RESERVED_KEYWORD(X, Y) .Case(Y, true)
 #include "eter/Lexer/TokenKinds.def"
@@ -47,27 +48,28 @@ static bool lexUnicodeEscape(const char *EscapeStart, const char *&CurPtr,
     CurPtr++;
   }
 
-  bool HasDigits = CurPtr > DigitsStart;
+  bool const HasDigits = CurPtr > DigitsStart;
   if (CurPtr >= BufferEnd) {
-    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+    PushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
                     EscapeStart, CurPtr, BufferStart);
     return true;
   }
 
   if (*CurPtr != '}') {
-    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+    PushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
                     EscapeStart, CurPtr, BufferStart);
     return true;
   }
 
   CurPtr++; // consume '}'
   if (!HasDigits) {
-    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+    PushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
                     EscapeStart, CurPtr, BufferStart);
   }
   return true;
 }
-} // anonymous namespace
+// NOLINTEND(misc-use-anonymous-namespace,
+// llvm-prefer-static-over-anonymous-namespace)
 
 /// Lexes a specific byte range within the source buffer and returns a list of
 /// lexer items. This is the core engine for incremental lexing.
@@ -102,55 +104,10 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
     // 0. Comment handling (doc comments, regular comments, block comments)
     if (C == '/') {
-      if (CurPtr < BufferEnd && *CurPtr == '/') {
-        // Line comment: check for doc comment (///)
-        if (CurPtr + 1 < BufferEnd && CurPtr[1] == '/' &&
-            (CurPtr + 2 >= BufferEnd || CurPtr[2] != '/')) {
-          // Doc comment (/// but not ////)
-          CurPtr += 2; // consume second and third slashes
-          while (CurPtr < BufferEnd && *CurPtr != '\n' && *CurPtr != '\r') {
-            CurPtr++;
-          }
-          LexerItems.push_back(
-              Token(Token::Kind::doc_comment,
-                    eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
-          continue;
-        } // Regular line comment (//)
-        CurPtr++; // consume second slash
-        while (CurPtr < BufferEnd && *CurPtr != '\n' && *CurPtr != '\r') {
-          CurPtr++;
-        }
-        LexerItems.push_back(
-            Token(Token::Kind::comment,
-                  eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
-        continue;
-      }
-      if (CurPtr < BufferEnd && *CurPtr == '*') {
-        // Block comment (/* */) with nesting support
-        CurPtr++; // consume '*'
-        int NestingDepth = 1;
-        while (CurPtr < BufferEnd && NestingDepth > 0) {
-          if (CurPtr + 1 < BufferEnd && *CurPtr == '/' && CurPtr[1] == '*') {
-            NestingDepth++;
-            CurPtr += 2;
-          } else if (CurPtr + 1 < BufferEnd && *CurPtr == '*' &&
-                     CurPtr[1] == '/') {
-            NestingDepth--;
-            CurPtr += 2;
-          } else {
-            CurPtr++;
-          }
-        }
-
-        if (NestingDepth > 0) {
-          LexerItems.push_back(LexerError{
-              LexerError::Kind::UnterminatedBlockComment,
-              eter::Span(TokStart - BufferStart, CurPtr - BufferStart)});
-        } else {
-          LexerItems.push_back(
-              Token(Token::Kind::comment,
-                    eter::Span(TokStart - BufferStart, CurPtr - BufferStart)));
-        }
+      // NOLINTNEXTLINE(misc-const-correctness): modified by lexComment
+      Token Result(Token::Kind::comment, eter::Span(0, 0));
+      if (lexComment(Result, TokStart, LexerItems)) {
+        LexerItems.push_back(Result);
         continue;
       }
       // Fall through: not a comment, let the switch handle division operator
@@ -563,7 +520,7 @@ bool Lexer::lexStringLiteral(Token &Result, const char *TokStart,
     if (C == '\\') {
       const char *EscapeStart = CurPtr - 1;
       if (CurPtr >= BufferEnd) {
-        pushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
                         EscapeStart, CurPtr, BufferStart);
         break;
       }
@@ -586,7 +543,7 @@ bool Lexer::lexStringLiteral(Token &Result, const char *TokStart,
         break;
       default:
         CurPtr++;
-        pushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
                         EscapeStart, CurPtr, BufferStart);
         break;
       }
@@ -616,7 +573,7 @@ bool Lexer::lexCharacterLiteral(Token &Result, const char *TokStart,
     if (C == '\\') {
       const char *EscapeStart = CurPtr - 1;
       if (CurPtr >= BufferEnd) {
-        pushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
                         EscapeStart, CurPtr, BufferStart);
         break;
       }
@@ -642,7 +599,7 @@ bool Lexer::lexCharacterLiteral(Token &Result, const char *TokStart,
       default:
         CurPtr++;
         CharCount++;
-        pushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
+        PushLexerErrork(LexerItems, LexerError::Kind::InvalidEscapeSequence,
                         EscapeStart, CurPtr, BufferStart);
         break;
       }
@@ -662,6 +619,65 @@ bool Lexer::lexCharacterLiteral(Token &Result, const char *TokStart,
   Result.TokenKind = Token::Kind::char_literal;
   Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
   return false;
+}
+
+/// Lexes a comment (line, doc, or block comment).
+/// Assumes `CurPtr` is pointing to the second '/' character.
+/// Returns true if a comment was successfully lexed, false if this is
+/// a division operator (not a comment).
+bool Lexer::lexComment(Token &Result, const char *TokStart,
+                       std::vector<LexerItem> &LexerItems) {
+  if (CurPtr >= BufferEnd || *CurPtr != '/') {
+    // Check if it's a block comment
+    if (CurPtr < BufferEnd && *CurPtr == '*') {
+      CurPtr++; // consume '*'
+      int NestingDepth = 1;
+      while (CurPtr < BufferEnd && NestingDepth > 0) {
+        if (CurPtr + 1 < BufferEnd && *CurPtr == '/' && CurPtr[1] == '*') {
+          NestingDepth++;
+          CurPtr += 2;
+        } else if (CurPtr + 1 < BufferEnd && *CurPtr == '*' &&
+                   CurPtr[1] == '/') {
+          NestingDepth--;
+          CurPtr += 2;
+        } else {
+          CurPtr++;
+        }
+      }
+
+      if (NestingDepth > 0) {
+        PushLexerErrork(LexerItems, LexerError::Kind::UnterminatedBlockComment,
+                        TokStart, CurPtr, BufferStart);
+      }
+
+      Result.TokenKind = Token::Kind::comment;
+      Result.TokenSpan =
+          eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+      return true;
+    }
+    return false;
+  }
+
+  // Line comment: check for doc comment (///)
+  if (CurPtr + 1 < BufferEnd && CurPtr[1] == '/' &&
+      (CurPtr + 2 >= BufferEnd || CurPtr[2] != '/')) {
+    // Doc comment (/// but not ////)
+    CurPtr += 2; // consume second and third slashes
+    while (CurPtr < BufferEnd && *CurPtr != '\n' && *CurPtr != '\r') {
+      CurPtr++;
+    }
+    Result.TokenKind = Token::Kind::doc_comment;
+  } else {
+    // Regular line comment (//)
+    CurPtr++; // consume second slash
+    while (CurPtr < BufferEnd && *CurPtr != '\n' && *CurPtr != '\r') {
+      CurPtr++;
+    }
+    Result.TokenKind = Token::Kind::comment;
+  }
+
+  Result.TokenSpan = eter::Span(TokStart - BufferStart, CurPtr - BufferStart);
+  return true;
 }
 
 } // namespace eter::lexer

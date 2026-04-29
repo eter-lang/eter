@@ -111,6 +111,15 @@ private:
                            std::vector<LexerItem> &LexerItems,
                            size_t &CharCount);
 
+  /// \param Result The token to populate with the lexed information.
+  /// \param TokStart A pointer to the start of the token in the source buffer.
+  /// \param LexerItems The output list to append lexer errors to.
+  /// \returns true if a comment was lexed, false if this is a division
+  /// operator.
+  [[nodiscard]]
+  bool lexComment(Token &Result, const char *TokStart,
+                  std::vector<LexerItem> &LexerItems);
+
   //===--------------------------------------------------------------------===//
   // Internal Traversal State
   //
