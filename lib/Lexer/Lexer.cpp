@@ -24,6 +24,49 @@ static void pushLexerErrork(std::vector<LexerItem> &Items,
 bool isHexDigit(char C) {
   return std::isxdigit(static_cast<unsigned char>(C)) != 0;
 }
+bool isReservedKeyword(llvm::StringRef Str) {
+  return llvm::StringSwitch<bool>(Str)
+#define ETER_RESERVED_KEYWORD(X, Y) .Case(Y, true)
+#include "eter/Lexer/TokenKinds.def"
+      .Default(false);
+}
+static bool lexUnicodeEscape(const char *EscapeStart, const char *&CurPtr,
+                             const char *BufferEnd,
+                             std::vector<LexerItem> &LexerItems,
+                             const char *BufferStart) {
+  if (CurPtr >= BufferEnd || *CurPtr != 'u') {
+    return false;
+  }
+  if (CurPtr + 1 >= BufferEnd || CurPtr[1] != '{') {
+    return false;
+  }
+
+  CurPtr += 2; // consume 'u' and '{'
+  const char *DigitsStart = CurPtr;
+  while (CurPtr < BufferEnd && isHexDigit(*CurPtr)) {
+    CurPtr++;
+  }
+
+  bool HasDigits = CurPtr > DigitsStart;
+  if (CurPtr >= BufferEnd) {
+    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+                    EscapeStart, CurPtr, BufferStart);
+    return true;
+  }
+
+  if (*CurPtr != '}') {
+    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+                    EscapeStart, CurPtr, BufferStart);
+    return true;
+  }
+
+  CurPtr++; // consume '}'
+  if (!HasDigits) {
+    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
+                    EscapeStart, CurPtr, BufferStart);
+  }
+  return true;
+}
 } // anonymous namespace
 
 /// Lexes a specific byte range within the source buffer and returns a list of
@@ -115,14 +158,22 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
     // 1. Identifiers and Keywords
     if (std::isalpha(UC) || C == '_') {
+      // NOLINTNEXTLINE(misc-const-correctness): modified by lexIdentifier
       Token Result(Token::Kind::identifier, eter::Span(0, 0));
       lexIdentifier(Result, TokStart);
-      LexerItems.push_back(Result);
+      if (isReservedKeyword(
+              Buffer.slice(Result.TokenSpan.Start, Result.TokenSpan.End))) {
+        LexerItems.push_back(
+            LexerError{LexerError::Kind::ReservedKeyword, Result.TokenSpan});
+      } else {
+        LexerItems.push_back(Result);
+      }
       continue;
     }
 
     // 2. Numeric Literals
     if (std::isdigit(UC)) {
+      // NOLINTNEXTLINE(misc-const-correctness): modified by lexNumericLiteral
       Token Result(Token::Kind::integer_literal, eter::Span(0, 0));
       bool const Valid = lexNumericLiteral(Result, TokStart);
       if (Valid) {
@@ -136,6 +187,7 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
     // 3. String Literals
     if (C == '"') {
+      // NOLINTNEXTLINE(misc-const-correctness): modified by lexStringLiteral
       Token Result(Token::Kind::string_literal, eter::Span(0, 0));
       bool const Terminated = lexStringLiteral(Result, TokStart, LexerItems);
       if (Terminated) {
@@ -149,7 +201,9 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
 
     // 4. Character Literals
     if (C == '\'') {
+      // NOLINTNEXTLINE(misc-const-correctness): modified by lexCharacterLiteral
       Token Result(Token::Kind::char_literal, eter::Span(0, 0));
+      // NOLINTNEXTLINE(misc-const-correctness): modified by lexCharacterLiteral
       size_t CharCount = 0;
       bool const Terminated =
           lexCharacterLiteral(Result, TokStart, LexerItems, CharCount);
@@ -499,46 +553,6 @@ bool Lexer::lexNumericLiteral(Token &Result, const char *TokStart) {
 
   return true;
 }
-namespace {
-static bool lexUnicodeEscape(const char *EscapeStart, const char *&CurPtr,
-
-                             const char *BufferEnd,
-                             std::vector<LexerItem> &LexerItems,
-                             const char *BufferStart) {
-  if (CurPtr >= BufferEnd || *CurPtr != 'u') {
-    return false;
-  }
-  if (CurPtr + 1 >= BufferEnd || CurPtr[1] != '{') {
-    return false;
-  }
-
-  CurPtr += 2; // consume 'u' and '{'
-  const char *DigitsStart = CurPtr;
-  while (CurPtr < BufferEnd && isHexDigit(*CurPtr)) {
-    CurPtr++;
-  }
-
-  bool HasDigits = CurPtr > DigitsStart;
-  if (CurPtr >= BufferEnd) {
-    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
-                    EscapeStart, CurPtr, BufferStart);
-    return true;
-  }
-
-  if (*CurPtr != '}') {
-    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
-                    EscapeStart, CurPtr, BufferStart);
-    return true;
-  }
-
-  CurPtr++; // consume '}'
-  if (!HasDigits) {
-    pushLexerErrork(LexerItems, LexerError::Kind::InvalidUnicodeEscape,
-                    EscapeStart, CurPtr, BufferStart);
-  }
-  return true;
-}
-} // namespace
 
 /// Lexes a string literal enclosed in double quotes.
 /// Handles basic escape sequences.

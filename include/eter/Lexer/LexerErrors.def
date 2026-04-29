@@ -28,5 +28,6 @@ ETER_LEXER_ERROR(EmptyCharLiteral, "empty_char_literal")
 ETER_LEXER_ERROR(MultiCharCharLiteral, "multi_char_literal")
 ETER_LEXER_ERROR(InvalidNumericLiteral, "invalid_numeric_literal")
 ETER_LEXER_ERROR(TrailingNumericSeparator, "trailing_numeric_separator")
+ETER_LEXER_ERROR(ReservedKeyword, "reserved_keyword")
 
 #undef ETER_LEXER_ERROR
