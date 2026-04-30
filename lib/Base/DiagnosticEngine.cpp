@@ -31,8 +31,8 @@ DiagnosticBuilder<SimpleDiagnosticEngine> SimpleDiagnosticEngine::note() {
 }
 
 DiagnosticEngine
-SimpleDiagnosticEngine::withSourceManager(const SourceManager &SM) && {
-  DiagnosticEngine DE(SM);
+SimpleDiagnosticEngine::withSourceManager(SourceManager SM) && {
+  DiagnosticEngine DE(std::move(SM));
 
   for (auto &D : Diagnostics)
     DE.emit(std::move(D));
@@ -40,7 +40,7 @@ SimpleDiagnosticEngine::withSourceManager(const SourceManager &SM) && {
   return DE;
 }
 
-DiagnosticEngine::DiagnosticEngine(const SourceManager &SM) : SM(SM) {}
+DiagnosticEngine::DiagnosticEngine(SourceManager SM) : SM(std::move(SM)) {}
 
 void DiagnosticEngine::emit(Diagnostic Diag) {
   Diagnostics.push_back(std::move(Diag));

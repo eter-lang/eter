@@ -110,7 +110,7 @@ public:
   /// Convert this simple engine to a full DiagnosticEngine with the given
   /// source manager. Calling this method when SimpleDiagnosticEngine is an
   /// rvalue causes the SimpleDiagnosticEngine instance to be invalidated.
-  DiagnosticEngine withSourceManager(const SourceManager &SM) &&;
+  DiagnosticEngine withSourceManager(SourceManager SM) &&;
 
   SimpleDiagnosticEngine(SimpleDiagnosticEngine &&) = delete;
   SimpleDiagnosticEngine &operator=(SimpleDiagnosticEngine &&) = delete;
@@ -124,7 +124,7 @@ private:
 class DiagnosticEngine {
 public:
   /// Construct a diagnostic engine with a source manager.
-  explicit DiagnosticEngine(const SourceManager &SM);
+  explicit DiagnosticEngine(SourceManager SM);
 
   /// Emit a diagnostic.
   void emit(Diagnostic Diag);
@@ -154,7 +154,7 @@ private:
   /// Print a single diagnostic.
   void print(const Diagnostic &Diag) const;
 
-  const SourceManager &SM;
+  SourceManager SM;
   llvm::SmallVector<Diagnostic, 8> Diagnostics;
 };
 

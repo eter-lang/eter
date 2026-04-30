@@ -36,19 +36,24 @@ public:
   explicit SourceManager(const SourceBuffer &Buffer);
 
   /// Return the full contents of the source buffer.
+  [[nodiscard]]
   llvm::StringRef getBuffer() const;
 
   /// Return a substring of the source buffer for the given span.
+  [[nodiscard]]
   llvm::StringRef slice(Span Span) const;
 
   /// Resolve a byte offset to a line and column location.
+  [[nodiscard]]
   SourceLocation getLocation(uint32_t Offset) const;
 
   /// Return the filename of the source buffer.
+  [[nodiscard]]
   llvm::StringRef getFilename() const;
 
   SourceManager(const SourceManager &) = delete;
   SourceManager &operator=(const SourceManager &) = delete;
+  SourceManager(SourceManager &&) = default;
 
 private:
   /// Build the line start offset index.
