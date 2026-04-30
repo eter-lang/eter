@@ -112,6 +112,9 @@ public:
   /// rvalue causes the SimpleDiagnosticEngine instance to be invalidated.
   DiagnosticEngine withSourceManager(const SourceManager &SM) &&;
 
+  SimpleDiagnosticEngine(SimpleDiagnosticEngine &&) = delete;
+  SimpleDiagnosticEngine &operator=(SimpleDiagnosticEngine &&) = delete;
+
 private:
   llvm::SmallVector<Diagnostic, 8> Diagnostics;
 };
@@ -151,7 +154,6 @@ private:
   /// Print a single diagnostic.
   void print(const Diagnostic &Diag) const;
 
-private:
   const SourceManager &SM;
   llvm::SmallVector<Diagnostic, 8> Diagnostics;
 };

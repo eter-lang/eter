@@ -107,6 +107,9 @@ public:
   [[nodiscard]]
   std::vector<LexerItem> lex(SourceBuffer &SourceBuffer, Span Span);
 
+  Lexer(const Lexer &) = delete;
+  Lexer &operator=(const Lexer &) = delete;
+
 private:
   /// Constructs a `LexerError` and appends it to the output items list.
   /// \param Items The output list to append the error to.
