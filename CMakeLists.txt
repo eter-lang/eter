@@ -188,4 +188,13 @@ if(ETER_INCLUDE_TESTS)
   enable_testing()
   add_subdirectory(test)
   add_subdirectory(unittests)
+
+  # Unified target to run both lit tests and unit tests
+  # ETER_LIT_EXECUTABLE and FILECHECK_EXECUTABLE are set by test/CMakeLists.txt
+  add_custom_target(check-all
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --test-dir ${CMAKE_BINARY_DIR}
+    COMMAND ${ETER_LIT_EXECUTABLE} -sv ${CMAKE_BINARY_DIR}/test
+    DEPENDS eterc EterUnitTests
+    COMMENT "Running all Eter tests (unit + lit)"
+  )
 endif()

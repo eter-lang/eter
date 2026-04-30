@@ -116,11 +116,3 @@ add_custom_target(check-eter
   DEPENDS eterc
   COMMENT "Running Eter lit test suite"
 )
-
-# Unified target to run both lit tests and unit tests
-add_custom_target(check-all
-  COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --test-dir ${CMAKE_BINARY_DIR}
-  COMMAND ${ETER_LIT_EXECUTABLE} -sv ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS eterc EterUnitTests
-  COMMENT "Running all Eter tests (unit + lit)"
-)

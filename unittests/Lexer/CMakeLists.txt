@@ -23,6 +23,3 @@ target_include_directories(LexerTest SYSTEM PRIVATE
   ${LLVM_INCLUDE_DIRS}
   ${MLIR_INCLUDE_DIRS}
 )
-
-# Disable -Werror for tests to avoid LLVM header warnings
-#set_property(TARGET LexerTest APPEND PROPERTY COMPILE_OPTIONS -Wno-error -Wno-unused-parameter)

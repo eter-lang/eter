@@ -18,7 +18,7 @@ using namespace eter;
 TEST(SourceBufferTest, MakeFromString) {
   auto Buffer = SourceBuffer::makeFromString("hello world");
   EXPECT_EQ(Buffer.getBuffer(), "hello world");
-  EXPECT_EQ(Buffer.getFilename(), "test-buffer");
+  EXPECT_EQ(Buffer.getFilename(), "buffer");
 }
 
 TEST(SourceBufferTest, MakeFromStringWithCustomName) {
@@ -30,7 +30,7 @@ TEST(SourceBufferTest, MakeFromStringWithCustomName) {
 TEST(SourceBufferTest, MakeFromStringEmpty) {
   auto Buffer = SourceBuffer::makeFromString("");
   EXPECT_EQ(Buffer.getBuffer(), "");
-  EXPECT_EQ(Buffer.getFilename(), "test-buffer");
+  EXPECT_EQ(Buffer.getFilename(), "buffer");
 }
 
 TEST(SourceBufferTest, MakeFromStringUnicode) {
