@@ -48,4 +48,6 @@ function(add_eter_unittest test_dirname)
 endfunction()
 
 # Add unittest subdirectories here as Eter grows
+add_eter_unittest(Base)
+add_eter_unittest(Driver)
 add_eter_unittest(Lexer)

@@ -1,0 +1,3 @@
+// RUN: %eter --help | %FileCheck %s
+// CHECK: Usage:
+// CHECK: Options:

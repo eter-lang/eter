@@ -7,7 +7,7 @@
 #===----------------------------------------------------------------------===#
 
 config.eter_obj_root = r"@PROJECT_BINARY_DIR@"
-config.eter_executable = r"@PROJECT_BINARY_DIR@/tools/eter/eter"
+config.eter_executable = r"@PROJECT_BINARY_DIR@/tools/eter/eterc"
 config.filecheck_executable = r"@FILECHECK_EXECUTABLE@"
 
 lit_config.load_config(config, r"@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")
