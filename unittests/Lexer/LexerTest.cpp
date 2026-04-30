@@ -87,7 +87,7 @@ TEST(LexerTest, LexIdentifier) {
   auto Buffer = createTestBuffer("hello");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::identifier);
 }
@@ -97,7 +97,7 @@ TEST(LexerTest, LexIdentifierWithUnderscore) {
   auto Buffer = createTestBuffer("_test_123");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::identifier);
 }
@@ -108,7 +108,7 @@ TEST(LexerTest, LexMultipleIdentifiers) {
   auto Items = L.lex(Buffer);
 
   // Should have: foo, bar, baz, eof
-  ASSERT_GE(Items.size(), 4);
+  ASSERT_EQ(Items.size(), 4);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::identifier);
   EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::identifier);
   EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::identifier);
@@ -123,7 +123,7 @@ TEST(LexerTest, LexIntegerLiteral) {
   auto Buffer = createTestBuffer("12345");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::integer_literal);
 }
@@ -133,7 +133,7 @@ TEST(LexerTest, LexHexIntegerLiteral) {
   auto Buffer = createTestBuffer("0x1A3F");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::integer_literal);
 }
@@ -143,7 +143,7 @@ TEST(LexerTest, LexFloatLiteral) {
   auto Buffer = createTestBuffer("123.456");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::float_literal);
 }
@@ -153,7 +153,7 @@ TEST(LexerTest, LexFloatFLiteral) {
   auto Buffer = createTestBuffer("123.4f");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::float_literal);
 }
@@ -168,7 +168,7 @@ TEST(LexerTest, LexStringLiteral) {
   auto Buffer = createTestBuffer("\"hello world\"");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::string_literal);
 }
@@ -178,7 +178,7 @@ TEST(LexerTest, LexEmptyStringLiteral) {
   auto Buffer = createTestBuffer("\"\"");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::string_literal);
 }
@@ -188,7 +188,7 @@ TEST(LexerTest, LexStringWithEscape) {
   auto Buffer = createTestBuffer("\"hello\\nworld\\t!\"");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::string_literal);
 }
@@ -219,7 +219,7 @@ TEST(LexerTest, LexCharLiteral) {
   auto Buffer = createTestBuffer("'a'");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::char_literal);
 }
@@ -229,7 +229,7 @@ TEST(LexerTest, LexCharLiteralWithEscape) {
   auto Buffer = createTestBuffer("'\\n'");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::char_literal);
 }
@@ -260,7 +260,7 @@ TEST(LexerTest, LexSimpleSymbols) {
   auto Buffer = createTestBuffer("(){}[],;:");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 7);
+  ASSERT_EQ(Items.size(), 7);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::l_paren);
   EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::r_paren);
   EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::l_brace);
@@ -275,7 +275,7 @@ TEST(LexerTest, LexDoubleColon) {
   auto Buffer = createTestBuffer("::");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::colon_colon);
 }
 
@@ -284,7 +284,7 @@ TEST(LexerTest, LexArithmeticOps) {
   auto Buffer = createTestBuffer("+-*/");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 4);
+  ASSERT_EQ(Items.size(), 4);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::plus);
   EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::minus);
   EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::star);
@@ -296,7 +296,7 @@ TEST(LexerTest, LexIncrementDecrement) {
   auto Buffer = createTestBuffer("++ --");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 2);
+  ASSERT_EQ(Items.size(), 2);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::plus_plus);
   EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::minus_minus);
 }
@@ -306,7 +306,7 @@ TEST(LexerTest, LexComparisonOps) {
   auto Buffer = createTestBuffer("< > <= >= == !=");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 6);
+  ASSERT_EQ(Items.size(), 6);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::less);
   EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::greater);
   EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::less_eq);
@@ -320,7 +320,7 @@ TEST(LexerTest, LexAssignmentOps) {
   auto Buffer = createTestBuffer("= += -= *= /=");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 5);
+  ASSERT_EQ(Items.size(), 5);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::eq);
   EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::plus_eq);
   EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::minus_eq);
@@ -334,7 +334,7 @@ TEST(LexerTest, LexArrow) {
   auto Items = L.lex(Buffer);
 
   // Arrow is a reserved symbol, should produce an error
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isError(Items[0])) << "Expected LexerError for reserved arrow";
   if (isError(Items[0])) {
     EXPECT_EQ(getError(Items[0]).ErrorKind, LexerError::Kind::ReservedSymbol);
@@ -346,7 +346,7 @@ TEST(LexerTest, LexFatArrow) {
   auto Buffer = createTestBuffer("=>");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::fat_arrow);
 }
 
@@ -359,7 +359,7 @@ TEST(LexerTest, LexSingleLineComment) {
   auto Buffer = createTestBuffer("// this is a comment\n");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::comment);
 }
 
@@ -368,7 +368,7 @@ TEST(LexerTest, LexMultiLineComment) {
   auto Buffer = createTestBuffer("/* this is a\nmulti-line\ncomment */");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::comment);
 }
 
@@ -377,7 +377,7 @@ TEST(LexerTest, LexDocComment) {
   auto Buffer = createTestBuffer("/// doc comment");
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::doc_comment);
 }
 
@@ -425,7 +425,7 @@ TEST(LexerTest, LexUnicodeEscape) {
   auto Buffer = createTestBuffer("\"\\u{0041}\""); // 'A' in unicode escape
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::string_literal);
 }
@@ -474,7 +474,7 @@ TEST(LexerTest, TokenSpansCorrect) {
   auto Buffer = createTestBuffer(Input);
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 1);
+  ASSERT_EQ(Items.size(), 1);
   auto &Tok = getToken(Items[0]);
   EXPECT_EQ(Tok.TokenSpan.Start, 0u);
   EXPECT_EQ(Tok.TokenSpan.End, 5u); // "hello" is 5 chars
@@ -486,7 +486,7 @@ TEST(LexerTest, MultipleTokenSpansCorrect) {
   auto Buffer = createTestBuffer(Input);
   auto Items = L.lex(Buffer);
 
-  ASSERT_GE(Items.size(), 2);
+  ASSERT_EQ(Items.size(), 2);
   EXPECT_EQ(getToken(Items[0]).TokenSpan.Start, 0u);
   EXPECT_EQ(getToken(Items[0]).TokenSpan.End, 3u);   // "foo"
   EXPECT_EQ(getToken(Items[1]).TokenSpan.Start, 4u); // space skipped
