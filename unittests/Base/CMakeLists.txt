@@ -6,31 +6,19 @@
 #
 #===----------------------------------------------------------------------===#
 
-# Add the Base library unit tests
-add_unittest(EterUnitTests BaseSpanTest SpanTest.cpp)
-target_link_libraries(BaseSpanTest PRIVATE EterBase)
+# Add the Base library unit tests (LLVM style: one executable, multiple .cpp files)
+add_unittest(EterUnitTests EterBaseTests
+  SpanTest.cpp
+  SourceBufferTest.cpp
+  SourceManagerTest.cpp
+  DiagnosticEngineTest.cpp
+)
 
-add_unittest(EterUnitTests BaseSourceBufferTest SourceBufferTest.cpp)
-target_link_libraries(BaseSourceBufferTest PRIVATE EterBase)
+target_link_libraries(EterBaseTests PRIVATE EterBase)
 
-add_unittest(EterUnitTests BaseSourceManagerTest SourceManagerTest.cpp)
-target_link_libraries(BaseSourceManagerTest PRIVATE EterBase)
-
-add_unittest(EterUnitTests BaseDiagnosticEngineTest DiagnosticEngineTest.cpp)
-target_link_libraries(BaseDiagnosticEngineTest PRIVATE EterBase)
-
-# Set folder for IDE organization
-set_target_properties(BaseSpanTest BaseSourceBufferTest BaseSourceManagerTest BaseDiagnosticEngineTest
+set_target_properties(EterBaseTests
   PROPERTIES FOLDER "Eter/Tests/Base"
 )
 
-# Add include directories
-target_include_directories(BaseSpanTest PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_include_directories(BaseSourceBufferTest PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_include_directories(BaseSourceManagerTest PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_include_directories(BaseDiagnosticEngineTest PRIVATE ${CMAKE_SOURCE_DIR}/include)
-
-target_include_directories(BaseSpanTest SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS} ${MLIR_INCLUDE_DIRS})
-target_include_directories(BaseSourceBufferTest SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS} ${MLIR_INCLUDE_DIRS})
-target_include_directories(BaseSourceManagerTest SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS} ${MLIR_INCLUDE_DIRS})
-target_include_directories(BaseDiagnosticEngineTest SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS} ${MLIR_INCLUDE_DIRS})
+target_include_directories(EterBaseTests PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(EterBaseTests SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS} ${MLIR_INCLUDE_DIRS})

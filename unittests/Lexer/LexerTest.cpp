@@ -11,7 +11,6 @@
 
 #include <llvm/Support/VirtualFileSystem.h>
 
-#include <string>
 #include <variant>
 #include <vector>
 
@@ -500,11 +499,11 @@ TEST(LexerTest, MultipleTokenSpansCorrect) {
 
 TEST(LexerTest, LexSimpleExpression) {
   Lexer L;
-  auto Buffer = createTestBuffer("let fn: i32 = 42 + y * 3");
+  auto Buffer = createTestBuffer("let x: i32 = 42 + y * 3");
   auto Items = L.lex(Buffer);
 
-  // Should lex: identifier, =, integer, +, identifier, *, integer
-  EXPECT_GE(Items.size(), 9);
+  // Should lex: kw_let, identifier, colon, identifier, eq, integer, plus, identifier, star, integer
+  EXPECT_GE(Items.size(), 10);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::kw_let);
   EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::identifier);
   EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::colon);

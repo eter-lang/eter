@@ -124,3 +124,16 @@ add_custom_target(check-all
   DEPENDS eterc EterUnitTests
   COMMENT "Running all Eter tests (unit + lit)"
 )
+
+# Per-suite lit test targets (LLVM style)
+add_custom_target(check-eter-driver
+  COMMAND ${ETER_LIT_EXECUTABLE} -sv ${CMAKE_CURRENT_BINARY_DIR}/Driver
+  DEPENDS eterc
+  COMMENT "Running Eter Driver lit tests"
+)
+
+add_custom_target(check-eter-lexer
+  COMMAND ${ETER_LIT_EXECUTABLE} -sv ${CMAKE_CURRENT_BINARY_DIR}/Lexer
+  DEPENDS eterc
+  COMMENT "Running Eter Lexer lit tests"
+)

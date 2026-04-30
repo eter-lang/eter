@@ -28,7 +28,7 @@ function(add_unittest test_suite test_name)
   add_executable(${test_name} ${ARGN})
   target_link_libraries(${test_name} PRIVATE GTest::gtest_main GTest::gtest ${LLVM_PTHREAD_LIB})
   target_compile_features(${test_name} PRIVATE cxx_std_17)
-  target_compile_options(${test_name} PRIVATE 
+  target_compile_options(${test_name} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-Wno-error>
     $<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>
   )

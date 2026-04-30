@@ -281,18 +281,32 @@ To run both unit tests and lit tests together:
 cmake --build build --target check-all
 ```
 
+### Per-Suite Lit Test Targets (LLVM style)
+
+To run tests for a specific component:
+
+```bash
+# Run only Driver lit tests
+cmake --build build --target check-eter-driver
+
+# Run only Lexer lit tests
+cmake --build build --target check-eter-lexer
+```
+
 ### Test Directory Structure
 
 ```
 unittests/
-├── Base/           # Unit tests for Base library (Span, SourceBuffer, SourceManager, DiagnosticEngine)
+├── Base/           # Unit tests for Base library (consolidated)
 │   ├── CMakeLists.txt
+│   ├── EterBaseTests.cpp        # Main test runner
 │   ├── SpanTest.cpp
 │   ├── SourceBufferTest.cpp
 │   ├── SourceManagerTest.cpp
 │   └── DiagnosticEngineTest.cpp
-├── Driver/         # Unit tests for Driver library (Version, Driver)
+├── Driver/         # Unit tests for Driver library (consolidated)
 │   ├── CMakeLists.txt
+│   ├── EterDriverTests.cpp      # Main test runner
 │   ├── VersionTest.cpp
 │   └── DriverTest.cpp
 └── Lexer/         # Unit tests for Lexer library
@@ -301,23 +315,28 @@ unittests/
 
 test/
 ├── Driver/         # Lit tests for driver functionality
+│   ├── lit.local.cfg
 │   ├── version.smoke
 │   └── help.smoke
 └── Lexer/         # Lit tests for lexer (when available)
+    └── lit.local.cfg
 ```
 
 ### Adding New Tests
 
-**Unit tests**: Add a new `.cpp` file in the appropriate `unittests/<Library>/` directory
-and update the `CMakeLists.txt` there.
+**Unit tests**: Add test code to the appropriate `.cpp` file in `unittests/<Library>/`.
+Tests are consolidated into one executable per library (e.g., `EterBaseTests`, `EterDriverTests`).
+Simply add new `TEST()` macros to the existing files or include new files from the main test runner.
 
-**Lit tests**: Add a new `.smoke` (or `.mlir`) file in the appropriate `test/`
-subdirectory. Use the following template:
+**Lit tests**: Add a new `.smoke` (or `.mlir`) file in the appropriate `test/` subdirectory.
+Use the following template:
 
 ```text
 // RUN: %eter <test-input> | %FileCheck %s
 // CHECK: expected-output
 ```
+
+Local test configuration can be customized per directory using `lit.local.cfg` files.
 
 ## Running the Driver
 
