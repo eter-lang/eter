@@ -11,7 +11,6 @@
 
 #include <llvm/Support/VirtualFileSystem.h>
 
-#include <cstdint>
 #include <string>
 #include <variant>
 #include <vector>
@@ -20,6 +19,8 @@
 
 using namespace eter;
 using namespace eter::lexer;
+
+namespace {
 
 // Helper function to create a SourceBuffer from a string for testing
 static SourceBuffer createTestBuffer(llvm::StringRef Content) {
@@ -45,6 +46,7 @@ static const Token &getToken(const LexerItem &Item) {
 static const LexerError &getError(const LexerItem &Item) {
   return std::get<LexerError>(Item);
 }
+} // namespace
 
 //============================================================================//
 // Test: Lexer Static Helper Functions
@@ -71,6 +73,10 @@ TEST(LexerTest, IsReservedKeyword) {
   // These depend on what keywords are defined in TokenKinds.def
   EXPECT_FALSE(Lexer::isReservedKeyword("notakeyword"));
   EXPECT_FALSE(Lexer::isReservedKeyword("identifier123"));
+  EXPECT_TRUE(Lexer::isReservedKeyword( "type"));
+  EXPECT_TRUE(Lexer::isReservedKeyword( "return"));
+  EXPECT_TRUE(Lexer::isReservedKeyword( "ref"));
+  EXPECT_TRUE(Lexer::isReservedKeyword( "where"));
 }
 
 //============================================================================//
@@ -142,6 +148,17 @@ TEST(LexerTest, LexFloatLiteral) {
   EXPECT_TRUE(isToken(Items[0]));
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::float_literal);
 }
+
+TEST(LexerTest, LexFloatFLiteral) {
+  Lexer L;
+  auto Buffer = createTestBuffer("123.4f");
+  auto Items = L.lex(Buffer);
+
+  ASSERT_GE(Items.size(), 1);
+  EXPECT_TRUE(isToken(Items[0]));
+  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::float_literal);
+}
+
 
 //============================================================================//
 // Test: Basic Lexing - String Literals
@@ -321,8 +338,7 @@ TEST(LexerTest, LexArrow) {
   ASSERT_GE(Items.size(), 1);
   EXPECT_TRUE(isError(Items[0])) << "Expected LexerError for reserved arrow";
   if (isError(Items[0])) {
-    EXPECT_EQ(getError(Items[0]).ErrorKind,
-              LexerError::Kind::ReservedSymbol);
+    EXPECT_EQ(getError(Items[0]).ErrorKind, LexerError::Kind::ReservedSymbol);
   }
 }
 
@@ -394,8 +410,7 @@ TEST(LexerTest, LexInvalidCharacter) {
   bool FoundError = false;
   for (const auto &Item : Items) {
     if (isError(Item)) {
-      EXPECT_EQ(getError(Item).ErrorKind,
-                LexerError::Kind::InvalidCharacter);
+      EXPECT_EQ(getError(Item).ErrorKind, LexerError::Kind::InvalidCharacter);
       FoundError = true;
     }
   }
@@ -408,7 +423,7 @@ TEST(LexerTest, LexInvalidCharacter) {
 
 TEST(LexerTest, LexUnicodeEscape) {
   Lexer L;
-  auto Buffer = createTestBuffer("\"\\u{0041}\"");  // 'A' in unicode escape
+  auto Buffer = createTestBuffer("\"\\u{0041}\""); // 'A' in unicode escape
   auto Items = L.lex(Buffer);
 
   ASSERT_GE(Items.size(), 1);
@@ -418,7 +433,7 @@ TEST(LexerTest, LexUnicodeEscape) {
 
 TEST(LexerTest, LexInvalidUnicodeEscape) {
   Lexer L;
-  auto Buffer = createTestBuffer("\"\\u{}\"");  // Empty unicode escape
+  auto Buffer = createTestBuffer("\"\\u{}\""); // Empty unicode escape
   auto Items = L.lex(Buffer);
 
   // Should have an error for invalid unicode escape
@@ -442,12 +457,12 @@ TEST(LexerTest, IncrementalLexing) {
   auto Buffer = createTestBuffer("hello world foo bar");
 
   // First lex only part of the buffer
-  auto Items1 = L.lex(Buffer, Span(0, 11));  // "hello world"
-  EXPECT_GE(Items1.size(), 2);  // hello, world
+  auto Items1 = L.lex(Buffer, Span(0, 11)); // "hello world"
+  EXPECT_EQ(Items1.size(), 2);              // hello, world
 
   // Then lex the rest - "foo bar" starts at position 12 (after "hello world ")
-  auto Items2 = L.lex(Buffer, Span(12, 19));  // "foo bar"
-  EXPECT_GE(Items2.size(), 2);  // foo, bar
+  auto Items2 = L.lex(Buffer, Span(12, 19)); // "foo bar"
+  EXPECT_EQ(Items2.size(), 2);               // foo, bar
 }
 
 //============================================================================//
@@ -463,7 +478,7 @@ TEST(LexerTest, TokenSpansCorrect) {
   ASSERT_GE(Items.size(), 1);
   auto &Tok = getToken(Items[0]);
   EXPECT_EQ(Tok.TokenSpan.Start, 0u);
-  EXPECT_EQ(Tok.TokenSpan.End, 5u);  // "hello" is 5 chars
+  EXPECT_EQ(Tok.TokenSpan.End, 5u); // "hello" is 5 chars
 }
 
 TEST(LexerTest, MultipleTokenSpansCorrect) {
@@ -475,7 +490,7 @@ TEST(LexerTest, MultipleTokenSpansCorrect) {
   ASSERT_GE(Items.size(), 2);
   EXPECT_EQ(getToken(Items[0]).TokenSpan.Start, 0u);
   EXPECT_EQ(getToken(Items[0]).TokenSpan.End, 3u);   // "foo"
-  EXPECT_EQ(getToken(Items[1]).TokenSpan.Start, 4u);  // space skipped
+  EXPECT_EQ(getToken(Items[1]).TokenSpan.Start, 4u); // space skipped
   EXPECT_EQ(getToken(Items[1]).TokenSpan.End, 7u);   // "bar"
 }
 
@@ -485,18 +500,21 @@ TEST(LexerTest, MultipleTokenSpansCorrect) {
 
 TEST(LexerTest, LexSimpleExpression) {
   Lexer L;
-  auto Buffer = createTestBuffer("x = 42 + y * 3");
+  auto Buffer = createTestBuffer("let fn: i32 = 42 + y * 3");
   auto Items = L.lex(Buffer);
 
   // Should lex: identifier, =, integer, +, identifier, *, integer
-  EXPECT_GE(Items.size(), 7);
-  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::identifier);
-  EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::eq);
-  EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::integer_literal);
-  EXPECT_EQ(getToken(Items[3]).TokenKind, Token::Kind::plus);
-  EXPECT_EQ(getToken(Items[4]).TokenKind, Token::Kind::identifier);
-  EXPECT_EQ(getToken(Items[5]).TokenKind, Token::Kind::star);
-  EXPECT_EQ(getToken(Items[6]).TokenKind, Token::Kind::integer_literal);
+  EXPECT_GE(Items.size(), 9);
+  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::kw_let);
+  EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::identifier);
+  EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::colon);
+  EXPECT_EQ(getToken(Items[3]).TokenKind, Token::Kind::identifier);
+  EXPECT_EQ(getToken(Items[4]).TokenKind, Token::Kind::eq);
+  EXPECT_EQ(getToken(Items[5]).TokenKind, Token::Kind::integer_literal);
+  EXPECT_EQ(getToken(Items[6]).TokenKind, Token::Kind::plus);
+  EXPECT_EQ(getToken(Items[7]).TokenKind, Token::Kind::identifier);
+  EXPECT_EQ(getToken(Items[8]).TokenKind, Token::Kind::star);
+  EXPECT_EQ(getToken(Items[9]).TokenKind, Token::Kind::integer_literal);
 }
 
 TEST(LexerTest, LexFunctionCall) {
