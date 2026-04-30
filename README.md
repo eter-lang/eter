@@ -25,21 +25,44 @@ The Eter Programming Language
 > [!WARNING]
 > Eter is currently in the early stages of development. The language design and implementation are subject to significant changes, and the implementation is not started yet.
 
-While [The Eter Reference](https://eter-lang.github.io/eter/) serves as the primary source of language specification ([source code](./docs)), including its syntax and semantics, the [API Reference](https://eter-lang.github.io/eter/api/) provides the doxygen-generated documentation for the Eter compiler's C++ API, which is intended for contributors and advanced users interested in extending or interfacing with the compiler.
+While [The Eter Reference](https://eter-lang.github.io/eter/) serves as the primary source of language specification, including its syntax and semantics, the [API Reference](https://eter-lang.github.io/eter/api/) provides the doxygen-generated documentation for the Eter compiler's C++ API, which is intended for contributors and advanced users interested in extending or interfacing with the compiler.
 
 ```rust
-// ML models as first-class citizens. The @model attribute orchestrates the native 
-// loading and linking of pre-trained assets directly into the program's binary.
-// The function signature acts as a static hardware contract: the compiler enforces 
-// tensor shape integrity and memory residency (e.g., @host, @gpu), ensuring 
-// zero-overhead data transitions and eliminating runtime shape mismatches.
-@model<TF /* TensorFlow */, version = V1>("mobilenet_v2")
-extern fn infer(x: [f32; 1, 224, 224, 3] @host) -> [f32; 1, 1000] @host;
+//===--- ML Model as First-Class Citizen ---===//
+// The @model attribute acts as a compiler-driven linker.
+// It embeds 'mobilenet_v2' into the binary and optimizes the execution
+// for the CPU (using SIMD like AVX-512) to handle the @host memory input.
+@model<TF(version = V1), target = CPU>("mobilenet_v2")
+extern fn mobilenet_infer(x: let [f32; 1, 224, 224, 3] @host) -> [f32; 1, 1000] @host;
+
+//===--- Optimized GPU Kernel ---===//
+// A tile of 112x112 is a "perfect fit" for a 224x224 image.
+// It divides the work into exactly 4 quadrants (2x2 grid),
+// eliminating the need for boundary checks or padding logic.
+@gpu_tile(112, 112)
+fn custom_preprocess_kernel(data: proj [f32; 1, 224, 224, 3] @global) {
+    // 'proj' defines a memory projection: the data exists on the Host
+    // but is mapped to Global GPU VRAM for the duration of this call.
+    for tile in data.tiles() {
+        // Data is moved to @shared memory (SRAM), the fastest on-chip cache.
+        let mut sram_tile: Tile<f32, [112, 112]> @shared = tile.load();
+        // Element-wise tanh applied via high-throughput GPU vector units.
+        sram_tile = tanh(sram_tile);
+        // Results are committed back to the projected Global memory space.
+        tile = sram_tile;
+    }
+}
 
 fn main() {
-    let input [f32; 1, 224, 224, 3] @host = tsor::from_image("dog.jpg");
-    let output [f32; 1, 1000] = infer(input);
-    print("Inference completed. Output shape: ", output.shape());
+    // Initialize image in System RAM (@host).
+    let input: [f32; 1, 224, 224, 3] @host = tsor::from_image("dog.jpg");
+    // The 'as _ @global' cast triggers an implicit PCIe DMA transfer.
+    // The '&' ensures we are projecting a reference, not moving ownership.
+    custom_preprocess_kernel(&input as _ @global);
+    // The compiler detects that 'input' was modified on the GPU.
+    // Before calling the CPU-based model, it automatically syncs the
+    // data back to @host and ensures the GPU work is finished.
+    let output = mobilenet_infer(input as _ @host);
 }
 ```
 
