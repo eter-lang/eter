@@ -145,13 +145,58 @@ those changes are the main purpose of the review.
 
 ## Testing Expectations
 
-Behavioral changes should come with a regression test when possible. Eter’s test
-suite currently lives under `test/` and uses `lit` plus `FileCheck`.
+Behavioral changes should come with tests when possible. Eter uses a **two-tier
+testing approach**:
 
-Typical smoke tests live in:
+### Unit Tests (Google Test)
+
+Unit tests live in `unittests/` and use Google Test (gtest). They cover individual
+functions and classes.
+
+```
+unittests/
+├── Base/       # Tests for Base library
+├── Driver/     # Tests for Driver library
+└── Lexer/      # Tests for Lexer library
+```
+
+Run unit tests with:
+
+```bash
+cd build && ctest --output-on-failure
+```
+
+### Integration Tests (lit + FileCheck)
+
+Integration/smoke tests live in `test/` and use LLVM's `lit` framework with
+`FileCheck`.
+
+Typical tests live in:
 
 ```text
-test/Smoke/*.smoke
+test/Driver/*.smoke
+test/Lexer/*.smoke
+```
+
+and use directives such as:
+
+```text
+// RUN: %eter ... | %FileCheck %s
+// CHECK: expected-output
+```
+
+Run lit tests with:
+
+```bash
+cmake --build build --target check-eter
+```
+
+### Running All Tests
+
+For complete validation, run both test suites:
+
+```bash
+cmake --build build --target check-all
 ```
 
 and use directives such as:
