@@ -109,6 +109,8 @@ public:
 
   Lexer(const Lexer &) = delete;
   Lexer &operator=(const Lexer &) = delete;
+  Lexer(Lexer &&) = delete;
+  Lexer &operator=(Lexer &&) = delete;
 
 private:
   /// Constructs a `LexerError` and appends it to the output items list.
