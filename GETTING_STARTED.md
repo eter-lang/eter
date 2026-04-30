@@ -235,11 +235,88 @@ machine-local rule, you can still add it to your `~/.gitignore_global`.
 
 ## Running the Test Suite
 
-Eter uses `lit` and `FileCheck` for fast regression and smoke tests. Run them
-with:
+Eter uses a **two-tier testing approach**:
+
+1. **Unit tests** (in `unittests/`): Built with Google Test (gtest), covering individual
+   functions and classes in the `Base`, `Driver`, and `Lexer` libraries.
+
+2. **Integration/smoke tests** (in `test/`): Built with LLVM's `lit` framework and
+   `FileCheck`, testing the compiler end-to-end via command-line invocations.
+
+### Running Unit Tests
+
+To run only the unit tests:
+
+```bash
+cd build
+ctest --output-on-failure
+```
+
+Or directly via CMake:
+
+```bash
+cmake --build build --target test
+```
+
+### Running Lit (Integration) Tests
+
+To run only the `lit` test suite:
 
 ```bash
 cmake --build build --target check-eter
+```
+
+Or manually with `lit`:
+
+```bash
+cd build
+lit -va ./test/
+```
+
+### Running All Tests (Recommended)
+
+To run both unit tests and lit tests together:
+
+```bash
+cmake --build build --target check-all
+```
+
+### Test Directory Structure
+
+```
+unittests/
+├── Base/           # Unit tests for Base library (Span, SourceBuffer, SourceManager, DiagnosticEngine)
+│   ├── CMakeLists.txt
+│   ├── SpanTest.cpp
+│   ├── SourceBufferTest.cpp
+│   ├── SourceManagerTest.cpp
+│   └── DiagnosticEngineTest.cpp
+├── Driver/         # Unit tests for Driver library (Version, Driver)
+│   ├── CMakeLists.txt
+│   ├── VersionTest.cpp
+│   └── DriverTest.cpp
+└── Lexer/         # Unit tests for Lexer library
+    ├── CMakeLists.txt
+    └── LexerTest.cpp
+
+test/
+├── Driver/         # Lit tests for driver functionality
+│   ├── version.smoke
+│   └── help.smoke
+└── Lexer/         # Lit tests for lexer (when available)
+```
+
+### Adding New Tests
+
+**Unit tests**: Add a new `.cpp` file in the appropriate `unittests/<Library>/` directory
+and update the `CMakeLists.txt` there.
+
+**Lit tests**: Add a new `.smoke` (or `.mlir`) file in the appropriate `test/`
+subdirectory. Use the following template:
+
+```text
+// RUN: %eter <test-input> | %FileCheck %s
+// CHECK: expected-output
 ```
 
 ## Running the Driver
