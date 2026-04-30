@@ -47,6 +47,9 @@ public:
   /// Return the filename of the source buffer.
   llvm::StringRef getFilename() const;
 
+  SourceManager(const SourceManager &) = delete;
+  SourceManager &operator=(const SourceManager &) = delete;
+
 private:
   /// Build the line start offset index.
   void buildLineIndex();
