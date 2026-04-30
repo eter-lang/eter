@@ -185,6 +185,7 @@ add_subdirectory(lib)
 add_subdirectory(tools)
 
 if(ETER_INCLUDE_TESTS)
+  enable_testing()
   add_subdirectory(test)
   add_subdirectory(unittests)
 endif()

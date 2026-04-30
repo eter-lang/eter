@@ -47,7 +47,14 @@ public:
   /// \returns The loaded source buffer on success, or an error on failure.
   static llvm::Expected<SourceBuffer>
   makeFromFileName(llvm::vfs::FileSystem &FS, llvm::StringRef Filename,
-                   SimpleDiagnosticEngine &SDE);
+                    SimpleDiagnosticEngine &SDE);
+
+  /// Create a `SourceBuffer` from a string (useful for testing).
+  /// \param Content The string content to load into the buffer.
+  /// \param Name An optional name for the buffer (default: "test-buffer").
+  /// \returns A source buffer containing the provided string.
+  static SourceBuffer makeFromString(llvm::StringRef Content,
+                                    llvm::StringRef Name = "test-buffer");
 
   /// Return the name of the source file associated with this buffer.
   llvm::StringRef getFilename() const;
