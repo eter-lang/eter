@@ -46,3 +46,4 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/build
           lit -va ./test/
+          ctest --output-on-failure

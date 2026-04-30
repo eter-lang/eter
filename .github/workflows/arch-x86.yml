@@ -66,3 +66,4 @@ jobs:
           export PATH="${LLVM_PREFIX}/bin:${PATH}"
           cd build
           lit -va ./test/
+          ctest --output-on-failure
