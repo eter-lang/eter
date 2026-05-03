@@ -1,0 +1,395 @@
+// ========================================================================
+// ========================================================================
+// SCALAR TYPES
+// ========================================================================
+// ========================================================================
+
+
+// ==========
+// Let to Let
+// ==========
+fn f(let x: i32) {}
+fn main() {
+    let x: i32 = 1;
+    let y: i32 = x;
+    f(x);
+}
+
+// ==========
+// Let to Mut
+// ==========
+fn f(mut x: i32) {}
+fn main() {
+    let x: i32 = 1;
+    let mut y: i32 = x; // ERROR: Changing the regime from let to mut is not allowed. Need to copy.
+    f(x); // ERROR: Changing the regime from let to mut is not allowed. Need to copy.
+}
+
+// ===========
+// Let to Proj
+// ===========
+fn f(proj x: i32) {}
+fn main() {
+    let x: i32 = 1;
+    let proj y: i32 = x; // ERROR: Changing the regime from let to proj is not allowed. Need to copy.
+    f(x); // ERROR: Changing the regime from let to proj is not allowed. Need to copy.
+}
+
+// ========================================================================
+// ========================================================================
+// ARRAY TYPES
+// ========================================================================
+// ========================================================================
+
+// ==========
+// Let to Let
+// ==========
+fn f(let x: [i32; 3]) {}
+fn main() {
+    let x: [i32; 3] = [1, 2, 3];
+    let y: [i32; 3] = x; // O(1)
+    f(x); // O(1)
+}
+
+// ==========
+// Let to Mut
+// ==========
+fn f(mut x: [i32; 3]) {}
+fn main() {
+    let x: [i32; 3] = [1, 2, 3];
+    let mut y: [i32; 3] = x; // ERROR: Changing the regime from let to mut is not allowed. Need to copy.
+    f(x); // ERROR: Changing the regime from let to mut is not allowed. Need to copy.
+}
+
+// ===========
+// Let to Proj
+// ===========
+fn f(proj x: [i32; 3]) {}
+fn main() {
+    let x: [i32; 3] = [1, 2, 3];
+    let proj y: [i32; 3] = x; // ERROR: Changing the regime from let to proj is not allowed. Need to copy.
+    f(x); // ERROR: Changing the regime from let to proj is not allowed. Need to copy.
+}
+
+// ========================================================================
+// ========================================================================
+// STRUCTS
+// ========================================================================
+// ========================================================================
+
+struct Point {
+    let x: i32,
+    let y: i32,
+}
+
+// ==========
+// Let to Let
+// ==========
+fn f(let p: Point) {}
+fn main() {
+    let p = Point { x: 1, y: 2 };
+    let q = p;
+    f(p);
+}
+
+// ==========
+// Let to Mut
+// ==========
+fn f(mut p: Point) {}
+fn main() {
+    let p = Point { x: 1, y: 2 };
+    let mut q = p; // ERROR: Changing the regime from let to mut is not allowed. Need to copy.
+    f(p); // ERROR: Changing the regime from let to mut is not allowed. Need to copy.
+}
+
+// ===========
+// Let to Proj
+// ===========
+fn f(proj p: Point) {}
+fn main() {
+    let p = Point { x: 1, y: 2 };
+    let proj q = p; // ERROR: Changing the regime from let to proj is not allowed. Need to copy.
+}
+
+// ========================================================================
+// ========================================================================
+// Let as Formal Parameter in the Presence of Returns
+// ========================================================================
+// ========================================================================
+
+// ==========
+// Let to Let
+// ==========
+fn f(let p: Point) -> Point { p }
+fn main() {
+    let p = Point { x: 1, y: 2 };
+    let q = f(p);
+}
+
+fn f2(let p1: Point, let p2: Point) -> Point { p1 }
+fn main() {
+    let p1 = Point { x: 1, y: 2 };
+    let p2 = Point { x: 3, y: 4 };
+    let q = f2(p1, p2);
+}
+
+// ==========
+// Let to Mut
+// ==========
+fn f(p: let Point) -> Point { p }
+fn main() {
+    let p = Point { x: 1, y: 2 };
+    let mut q = f(p); // ERROR: Changing the regime from let to mut is not allowed. Need to copy.
+}
+
+// ===========
+// Let to Proj
+// ===========
+fn f(let p: Point) -> Point { p }
+fn main() {
+    let p = Point { x: 1, y: 2 };
+    let proj q = f(p); // ERROR: Changing the regime from let to proj is not allowed. Need to copy.
+}
+
+// ========================================================================
+// ========================================================================
+// Store Let in Struct
+// ========================================================================
+// ========================================================================
+
+struct Point {
+    let x: i32,
+    let y: i32,
+}
+
+fn f(let p:  Point) -> Point {
+    let x = p.x;
+    let y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let p1 = Point { x: 1, y: 2 };
+    let p2 = f(p1);
+}
+
+// OPTIMIZATION to avoid copy
+// fn tmp2() {
+//     let p2;
+//     let tmp = Point { x: 1, y: 2 };
+//     {
+//         let p1 = tmp;
+//         p2 = f(p1);
+//     }
+// }
+fn tmp2() {
+    let p2;
+    {
+        let p1 = Point { x: 1, y: 2 };
+        p2 = f(p1);
+    }
+}
+
+// ========================================================================
+struct Point {
+    let x: i32,
+    let y: i32,
+}
+
+fn f(let p:  Point, let u: Point) -> Point {
+    // U is not used
+    let x = p.x;
+    let y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let p1 = Point { x: 1, y: 2 };
+    let p2 = f(p1);
+}
+
+// OPTIMIZATION to avoid copy
+// fn tmp2() {
+//     let p2;
+//     let p = Point { x: 1, y: 2 };
+//     let tmp = Point { x: 3, y: 4 };
+//     {
+//         let u = tmp;
+//         p2 = f(p, tmp);
+//     }
+// }
+fn tmp2() {
+    let p2;
+    let p = Point { x: 1, y: 2 };
+    {
+        let u = Point { x: 3, y: 4 };
+        p2 = f(p, u);
+    }
+}
+
+// ========================================================================
+
+
+struct Point {
+    let x: i32,
+    let y: i32,
+}
+
+fn f(let p:  Point, let u: Point) -> Point {
+    // U is not used
+    let x = p.x;
+    let y = p.y;
+    Point { x, y }
+}
+
+fn dummy(let p: Point, proj p2: Point) {
+    let u = Point { x: 3, y: 4 };
+    p2 = f(p, u);
+}
+
+fn main() {
+    let p2;
+    let p = Point { x: 1, y: 2 };
+    dummy(p, &p2); // ERROR(1): Changing the regime from let to proj is not allowed. Need to copy.
+                   // ERROR(2): Uninitialized variable 'p2' used. Need to initialize.
+}
+
+
+// ========================================================================
+
+struct Point {
+    let x: i32,
+    let y: i32,
+}
+
+fn f(let p:  Point, mut u: Point) -> Point {
+    // u is not used
+    let x = p.x;
+    let y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 1, y: 2 };
+    let p3 = f(p1, p2);
+    // - p2 is moved, so it is not used anymore
+    // - p1 can be used again
+    // - It does not matter if p3 is derived from p1 or p2
+}
+
+
+// OPTIMIZATION to avoid copy
+// fn tmp2() {
+//     let p3;
+//     let p1 = Point { x: 1, y: 2 };
+//     let mut tmp = Point { x: 3, y: 4 };
+//     {
+//         let mut p2 = tmp;
+//         p3 = f(p1, p2);
+//     }
+// }
+fn tmp2() {
+    let p3;
+    let p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);
+        // - p2 is moved, so it is not used anymore
+        // - p1 can be used again
+        // - It does not matter if p3 is derived from p1 or p2
+    }
+}
+
+// ========================================================================
+
+struct Point {
+    let x: i32,
+    let y: i32,
+}
+
+fn f(let p:  Point, mut u: Point) -> Point {
+    // u is not used
+    let x = p.x;
+    let y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 1, y: 2 };
+    let p3 = f(p1, p2);
+    // - p2 is moved, so it is not used anymore
+    // - p1 can be used again
+    // - It does not matter if p3 is derived from p1 or p2
+}
+
+
+// OPTIMIZATION to avoid copy
+// fn tmp2() {
+//     let p3;
+//     let p1 = Point { x: 1, y: 2 };
+//     let mut tmp = Point { x: 3, y: 4 };
+//     {
+//         let mut p2 = tmp;
+//         p3 = f(p1, p2);
+//     }
+// }
+fn tmp2() {
+    let p3;
+    let p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);
+        // - p2 is moved, so it is not used anymore
+        // - p1 can be used again
+        // - It does not matter if p3 is derived from p1 or p2
+    }
+}
+
+// ========================================================================
+
+
+struct Point {
+    let x: i32,
+    let y: i32,
+}
+
+fn f(let p:  Point, proj u: Point) -> Point {
+    // u is not used
+    let x = p.x;
+    let y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 1, y: 2 };
+    let p3 = f(p1, p2);
+    // - p2 is projected, so it is can be used again
+    // - p1 can be used again
+    // - It does not matter if p3 is derived from p1 or p2
+}
+
+
+// OPTIMIZATION to avoid copy
+// fn tmp2() {
+//     let p3;
+//     let p1 = Point { x: 1, y: 2 };
+//     let mut tmp = Point { x: 3, y: 4 };
+//     {
+//         let mut p2 = tmp;
+//         p3 = f(p1, p2);
+//     }
+// }
+fn tmp2() {
+    let p3;
+    let p1 = Point { x: 1, y: 2 };
+    {
+        let proj p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);
+        // - p2 is projected, so it is can be used again
+        // - p1 can be used again
+        // - It does not matter if p3 is derived from p1 or p2
+    }
+}

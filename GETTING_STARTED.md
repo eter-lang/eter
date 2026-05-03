@@ -351,6 +351,11 @@ point to the same 22.x install.
 Make sure those tools are installed and reachable through your `PATH`, or
 provided by your LLVM installation.
 
+On many Linux distros, the package may be called `llvm`, `llvm-tools`, or
+`llvm-toolchain`. If `FileCheck` is still not found, check whether the
+installed executable is named `filecheck`, `llvm-FileCheck`, or
+`llvm-filecheck`, and add its containing `bin/` directory to `PATH`.
+
 ### Linker warnings on macOS
 
 Depending on the local Xcode or Homebrew setup, you may see warnings about LLVM
