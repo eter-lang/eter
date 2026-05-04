@@ -97,6 +97,7 @@ ETER_SYMBOL(minus_minus, "--")
 ETER_SYMBOL(pipe, "|")
 ETER_SYMBOL(less_less, "<<")
 ETER_SYMBOL(greater_greater, ">>")
+ETER_SYMBOL(amp, "&")
 ETER_SYMBOL(amp_amp, "&&")
 ETER_SYMBOL(pipe_pipe, "||")
 ETER_SYMBOL(bang, "!")
@@ -156,7 +157,6 @@ ETER_RESERVED_KEYWORD(where, "where")
 // Reserved Symbols (produce lexer errors when encountered)
 //===----------------------------------------------------------------------===//
 ETER_RESERVED_SYMBOL(arrow, "->")
-ETER_RESERVED_SYMBOL(amp, "&")
 
 // Clean up macros at the end of the file
 #undef ETER_KEYWORD

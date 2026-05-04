@@ -59,7 +59,8 @@ using LexerItem = std::variant<Token, LexerError>;
 /// via zero-copy string references to support fast, incremental updates.
 class Lexer {
 public:
-  Span makeTokenSpan(const char *TokStart) const;
+  static Span makeTokenSpan(const char *TokStart, const char *CurPtr,
+                            const char *BufferStart);
 
   /// Checks if a character is a valid hexadecimal digit (0-9, a-f, A-F).
   static bool isHexDigit(char C);
@@ -125,28 +126,34 @@ private:
                              const char *End, const char *BufferStart);
 
   /// Advances the internal cursor past any consecutive whitespace characters.
-  void skipWhitespace();
+  static void skipWhitespace(const char *&CurPtr, const char *BufferEnd);
 
   /// Specialized lexing routines for extracting specific token categories.
   /// These functions assume `CurPtr` is pointing to the start of the token,
   /// and they advance `CurPtr` to the token's end upon completion.
   /// \param Result The token to populate with the lexed information.
   /// \param TokStart A pointer to the start of the token in the source buffer.
-  void lexIdentifier(Token &Result, const char *TokStart);
+  static void lexIdentifier(Token &Result, const char *TokStart,
+                            const char *&CurPtr, const char *BufferEnd,
+                            const char *BufferStart);
 
   /// \param Result The token to populate with the lexed information.
   /// \param TokStart A pointer to the start of the token in the source buffer.
   /// \returns true if the numeric literal is valid, false otherwise.
   [[nodiscard]]
-  bool lexNumericLiteral(Token &Result, const char *TokStart);
+  static bool lexNumericLiteral(Token &Result, const char *TokStart,
+                                const char *&CurPtr, const char *BufferEnd,
+                                const char *BufferStart);
 
   /// \param Result The token to populate with the lexed information.
   /// \param TokStart A pointer to the start of the token in the source buffer.
   /// \param LexerItems The output list to append lexer errors to.
   /// \returns true if the string was properly terminated, false otherwise.
   [[nodiscard]]
-  bool lexStringLiteral(Token &Result, const char *TokStart,
-                        std::vector<LexerItem> &LexerItems);
+  static bool lexStringLiteral(Token &Result, const char *TokStart,
+                               const char *&CurPtr, const char *BufferEnd,
+                               const char *BufferStart,
+                               std::vector<LexerItem> &LexerItems);
 
   /// \param Result The token to populate with the lexed information.
   /// \param TokStart A pointer to the start of the token in the source buffer.
@@ -155,9 +162,10 @@ private:
   /// \returns true if the character literal was properly terminated, false
   /// otherwise.
   [[nodiscard]]
-  bool lexCharacterLiteral(Token &Result, const char *TokStart,
-                           std::vector<LexerItem> &LexerItems,
-                           size_t &CharCount);
+  static bool
+  lexCharacterLiteral(Token &Result, const char *TokStart, const char *&CurPtr,
+                      const char *BufferEnd, const char *BufferStart,
+                      std::vector<LexerItem> &LexerItems, size_t &CharCount);
 
   /// \param Result The token to populate with the lexed information.
   /// \param TokStart A pointer to the start of the token in the source buffer.
@@ -165,25 +173,10 @@ private:
   /// \returns true if a comment was lexed, false if this is a division
   /// operator.
   [[nodiscard]]
-  bool lexComment(Token &Result, const char *TokStart,
-                  std::vector<LexerItem> &LexerItems);
-
-  //===--------------------------------------------------------------------===//
-  // Internal Traversal State
-  //
-  // These pointers manage the "sliding window" over the raw memory buffer
-  // during a `lexSpan` operation. They are re-initialized per lexing request.
-  //===--------------------------------------------------------------------===//
-
-  /// Pointer to the very beginning of the source buffer's memory.
-  /// Used as a base anchor to calculate `Span` byte offsets.
-  const char *BufferStart = nullptr;
-
-  /// Pointer to the current character being inspected by the lexer.
-  const char *CurPtr = nullptr;
-
-  /// Pointer to the memory boundary immediately following the lexing span.
-  const char *BufferEnd = nullptr;
+  static bool lexComment(Token &Result, const char *TokStart,
+                         const char *&CurPtr, const char *BufferEnd,
+                         const char *BufferStart,
+                         std::vector<LexerItem> &LexerItems);
 };
 } // namespace eter::lexer
 
