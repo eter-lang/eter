@@ -65,7 +65,7 @@ llvm::StringRef SourceBuffer::getFilename() const { return Filename; }
 llvm::StringRef SourceBuffer::getBuffer() const { return Buffer->getBuffer(); }
 
 SourceBuffer SourceBuffer::makeFromString(llvm::StringRef Content,
-                                          llvm::StringRef Name) {
+                                        llvm::StringRef Name) {
   std::unique_ptr<llvm::MemoryBuffer> Buffer =
       llvm::MemoryBuffer::getMemBuffer(Content, Name);
   return SourceBuffer(Name.str(), std::move(Buffer));

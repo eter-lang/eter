@@ -9,8 +9,6 @@
 #ifndef ETER_DRIVER_DRIVER_H
 #define ETER_DRIVER_DRIVER_H
 
-#include <llvm/ADT/StringSet.h>
-
 #include <string>
 #include <vector>
 
@@ -48,21 +46,9 @@ public:
   void printVersion() const;
 
 private:
-  /// Compile a complete pack rooted at `RootFile`.
-  /// Discovers all reachable source files via `mod foo;` declarations,
-  /// parses them with a shared `StringInterner`, and stores the results in
-  /// a `PackSession`.
+  /// Process a single source file through the compilation pipeline.
   /// \returns 0 on success, non-zero error code on failure.
-  int compilePack(const std::string &RootFile);
-
-  /// Parse one source file and, recursively, all files it references via
-  /// `mod foo;`. Detects circular dependencies via `InProgress`.
-  /// \param Path       Canonical path of the file to parse.
-  /// \param Session    The shared pack session (interner + results).
-  /// \param InProgress Set of paths currently being parsed (cycle detection).
-  /// \returns 0 on success, non-zero on I/O or fatal error.
-  int parseFile(const std::string &Path, struct PackSession &Session,
-                llvm::StringSet<> &InProgress);
+  int compileFile(const std::string &InputFile);
 
   CompilerOptions Options;
 };

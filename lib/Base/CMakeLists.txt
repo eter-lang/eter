@@ -8,10 +8,9 @@
 
 add_library(EterBase
   Debug.cpp
-  DiagnosticEngine.cpp
   SourceBuffer.cpp
   SourceManager.cpp
-  StringInterner.cpp
+  DiagnosticEngine.cpp
 )
 
 add_library(eter::Base ALIAS EterBase)

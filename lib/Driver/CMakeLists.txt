@@ -19,7 +19,6 @@ target_link_libraries(EterDriver
     LLVM
     eter::Base
     eter::Lexer
-    eter::Parser
 )
 
 target_include_directories(EterDriver

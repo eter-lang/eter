@@ -13,21 +13,13 @@
 #include "eter/Base/SourceBuffer.h"
 #include "eter/Base/SourceManager.h"
 #include "eter/Driver/Driver.h"
-#include "eter/Driver/PackSession.h"
 #include "eter/Driver/Version.h"
-#include "eter/Lexer/Lexer.h"
-#include "eter/Parser/NodePool.h"
-#include "eter/Parser/Parser.h"
-#include "eter/Parser/TokenStream.h"
 
-#include <llvm/ADT/ScopeExit.h>
-#include <llvm/ADT/StringRef.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/VirtualFileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 
 #include <cstddef>
-#include <filesystem>
 #include <iostream>
 #include <string>
 
@@ -64,26 +56,19 @@ bool Driver::parseCommandLine(int Argc, char **Argv) {
     } else if (Arg == "-o" && I + 1 < Argc) {
       Options.OutputFile = Argv[++I];
     } else if (Arg[0] != '-') {
-      // If an argument doesn't start with '-', it's an input file.
+      // If an argument does not start with a '-', treat it as an input file.
       Options.InputFiles.push_back(std::string(Arg));
     } else {
-      llvm::errs() << "error: Unknown option: " << Arg << "\n\n";
+      llvm::errs() << "eter: error: Unknown option: " << Arg << "\n\n";
       printHelp();
       return false;
     }
   }
 
   if (Options.InputFiles.empty() && !Options.ShowVersion && !Options.ShowHelp) {
-    llvm::errs() << "error: No input files specified\n\n";
+    llvm::errs() << "eter: error: No input files specified\n\n";
     printHelp();
     return false;
-  }
-
-  // For now, we support only one input file.
-  if (Options.InputFiles.size() != 1) {
-    llvm::errs() << "error: only one input file is supported\n\n";
-    printHelp();
-    return 1;
   }
 
   return true;
@@ -100,114 +85,55 @@ int Driver::run() {
     return 0;
   }
 
+  // Compile each input file
   for (const auto &InputFilename : Options.InputFiles) {
-    const int Result = compilePack(InputFilename);
-    if (Result != 0)
+    const int Result = compileFile(InputFilename);
+    if (Result != 0) {
       return Result;
+    }
   }
 
   return 0;
 }
 
-int Driver::compilePack(const std::string &RootFile) {
-  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] compilePack root=" << RootFile
+int Driver::compileFile(const std::string &InputFilename) {
+  ETER_DEBUG(llvm::dbgs() << "eter: remark: Compiling: " << InputFilename
                           << "\n");
 
-  PackSession Session;
-  llvm::StringSet<> InProgress;
-
-  const int Rc = parseFile(RootFile, Session, InProgress);
-  if (Rc != 0)
-    return Rc;
-
-  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] pack parsed: "
-                          << Session.Results.size() << " file(s)\n");
-
-  // TODO: semantic analysis, lowering to MLIR, optimisation, codegen.
-  return 0;
-}
-
-int Driver::parseFile(const std::string &Path, PackSession &Session,
-                      llvm::StringSet<> &InProgress) {
-  // Already parsedm, nothing to do.
-  if (Session.Results.count(Path))
-    return 0;
-
-  // Cycle detection.
-  if (InProgress.count(Path)) {
-    llvm::errs() << "error: circular mod dependency detected for '" << Path
-                 << "'\n";
-    return 1;
-  }
-
-  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseFile " << Path << "\n");
-
-  // Load the source file.
   const llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
       llvm::vfs::getRealFileSystem();
   SimpleDiagnosticEngine SDE;
-  auto ExpectedBuf = SourceBuffer::makeFromFileName(*FS, Path, SDE);
-  if (!ExpectedBuf) {
-    llvm::errs() << "error: cannot open '" << Path
-                 << "': " << llvm::toString(ExpectedBuf.takeError()) << "\n";
+  auto ExpectedBuffer = SourceBuffer::makeFromFileName(*FS, InputFilename, SDE);
+  if (!ExpectedBuffer) {
+    llvm::errs() << "eter: error: Failed to load source file '" << InputFilename
+                 << "': " << llvm::toString(ExpectedBuffer.takeError()) << "\n";
     return 1;
   }
-  // Lex.
-  lexer::Lexer L;
-  // Lex errors must be captured before TokenStream is moved into parse().
-  parser::TokenStream TS(L.lex(*ExpectedBuf), ExpectedBuf->getBuffer());
 
-  // Parse.
-  parser::ParseResult Result =
-      parser::Parser::parse(std::move(TS), Session.Interner);
+  ETER_DEBUG(llvm::dbgs() << "eter: remark: Loaded source file: "
+                          << InputFilename << "\n");
 
-  // Emit diagnostics.
-  DiagnosticEngine DE =
-      std::move(SDE).withSourceManager(SourceManager(*ExpectedBuf));
-  for (const auto &LErr : TS.lexErrors())
-    DE.error(LErr.ErrorSpan)
-        .message(lexer::LexerError::getErrorString(LErr.ErrorKind))
-        .emit();
-  for (const auto &PErr : Result.Errors)
-    DE.error(PErr.Span).message(PErr.Message).emit();
-  DE.printAll();
+  const DiagnosticEngine DE =
+      std::move(SDE).withSourceManager(SourceManager(*ExpectedBuffer));
 
-  // Walk ModDeclFile nodes to discover child files.
-  const parser::NodePool &Pool = Result.Pool;
-  const std::filesystem::path Dir = std::filesystem::path(Path).parent_path();
+  return 0;
 
-  InProgress.insert(Path);
-  auto Cleanup = llvm::scope_exit([&] { InProgress.erase(Path); });
+  // TODO: Implement the actual compilation pipeline:
+  // 1. Lexical analysis (tokenization)
+  // 2. Parsing (build AST)
+  // 3. Semantic analysis
+  // 4. Lowering to MLIR
+  // 5. Optimization passes
+  // 6. Code generation
 
-  for (auto Child : Pool.childrenOf(Result.Root)) {
-    if (Pool.kindOf(Child) != parser::NodeKind::ModDeclFile)
-      continue;
+  ETER_DEBUG(llvm::dbgs() << "eter: remark: Optimization level: -O "
+                          << Options.OptimizationLevel << "\n");
 
-    const llvm::StringRef ModName =
-        Session.Interner.get(parser::NodePool::payloadStr(Pool[Child].Payload));
-
-    // Try foo.et, then foo/mod.et (similar to Rust 2018 convention).
-    const std::string FileDotEt = (Dir / (ModName.str() + ".et")).string();
-    const std::string ModDotEt = (Dir / ModName.str() / "mod.et").string();
-
-    std::string ChildPath;
-    if (std::filesystem::exists(FileDotEt))
-      ChildPath = FileDotEt;
-    else if (std::filesystem::exists(ModDotEt))
-      ChildPath = ModDotEt;
-    else {
-      llvm::errs() << "cannot find file for 'mod " << ModName << ";' (tried '"
-                   << FileDotEt << "' and '" << ModDotEt << "')\n";
-      return 1;
-    }
-
-    const int Rc = parseFile(ChildPath, Session, InProgress);
-    if (Rc != 0)
-      return Rc;
+  if (!Options.OutputFile.empty()) {
+    ETER_DEBUG(llvm::dbgs()
+               << "eter: remark: Output file: " << Options.OutputFile << "\n");
   }
 
-  // Store the result only after all children are processed.
-  Session.Results.insert({Path, std::move(Result)});
   return 0;
 }
 

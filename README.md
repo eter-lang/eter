@@ -33,14 +33,14 @@ While [The Eter Reference](https://eter-lang.github.io/eter/) serves as the prim
 // It embeds 'mobilenet_v2' into the binary and optimizes the execution
 // for the CPU (using SIMD like AVX-512) to handle the @host memory input.
 @model<TF(version = V1), target = CPU>("mobilenet_v2")
-extern fn fix mobilenet_infer(fix x: [f32; 1, 224, 224, 3] @host): [f32; 1, 1000] @host;
+extern fn mobilenet_infer(x: let [f32; 1, 224, 224, 3] @host) -> [f32; 1, 1000] @host;
 
 //===--- Optimized GPU Kernel ---===//
 // A tile of 112x112 is a "perfect fit" for a 224x224 image.
 // It divides the work into exactly 4 quadrants (2x2 grid),
 // eliminating the need for boundary checks or padding logic.
 @gpu_tile(112, 112)
-fn custom_preprocess_kernel(proj data: [f32; 1, 224, 224, 3] @global) {
+fn custom_preprocess_kernel(data: proj [f32; 1, 224, 224, 3] @global) {
     // 'proj' defines a memory projection: the data exists on the Host
     // but is mapped to Global GPU VRAM for the duration of this call.
     for tile in data.tiles() {
@@ -55,7 +55,7 @@ fn custom_preprocess_kernel(proj data: [f32; 1, 224, 224, 3] @global) {
 
 fn main() {
     // Initialize image in System RAM (@host).
-    let mut input: [f32; 1, 224, 224, 3] @host = tsor::from_image("dog.jpg");
+    let input: [f32; 1, 224, 224, 3] @host = tsor::from_image("dog.jpg");
     // The 'as _ @global' cast triggers an implicit PCIe DMA transfer.
     // The '&' ensures we are projecting a reference, not moving ownership.
     custom_preprocess_kernel(&input as _ @global);
@@ -130,9 +130,15 @@ Built on the LLVM and MLIR infrastructure, Eter leverages industry-leading optim
 
 ## Getting the Source Code and Building Eter
 
-See [GETTING_STARTED.md](./GETTING_STARTED.md) for build instructions and a
-quick-start guide. For the full contributor workflow, see
-[CONTRIBUTING.md](./CONTRIBUTING.md).
+Consult the [Getting Started with Eter](./GETTING_STARTED.md) page for information on building and running Eter.
+Eter currently expects **LLVM/MLIR 22.x** and a **C++17-capable** compiler toolchain.
+
+
+For information on how to contribute to the Eter project, please take a look at the [Contributing to Eter](./CONTRIBUTING.md) guide.
+
+Contributors may also want to enable the repository Git hooks described in [Contributing to Eter](./CONTRIBUTING.md) for local formatting, linting, and pre-push validation.
+
+For IDE/LSP setup tips, including the recommended root `.clangd` file, see [Getting Started with Eter](./GETTING_STARTED.md).
 
 ## License
 

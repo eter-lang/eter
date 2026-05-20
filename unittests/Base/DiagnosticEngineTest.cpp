@@ -10,9 +10,9 @@
 #include "eter/Base/SourceBuffer.h"
 #include "eter/Base/SourceManager.h"
 
-#include <sstream>
-
 #include "gtest/gtest.h"
+
+#include <sstream>
 
 using namespace eter;
 
@@ -24,7 +24,7 @@ TEST(SimpleDiagnosticEngineTest, ErrorBuilder) {
   SimpleDiagnosticEngine SDE;
   SDE.error().message("test error").emit();
 
-  const std::stringstream SS;
+  std::stringstream SS;
   EXPECT_TRUE(true);
 }
 
@@ -42,7 +42,10 @@ TEST(SimpleDiagnosticEngineTest, NoteBuilder) {
 
 TEST(SimpleDiagnosticEngineTest, ErrorWithNote) {
   SimpleDiagnosticEngine SDE;
-  SDE.error().message("main error").note("additional context").emit();
+  SDE.error()
+      .message("main error")
+      .note("additional context")
+      .emit();
   EXPECT_TRUE(true);
 }
 
@@ -80,13 +83,19 @@ TEST(DiagnosticLocationTest, SpanLocation) {
 
 TEST(DiagnosticBuilderTest, FluentApiWithAt) {
   SimpleDiagnosticEngine SDE;
-  SDE.error().at(Span(10, 20)).message("error at span").emit();
+  SDE.error()
+      .at(Span(10, 20))
+      .message("error at span")
+      .emit();
   EXPECT_TRUE(true);
 }
 
 TEST(DiagnosticBuilderTest, FluentApiWithAtFile) {
   SimpleDiagnosticEngine SDE;
-  SDE.error().atFile("myfile.et").message("error in file").emit();
+  SDE.error()
+      .atFile("myfile.et")
+      .message("error in file")
+      .emit();
   EXPECT_TRUE(true);
 }
 
@@ -121,7 +130,10 @@ TEST(DiagnosticEngineTest, WithSourceManager) {
   SourceManager SM(Buffer);
   DiagnosticEngine DE(std::move(SM));
 
-  DE.error().at(Span(0, 5)).message("test error with source").emit();
+  DE.error()
+      .at(Span(0, 5))
+      .message("test error with source")
+      .emit();
   EXPECT_TRUE(true);
 }
 
@@ -142,7 +154,10 @@ TEST(DiagnosticEngineTest, InternalCompilerError) {
   SourceManager SM(Buffer);
   DiagnosticEngine DE(std::move(SM));
 
-  DE.ice().at(Span(0, 4)).message("internal error").emit();
+  DE.ice()
+      .at(Span(0, 4))
+      .message("internal error")
+      .emit();
   EXPECT_TRUE(true);
 }
 

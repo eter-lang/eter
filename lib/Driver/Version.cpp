@@ -9,7 +9,6 @@
 #include "eter/Driver/Version.h"
 
 #include <llvm/ADT/StringRef.h>
-
 #include <string>
 
 namespace eter {

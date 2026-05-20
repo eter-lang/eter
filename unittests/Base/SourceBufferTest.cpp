@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "eter/Base/DiagnosticEngine.h"
 #include "eter/Base/SourceBuffer.h"
+#include "eter/Base/DiagnosticEngine.h"
 
 #include <llvm/Support/VirtualFileSystem.h>
 

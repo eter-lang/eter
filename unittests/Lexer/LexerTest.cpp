@@ -19,25 +19,33 @@
 using namespace eter;
 using namespace eter::lexer;
 
+namespace {
+
+// Helper function to create a SourceBuffer from a string for testing
 static SourceBuffer createTestBuffer(llvm::StringRef Content) {
   return SourceBuffer::makeFromString(Content);
 }
 
+// Helper to check if a LexerItem is a Token
 static bool isToken(const LexerItem &Item) {
   return std::holds_alternative<Token>(Item);
 }
 
+// Helper to check if a LexerItem is a LexerError
 static bool isError(const LexerItem &Item) {
   return std::holds_alternative<LexerError>(Item);
 }
 
+// Helper to get Token from LexerItem
 static const Token &getToken(const LexerItem &Item) {
   return std::get<Token>(Item);
 }
 
+// Helper to get LexerError from LexerItem
 static const LexerError &getError(const LexerItem &Item) {
   return std::get<LexerError>(Item);
 }
+} // namespace
 
 //============================================================================//
 // Test: Lexer Static Helper Functions
@@ -64,10 +72,10 @@ TEST(LexerTest, IsReservedKeyword) {
   // These depend on what keywords are defined in TokenKinds.def
   EXPECT_FALSE(Lexer::isReservedKeyword("notakeyword"));
   EXPECT_FALSE(Lexer::isReservedKeyword("identifier123"));
-  EXPECT_TRUE(Lexer::isReservedKeyword("type"));
-  EXPECT_TRUE(Lexer::isReservedKeyword("return"));
-  EXPECT_TRUE(Lexer::isReservedKeyword("ref"));
-  EXPECT_TRUE(Lexer::isReservedKeyword("where"));
+  EXPECT_TRUE(Lexer::isReservedKeyword( "type"));
+  EXPECT_TRUE(Lexer::isReservedKeyword( "return"));
+  EXPECT_TRUE(Lexer::isReservedKeyword( "ref"));
+  EXPECT_TRUE(Lexer::isReservedKeyword( "where"));
 }
 
 //============================================================================//
@@ -162,6 +170,7 @@ TEST(LexerTest, LexFloatFLiteral) {
   EXPECT_TRUE(isToken(Items[1]));
   EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::eof);
 }
+
 
 //============================================================================//
 // Test: Basic Lexing - String Literals
@@ -440,7 +449,7 @@ TEST(LexerTest, LexWithWhitespace) {
 
 TEST(LexerTest, LexInvalidCharacter) {
   Lexer L;
-  auto Buffer = createTestBuffer("~");
+  auto Buffer = createTestBuffer("@");
   auto Items = L.lex(Buffer);
 
   // Should have an error for invalid character
@@ -509,7 +518,7 @@ TEST(LexerTest, IncrementalLexing) {
 
 TEST(LexerTest, TokenSpansCorrect) {
   Lexer L;
-  const llvm::StringRef Input = "hello";
+  llvm::StringRef Input = "hello";
   auto Buffer = createTestBuffer(Input);
   auto Items = L.lex(Buffer);
 
@@ -522,7 +531,7 @@ TEST(LexerTest, TokenSpansCorrect) {
 
 TEST(LexerTest, MultipleTokenSpansCorrect) {
   Lexer L;
-  const llvm::StringRef Input = "foo bar";
+  llvm::StringRef Input = "foo bar";
   auto Buffer = createTestBuffer(Input);
   auto Items = L.lex(Buffer);
 
@@ -543,8 +552,7 @@ TEST(LexerTest, LexSimpleExpression) {
   auto Buffer = createTestBuffer("let x: i32 = 42 + y * 3");
   auto Items = L.lex(Buffer);
 
-  // Should lex: kw_let, identifier, colon, identifier, eq, integer, plus,
-  // identifier, star, integer
+  // Should lex: kw_let, identifier, colon, identifier, eq, integer, plus, identifier, star, integer
   EXPECT_GE(Items.size(), 10);
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::kw_let);
   EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::identifier);

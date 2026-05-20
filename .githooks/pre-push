@@ -16,12 +16,17 @@ echo "[eter] Running pre-push checks..."
 
 if [[ ! -f build/build.ninja ]]; then
   echo "[eter] error: build directory is not configured." >&2
-  echo "[eter] Run: ./x config" >&2
+  echo "[eter] Run: cmake -S . -B build -G Ninja" >&2
   exit 1
 fi
 
-./x build
-./x check-all
-./x doc-doxygen
+echo "[eter] Building project..."
+cmake --build build
+
+echo "[eter] Running test suite..."
+cmake --build build --target check-eter
+
+echo "[eter] Running the docs build..."
+cmake --build build --target doc-doxygen
 
 echo "[eter] Pre-push checks passed."

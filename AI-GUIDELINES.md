@@ -20,8 +20,7 @@ Please note the use of AI tools in your Pull Request description or commit messa
 `Assisted-by: AGENT_NAME:MODEL_VERSION [ADDITIONAL_TOOLS]`
 
 **Example:**
-> Assisted-by: Claude:4.7-Sonnet
->
+> Assisted-by: Claude-3.5-Sonnet:latest-v2
 > Assisted-by: GitHub-Copilot:auto
 
 The `Signed-off-by` and `Co-authored-by` trailers are reserved for human contributors and should not be used to indicate AI assistance.

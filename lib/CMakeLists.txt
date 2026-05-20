@@ -9,4 +9,3 @@
 add_subdirectory(Base)
 add_subdirectory(Driver)
 add_subdirectory(Lexer)
-add_subdirectory(Parser)
