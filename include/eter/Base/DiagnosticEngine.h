@@ -23,7 +23,7 @@ enum class DiagnosticKind { UserError, InternalCompilerError };
 
 /// A labeled span attached to a diagnostic, providing additional context.
 struct DiagnosticLabel {
-  Span Span;
+  Span DiagSpan;
   std::string Message;
 
   /// Return the label message as a string reference.
@@ -51,7 +51,7 @@ public:
   static DiagnosticLocation span(Span Span) {
     DiagnosticLocation Loc;
     Loc.Kind = Kind::Span;
-    Loc.Span = Span;
+    Loc.LocSpan = Span;
     return Loc;
   }
 
@@ -62,7 +62,7 @@ public:
   const std::string &filename() const { return Filename; }
 
   /// Return the span associated with this location.
-  const Span &span() const { return Span; }
+  const Span &span() const { return LocSpan; }
 
   /// Return true if this location has a span.
   bool hasSpan() const { return Kind == Kind::Span; }
@@ -73,7 +73,7 @@ private:
   Kind Kind = Kind::None;
 
   std::string Filename;
-  Span Span;
+  Span LocSpan;
 };
 
 /// A single diagnostic message with metadata, labels, and notes.

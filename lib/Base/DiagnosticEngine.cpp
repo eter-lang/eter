@@ -144,7 +144,7 @@ void DiagnosticEngine::print(const Diagnostic &Diag) const {
 
   // Print labels
   for (const auto &Label : Diag.Labels) {
-    auto Loc = SM.getLocation(Label.Span.Start);
+    auto Loc = SM.getLocation(Label.DiagSpan.Start);
 
     llvm::outs() << "  | " << Loc.Line << ":" << Loc.Column << " -> "
                  << Label.getMessage() << "\n";
