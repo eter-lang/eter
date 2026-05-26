@@ -47,5 +47,5 @@ TEST(EmptyFnDecl, NodeKind) {
 
   EXPECT_TRUE(pr.ok());
   NodeIndex root = pr.Root;
-  EXPECT_EQ("FnDecl", nodeKindName(pr.Pool.kindOf(root)));
+  EXPECT_EQ(NodeKind::FnDecl, pr.Pool.kindOf(root));
 }
