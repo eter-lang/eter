@@ -43,7 +43,18 @@ Parser::Parser(TokenStream Tokens, NodePool &Pool, StringInterner &Interner,
 
 NodeIndex Parser::parseSourceFile() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseSourceFile()\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseSourceFile");
+  // llvm::report_fatal_error("TODO: implement Parser::parseSourceFile");
+  lexer::Token T = peekToken();
+
+  NodeIndex constDecl;
+  if (T.TokenKind == lexer::Token::Kind::kw_const) {
+    constDecl = parseTopLevelDecl({});
+  }
+
+  NodeIndex allocatedNode =
+      Pool.alloc(NodeKind::SourceFile,
+                 Span{0, Stream.peekToken().TokenSpan.End}, {constDecl}, 0);
+  return allocatedNode;
 }
 
 //===----------------------------------------------------------------------===//

@@ -55,10 +55,12 @@ static bool checkChildrenKinds(NodeIndex Node, Kinds... Expected) {
   return ((pr.Pool.kindOf(Children[Index++]) == Expected) && ...);
 }
 
-TEST(ParserExpr, ConstDecl) {
+// ========================================== TESTS
+// =================================
+TEST(ParserTest, ConstDecl) {
   StringInterner si = StringInterner();
   Lexer L;
-  SourceBuffer bg = createTestBuffer("const v : i32 = 3 + 4");
+  SourceBuffer bg = createTestBuffer("const v : i32 = 3 + 4;");
   auto tokens = L.lex(bg);
 
   TokenStream ts = TokenStream(tokens, bg.getBuffer());
@@ -75,7 +77,7 @@ TEST(ParserExpr, ConstDecl) {
 
   NodeIndex exprNode = pr.Pool.childrenOf(constDeclNode)[1];
   EXPECT_EQ(NodePool::payloadOp(pr.Pool[exprNode].Payload),
-            lexer::Token::Kind::plus);
+            static_cast<uint16_t>(lexer::Token::Kind::plus));
 
   EXPECT_TRUE(
       checkChildrenKinds(exprNode, NodeKind::LitExpr, NodeKind::LitExpr));

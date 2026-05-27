@@ -7,7 +7,8 @@
 #===----------------------------------------------------------------------===#
 
 # Add the Lexer unit tests
-add_unittest(EterUnitTests ParserTest ASTNodesTest.cpp)
+add_unittest(EterUnitTests ParserTest TestParserExpr.cpp)
+# add_unittest(EterUnitTests ParserTestExpr TestParserDecl.cpp)
 
 # Link against Eter libraries
 target_link_libraries(ParserTest PRIVATE

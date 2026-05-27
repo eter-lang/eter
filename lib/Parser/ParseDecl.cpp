@@ -7,8 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "eter/Base/Debug.h"
+#include "eter/Base/Span.h"
+#include "eter/Base/StringInterner.h"
+#include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
 
+#include <llvm/ADT/StringRef.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -19,7 +23,8 @@ namespace eter::parser {
 NodeIndex Parser::parseTopLevelDecl(llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseTopLevelDecl\n");
   (void)Attrs;
-  llvm::report_fatal_error("TODO: implement Parser::parseTopLevelDecl");
+  // llvm::report_fatal_error("TODO: implement Parser::parseTopLevelDecl");
+  return parseConstDecl();
 }
 
 NodeIndex Parser::parseFnDecl(llvm::ArrayRef<NodeIndex> Attrs) {
@@ -78,8 +83,25 @@ NodeIndex Parser::parseUseDecl() {
 }
 
 NodeIndex Parser::parseConstDecl() {
-  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseConstDecl\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseConstDecl");
+  uint32_t startSpan = Stream.peekToken().TokenSpan.Start; // "const";
+  Stream.advance();                                        // <var name>
+  std::vector<NodeIndex> children;
+
+  InternedStr nameRef =
+      Interner.intern(Stream.textOf(Stream.peekToken().TokenSpan));
+
+  Stream.advance();             //":"
+  NodeIndex type = parseType(); //<type>
+  children.push_back(type);
+
+  Stream.advance(); //"="
+  NodeIndex rValue = parseExpr();
+  Stream.advance(); //";"
+  children.push_back(rValue);
+
+  return Pool.alloc(NodeKind::ConstDecl,
+                    Span{startSpan, Stream.previous().TokenSpan.End}, children,
+                    nameRef);
 }
 
 NodeIndex Parser::parseParamList() {

@@ -7,10 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "eter/Base/Debug.h"
+#include "eter/Base/StringInterner.h"
+#include "eter/Lexer/Token.h"
+#include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
 
+#include <llvm/ADT/StringRef.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
+
+#include <cstdint>
+#include <iostream>
+#include <ostream>
 
 #define DEBUG_TYPE "parser-expr"
 
@@ -19,7 +27,26 @@ namespace eter::parser {
 NodeIndex Parser::parseExpr([[maybe_unused]] int MinBP) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseExpr minBP=" << MinBP
                           << "\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseExpr");
+  // llvm::report_fatal_error("TODO: implement Parser::parseExpr");
+  std::vector<NodeIndex> childrens;
+  uint32_t oper;
+  lexer::Token start = Stream.advance();
+
+  while (Stream.peekToken().TokenKind != lexer::Token::Kind::semi) {
+    lexer::Token tok = Stream.advance();
+    if (tok.TokenKind == lexer::Token::Kind::plus) {
+      oper = NodePool::makeOpPayload(static_cast<uint16_t>(tok.TokenKind));
+    } else {
+      NodeIndex operand =
+          Pool.allocLeaf(NodeKind::LitExpr, tok.TokenSpan,
+                         Interner.intern(Stream.textOf(tok.TokenSpan)));
+      childrens.push_back(operand);
+    }
+  }
+
+  return Pool.alloc(NodeKind::BinaryExpr,
+                    Span{start.TokenSpan.Start, Stream.advance().TokenSpan.End},
+                    childrens, oper);
 }
 
 NodeIndex Parser::parsePrefixExpr() {
