@@ -1,0 +1,3 @@
+---
+InheritParentConfig: true
+Checks: '-llvm-header-guard'

@@ -19,7 +19,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef UNITTESTS_LEXER_LEXERHELPER_H
+#define UNITTESTS_LEXER_LEXERHELPER_H
 
 #include "eter/Base/DiagnosticEngine.h"
 #include "eter/Base/SourceBuffer.h"
@@ -64,7 +65,7 @@ lexBuffer(llvm::StringRef Source) {
 
 inline std::pair<SourceBuffer, std::vector<lexer::LexerItem>>
 lexFile(const char *TestName) {
-  std::string InputPath =
+  const std::string InputPath =
       std::string(GOLDEN_TESTS_INPUT_DIR) + "/" + TestName + ".et";
   SimpleDiagnosticEngine SDE;
   auto VFS = llvm::vfs::getRealFileSystem();
@@ -88,3 +89,4 @@ inline void checkNoErrors(const std::vector<lexer::LexerItem> &Items) {
 }
 
 } // namespace eter::test
+#endif // UNITTESTS_LEXER_LEXERHELPER_H

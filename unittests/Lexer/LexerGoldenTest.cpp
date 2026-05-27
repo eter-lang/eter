@@ -22,10 +22,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LexerHelper.h"
-
 #include "eter/Lexer/Token.h"
 
+#include "LexerHelper.h"
 #include "gtest/gtest.h"
 
 using namespace eter;
@@ -45,16 +44,22 @@ TEST(LexerGoldenTest, Empty) {
   EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::eof);
 }
 
-TEST(LexerGoldenTest, Identifiers) {
-  auto [Buffer, Items] = lexFile("identifiers");
+TEST(LexerGoldenTest, EmptyMain) {
+  auto [Buffer, Items] = lexFile("emptymain");
 
-  ASSERT_EQ(Items.size(), 4);
+  ASSERT_EQ(Items.size(), 7);
   EXPECT_TRUE(isToken(Items[0]));
-  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::identifier);
+  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::kw_fn);
   EXPECT_TRUE(isToken(Items[1]));
-  EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::integer_literal);
+  EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::identifier);
   EXPECT_TRUE(isToken(Items[2]));
-  EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::float_literal);
+  EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::l_paren);
   EXPECT_TRUE(isToken(Items[3]));
-  EXPECT_EQ(getToken(Items[3]).TokenKind, Token::Kind::eof);
+  EXPECT_EQ(getToken(Items[3]).TokenKind, Token::Kind::r_paren);
+  EXPECT_TRUE(isToken(Items[4]));
+  EXPECT_EQ(getToken(Items[4]).TokenKind, Token::Kind::l_brace);
+  EXPECT_TRUE(isToken(Items[5]));
+  EXPECT_EQ(getToken(Items[5]).TokenKind, Token::Kind::r_brace);
+  EXPECT_TRUE(isToken(Items[6]));
+  EXPECT_EQ(getToken(Items[6]).TokenKind, Token::Kind::eof);
 }
