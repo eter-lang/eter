@@ -7,7 +7,7 @@
 #===----------------------------------------------------------------------===#
 
 # Add the Lexer unit tests
-add_unittest(EterUnitTests LexerTest LexerTest.cpp)
+add_unittest(EterUnitTests LexerTest LexerTest.cpp LexerGoldenTest.cpp)
 
 # Link against Eter libraries
 target_link_libraries(LexerTest PRIVATE
@@ -17,6 +17,10 @@ target_link_libraries(LexerTest PRIVATE
 
 target_include_directories(LexerTest PRIVATE
   ${CMAKE_SOURCE_DIR}/include
+)
+
+target_compile_definitions(LexerTest PRIVATE
+  GOLDEN_TESTS_INPUT_DIR="${CMAKE_SOURCE_DIR}/unittests/GoldenTests/Inputs"
 )
 
 target_include_directories(LexerTest SYSTEM PRIVATE

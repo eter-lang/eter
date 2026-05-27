@@ -14,30 +14,17 @@
 #include <variant>
 #include <vector>
 
+#include "LexerHelper.h"
 #include "gtest/gtest.h"
 
 using namespace eter;
 using namespace eter::lexer;
-
-static SourceBuffer createTestBuffer(llvm::StringRef Content) {
-  return SourceBuffer::makeFromString(Content);
-}
-
-static bool isToken(const LexerItem &Item) {
-  return std::holds_alternative<Token>(Item);
-}
-
-static bool isError(const LexerItem &Item) {
-  return std::holds_alternative<LexerError>(Item);
-}
-
-static const Token &getToken(const LexerItem &Item) {
-  return std::get<Token>(Item);
-}
-
-static const LexerError &getError(const LexerItem &Item) {
-  return std::get<LexerError>(Item);
-}
+using eter::test::createTestBuffer;
+using eter::test::getError;
+using eter::test::getToken;
+using eter::test::isError;
+using eter::test::isToken;
+using eter::test::lexBuffer;
 
 //============================================================================//
 // Test: Lexer Static Helper Functions
@@ -535,40 +522,205 @@ TEST(LexerTest, MultipleTokenSpansCorrect) {
 }
 
 //============================================================================//
-// Test: Complex Code Snippets
+// Test: More Symbols
 //============================================================================//
 
-TEST(LexerTest, LexSimpleExpression) {
+TEST(LexerTest, LexDotAndAtAndQuestion) {
   Lexer L;
-  auto Buffer = createTestBuffer("let x: i32 = 42 + y * 3");
+  auto Buffer = createTestBuffer(". @ ?");
   auto Items = L.lex(Buffer);
 
-  // Should lex: kw_let, identifier, colon, identifier, eq, integer, plus,
-  // identifier, star, integer
-  EXPECT_GE(Items.size(), 10);
-  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::kw_let);
-  EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::identifier);
-  EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::colon);
-  EXPECT_EQ(getToken(Items[3]).TokenKind, Token::Kind::identifier);
-  EXPECT_EQ(getToken(Items[4]).TokenKind, Token::Kind::eq);
-  EXPECT_EQ(getToken(Items[5]).TokenKind, Token::Kind::integer_literal);
-  EXPECT_EQ(getToken(Items[6]).TokenKind, Token::Kind::plus);
-  EXPECT_EQ(getToken(Items[7]).TokenKind, Token::Kind::identifier);
-  EXPECT_EQ(getToken(Items[8]).TokenKind, Token::Kind::star);
-  EXPECT_EQ(getToken(Items[9]).TokenKind, Token::Kind::integer_literal);
+  ASSERT_EQ(Items.size(), 4);
+  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::dot);
+  EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::at);
+  EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::question);
+  EXPECT_EQ(getToken(Items[3]).TokenKind, Token::Kind::eof);
 }
 
-TEST(LexerTest, LexFunctionCall) {
+TEST(LexerTest, LexMoreOperators) {
   Lexer L;
-  auto Buffer = createTestBuffer("printf(\"hello\", 42)");
+  auto Buffer = createTestBuffer("% ^ | & << >> && || !");
   auto Items = L.lex(Buffer);
 
-  // Should lex: identifier, (, string, comma, integer, )
-  EXPECT_GE(Items.size(), 6);
-  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::identifier);
-  EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::l_paren);
-  EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::string_literal);
-  EXPECT_EQ(getToken(Items[3]).TokenKind, Token::Kind::comma);
-  EXPECT_EQ(getToken(Items[4]).TokenKind, Token::Kind::integer_literal);
-  EXPECT_EQ(getToken(Items[5]).TokenKind, Token::Kind::r_paren);
+  ASSERT_EQ(Items.size(), 10);
+  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::percent);
+  EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::caret);
+  EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::pipe);
+  EXPECT_EQ(getToken(Items[3]).TokenKind, Token::Kind::amp);
+  EXPECT_EQ(getToken(Items[4]).TokenKind, Token::Kind::less_less);
+  EXPECT_EQ(getToken(Items[5]).TokenKind, Token::Kind::greater_greater);
+  EXPECT_EQ(getToken(Items[6]).TokenKind, Token::Kind::amp_amp);
+  EXPECT_EQ(getToken(Items[7]).TokenKind, Token::Kind::pipe_pipe);
+  EXPECT_EQ(getToken(Items[8]).TokenKind, Token::Kind::bang);
+  EXPECT_EQ(getToken(Items[9]).TokenKind, Token::Kind::eof);
 }
+
+TEST(LexerTest, LexMoreCompoundAssignments) {
+  Lexer L;
+  auto Buffer = createTestBuffer("%= &= |= ^= <<= >>=");
+  auto Items = L.lex(Buffer);
+
+  ASSERT_EQ(Items.size(), 7);
+  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::percent_eq);
+  EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::amp_eq);
+  EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::pipe_eq);
+  EXPECT_EQ(getToken(Items[3]).TokenKind, Token::Kind::caret_eq);
+  EXPECT_EQ(getToken(Items[4]).TokenKind, Token::Kind::less_less_eq);
+  EXPECT_EQ(getToken(Items[5]).TokenKind, Token::Kind::greater_greater_eq);
+  EXPECT_EQ(getToken(Items[6]).TokenKind, Token::Kind::eof);
+}
+
+//============================================================================//
+// Test: All Keywords
+//============================================================================//
+
+TEST(LexerTest, LexKeywords) {
+  Lexer L;
+  auto Buffer = createTestBuffer(
+      "as break const continue else enum false fix fn "
+      "for if let match mod mut proj pub ret struct true use while");
+  auto Items = L.lex(Buffer);
+
+  ASSERT_EQ(Items.size(), 23);
+  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::kw_as);
+  EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::kw_break);
+  EXPECT_EQ(getToken(Items[2]).TokenKind, Token::Kind::kw_const);
+  EXPECT_EQ(getToken(Items[3]).TokenKind, Token::Kind::kw_continue);
+  EXPECT_EQ(getToken(Items[4]).TokenKind, Token::Kind::kw_else);
+  EXPECT_EQ(getToken(Items[5]).TokenKind, Token::Kind::kw_enum);
+  EXPECT_EQ(getToken(Items[6]).TokenKind, Token::Kind::kw_false);
+  EXPECT_EQ(getToken(Items[7]).TokenKind, Token::Kind::kw_fix);
+  EXPECT_EQ(getToken(Items[8]).TokenKind, Token::Kind::kw_fn);
+  EXPECT_EQ(getToken(Items[9]).TokenKind, Token::Kind::kw_for);
+  EXPECT_EQ(getToken(Items[10]).TokenKind, Token::Kind::kw_if);
+  EXPECT_EQ(getToken(Items[11]).TokenKind, Token::Kind::kw_let);
+  EXPECT_EQ(getToken(Items[12]).TokenKind, Token::Kind::kw_match);
+  EXPECT_EQ(getToken(Items[13]).TokenKind, Token::Kind::kw_mod);
+  EXPECT_EQ(getToken(Items[14]).TokenKind, Token::Kind::kw_mut);
+  EXPECT_EQ(getToken(Items[15]).TokenKind, Token::Kind::kw_proj);
+  EXPECT_EQ(getToken(Items[16]).TokenKind, Token::Kind::kw_pub);
+  EXPECT_EQ(getToken(Items[17]).TokenKind, Token::Kind::kw_ret);
+  EXPECT_EQ(getToken(Items[18]).TokenKind, Token::Kind::kw_struct);
+  EXPECT_EQ(getToken(Items[19]).TokenKind, Token::Kind::kw_true);
+  EXPECT_EQ(getToken(Items[20]).TokenKind, Token::Kind::kw_use);
+  EXPECT_EQ(getToken(Items[21]).TokenKind, Token::Kind::kw_while);
+  EXPECT_EQ(getToken(Items[22]).TokenKind, Token::Kind::eof);
+}
+
+//============================================================================//
+// Test: Error Kinds
+//============================================================================//
+
+TEST(LexerTest, LexUnterminatedBlockComment) {
+  Lexer L;
+  auto Buffer = createTestBuffer("/* hello world");
+  auto Items = L.lex(Buffer);
+
+  bool FoundError = false;
+  for (const auto &Item : Items) {
+    if (isError(Item)) {
+      EXPECT_EQ(getError(Item).ErrorKind,
+                LexerError::Kind::UnterminatedBlockComment);
+      FoundError = true;
+    }
+  }
+  EXPECT_TRUE(FoundError);
+}
+
+TEST(LexerTest, LexInvalidEscapeSequence) {
+  Lexer L;
+  auto Buffer = createTestBuffer("\"\\z\"");
+  auto Items = L.lex(Buffer);
+
+  bool FoundError = false;
+  for (const auto &Item : Items) {
+    if (isError(Item)) {
+      EXPECT_EQ(getError(Item).ErrorKind,
+                LexerError::Kind::InvalidEscapeSequence);
+      FoundError = true;
+    }
+  }
+  EXPECT_TRUE(FoundError);
+}
+
+TEST(LexerTest, LexEmptyCharLiteral) {
+  Lexer L;
+  auto Buffer = createTestBuffer("''");
+  auto Items = L.lex(Buffer);
+
+  bool FoundError = false;
+  for (const auto &Item : Items) {
+    if (isError(Item)) {
+      EXPECT_EQ(getError(Item).ErrorKind,
+                LexerError::Kind::EmptyCharLiteral);
+      FoundError = true;
+    }
+  }
+  EXPECT_TRUE(FoundError);
+}
+
+TEST(LexerTest, LexMultiCharCharLiteral) {
+  Lexer L;
+  auto Buffer = createTestBuffer("'ab'");
+  auto Items = L.lex(Buffer);
+
+  bool FoundError = false;
+  for (const auto &Item : Items) {
+    if (isError(Item)) {
+      EXPECT_EQ(getError(Item).ErrorKind,
+                LexerError::Kind::MultiCharCharLiteral);
+      FoundError = true;
+    }
+  }
+  EXPECT_TRUE(FoundError);
+}
+
+TEST(LexerTest, LexInvalidNumericLiteral) {
+  Lexer L;
+  auto Buffer = createTestBuffer("0x");
+  auto Items = L.lex(Buffer);
+
+  bool FoundError = false;
+  for (const auto &Item : Items) {
+    if (isError(Item)) {
+      EXPECT_EQ(getError(Item).ErrorKind,
+                LexerError::Kind::InvalidNumericLiteral);
+      FoundError = true;
+    }
+  }
+  EXPECT_TRUE(FoundError);
+}
+
+TEST(LexerTest, LexTrailingNumericSeparator) {
+  Lexer L;
+  auto Buffer = createTestBuffer("42_");
+  auto Items = L.lex(Buffer);
+
+  bool FoundError = false;
+  for (const auto &Item : Items) {
+    if (isError(Item)) {
+      EXPECT_EQ(getError(Item).ErrorKind,
+                LexerError::Kind::InvalidNumericLiteral);
+      FoundError = true;
+    }
+  }
+  EXPECT_TRUE(FoundError);
+}
+
+TEST(LexerTest, LexReservedKeywords) {
+  Lexer L;
+  auto Buffer = createTestBuffer("type return ref where");
+  auto Items = L.lex(Buffer);
+
+  int ErrorCount = 0;
+  for (const auto &Item : Items) {
+    if (isError(Item)) {
+      EXPECT_EQ(getError(Item).ErrorKind,
+                LexerError::Kind::ReservedKeyword);
+      ++ErrorCount;
+    }
+  }
+  EXPECT_EQ(ErrorCount, 4);
+}
+
+
