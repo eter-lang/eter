@@ -18,13 +18,13 @@ namespace eter::parser {
 
 NodeIndex Parser::parseType() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseType\n");
-  lexer::Token type = Stream.peekToken();
+  const lexer::Token Type = Stream.peekToken();
 
-  NodeIndex typeNode =
-      Pool.allocLeaf(NodeKind::NamedType, type.TokenSpan,
-                     Interner.intern(Stream.textOf(type.TokenSpan)));
+  NodeIndex TypeNode =
+      Pool.allocLeaf(NodeKind::NamedType, Type.TokenSpan,
+                     Interner.intern(Stream.textOf(Type.TokenSpan)));
   Stream.advance();
-  return typeNode;
+  return TypeNode;
 }
 
 NodeIndex Parser::parseNamedType() {

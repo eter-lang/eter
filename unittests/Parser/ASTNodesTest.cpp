@@ -6,24 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "eter/Base/SourceBuffer.h"
-#include "eter/Base/StringInterner.h"
-#include "eter/Lexer/Lexer.h"
-#include "eter/Parser/ASTNodes.h"
-#include "eter/Parser/NodePool.h"
-#include "eter/Parser/Parser.h"
-#include "eter/Parser/TokenStream.h"
-
 #include <llvm/Support/VirtualFileSystem.h>
 
-#include <variant>
-#include <vector>
-
 #include "gtest/gtest.h"
-
-using namespace eter;
-using namespace eter::parser;
-using namespace eter::lexer;
 
 // Testing the correct use of test suite. Remember to remove!
 #include <iostream>

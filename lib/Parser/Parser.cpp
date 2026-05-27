@@ -7,10 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "eter/Base/Debug.h"
+#include "eter/Base/Span.h"
+#include "eter/Lexer/Token.h"
+#include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
 
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
+
+#include <algorithm>
+#include <cstdint>
 
 #define DEBUG_TYPE "parser"
 
@@ -44,17 +50,17 @@ Parser::Parser(TokenStream Tokens, NodePool &Pool, StringInterner &Interner,
 NodeIndex Parser::parseSourceFile() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseSourceFile()\n");
   // llvm::report_fatal_error("TODO: implement Parser::parseSourceFile");
-  lexer::Token T = peekToken();
+  const Span StartOfFile = peekToken().TokenSpan;
 
-  NodeIndex constDecl;
-  if (T.TokenKind == lexer::Token::Kind::kw_const) {
-    constDecl = parseTopLevelDecl({});
+  std::vector<NodeIndex> TopLevelDecls;
+  while (!atEof()) {
+    auto Attributes = parseAttributes();
+    TopLevelDecls.push_back(parseTopLevelDecl(Attributes));
   }
 
-  NodeIndex allocatedNode =
-      Pool.alloc(NodeKind::SourceFile,
-                 Span{0, Stream.peekToken().TokenSpan.End}, {constDecl}, 0);
-  return allocatedNode;
+  const Span EndOfFile = Stream.previous().TokenSpan;
+  return Pool.alloc(NodeKind::SourceFile,
+                    Span{StartOfFile.Start, EndOfFile.End}, TopLevelDecls);
 }
 
 //===----------------------------------------------------------------------===//
@@ -62,7 +68,8 @@ NodeIndex Parser::parseSourceFile() {
 //===----------------------------------------------------------------------===//
 
 llvm::SmallVector<NodeIndex, 4> Parser::parseAttributes() {
-  llvm::report_fatal_error("TODO: implement Parser::parseAttributes");
+  // llvm::report_fatal_error("TODO: implement Parser::parseAttributes");
+  return {NullNode};
 }
 
 NodeIndex Parser::parseAttribute() {

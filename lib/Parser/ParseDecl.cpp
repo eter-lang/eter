@@ -83,25 +83,25 @@ NodeIndex Parser::parseUseDecl() {
 }
 
 NodeIndex Parser::parseConstDecl() {
-  uint32_t startSpan = Stream.peekToken().TokenSpan.Start; // "const";
-  Stream.advance();                                        // <var name>
-  std::vector<NodeIndex> children;
+  const uint32_t StartSpan =
+      advance().TokenSpan.Start; // "const" ->  <var name>
+  std::vector<NodeIndex> Children;
 
-  InternedStr nameRef =
-      Interner.intern(Stream.textOf(Stream.peekToken().TokenSpan));
+  const InternedStr NameRef =
+      Interner.intern(Stream.textOf(advance().TokenSpan)); // <var name> -> ":"
+  advance();                                               //":" -> <type>
 
-  Stream.advance();             //":"
-  NodeIndex type = parseType(); //<type>
-  children.push_back(type);
+  const NodeIndex Type = parseType(); //<type>
+  Children.push_back(Type);
 
   Stream.advance(); //"="
-  NodeIndex rValue = parseExpr();
+  const NodeIndex RValue = parseExpr();
   Stream.advance(); //";"
-  children.push_back(rValue);
+  Children.push_back(RValue);
 
   return Pool.alloc(NodeKind::ConstDecl,
-                    Span{startSpan, Stream.previous().TokenSpan.End}, children,
-                    nameRef);
+                    Span{StartSpan, Stream.previous().TokenSpan.End}, Children,
+                    NameRef);
 }
 
 NodeIndex Parser::parseParamList() {

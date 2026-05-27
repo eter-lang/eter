@@ -19,8 +19,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef UNITTESTS_LEXER_LEXERHELPER_H
-#define UNITTESTS_LEXER_LEXERHELPER_H
+#pragma once
 
 #include "eter/Base/DiagnosticEngine.h"
 #include "eter/Base/SourceBuffer.h"
@@ -89,4 +88,3 @@ inline void checkNoErrors(const std::vector<lexer::LexerItem> &Items) {
 }
 
 } // namespace eter::test
-#endif // UNITTESTS_LEXER_LEXERHELPER_H

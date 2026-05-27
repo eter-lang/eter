@@ -11,6 +11,7 @@
 #include "eter/Lexer/Token.h"
 #include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
+#include "eter/Parser/Regime.h"
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/ErrorHandling.h>
@@ -28,25 +29,36 @@ NodeIndex Parser::parseExpr([[maybe_unused]] int MinBP) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseExpr minBP=" << MinBP
                           << "\n");
   // llvm::report_fatal_error("TODO: implement Parser::parseExpr");
-  std::vector<NodeIndex> childrens;
-  uint32_t oper;
-  lexer::Token start = Stream.advance();
 
-  while (Stream.peekToken().TokenKind != lexer::Token::Kind::semi) {
-    lexer::Token tok = Stream.advance();
-    if (tok.TokenKind == lexer::Token::Kind::plus) {
-      oper = NodePool::makeOpPayload(static_cast<uint16_t>(tok.TokenKind));
+  std::vector<NodeIndex> Childrens;
+  uint32_t Oper;
+  const lexer::Token Start = Stream.peekToken();
+
+  while (!Stream.check(lexer::Token::Kind::semi)) {
+    const lexer::Token Tok = Stream.advance();
+
+    if (Tok.TokenKind == lexer::Token::Kind::plus) {
+      Oper = NodePool::makeOpPayload(static_cast<uint16_t>(Tok.TokenKind));
+
     } else {
-      NodeIndex operand =
-          Pool.allocLeaf(NodeKind::LitExpr, tok.TokenSpan,
-                         Interner.intern(Stream.textOf(tok.TokenSpan)));
-      childrens.push_back(operand);
+      const NodeIndex Operand = Pool.allocLeaf(
+          NodeKind::LitExpr, Tok.TokenSpan,
+          NodePool::makePayload(Interner.intern(textOf(Tok.TokenSpan)),
+                                Regime::None));
+      Childrens.push_back(Operand);
     }
   }
 
-  return Pool.alloc(NodeKind::BinaryExpr,
-                    Span{start.TokenSpan.Start, Stream.advance().TokenSpan.End},
-                    childrens, oper);
+  Stream.advance();
+
+  if (Childrens.size() == 1) { // Es. " let <name> : i32 = 10"
+    return Childrens[0];
+  }
+
+  return Pool.alloc(
+      NodeKind::BinaryExpr,
+      Span{Start.TokenSpan.Start, Stream.previous().TokenSpan.End}, Childrens,
+      Oper);
 }
 
 NodeIndex Parser::parsePrefixExpr() {
