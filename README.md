@@ -33,7 +33,7 @@ While [The Eter Reference](https://eter-lang.github.io/eter/) serves as the prim
 // It embeds 'mobilenet_v2' into the binary and optimizes the execution
 // for the CPU (using SIMD like AVX-512) to handle the @host memory input.
 @model<TF(version = V1), target = CPU>("mobilenet_v2")
-extern fn fix mobilenet_infer(fix x: [f32; 1, 224, 224, 3] @host): [f32; 1, 1000] @host;
+extern fn imm mobilenet_infer(imm x: [f32; 1, 224, 224, 3] @host): [f32; 1, 1000] @host;
 
 //===--- Optimized GPU Kernel ---===//
 // A tile of 112x112 is a "perfect fit" for a 224x224 image.

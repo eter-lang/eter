@@ -28,6 +28,17 @@ namespace eter::parser {
 /// wrong results.
 void assertKind(const NodePool &P, NodeIndex I, NodeKind Expected);
 
+/// Base for typed AST node views.
+/// Each concrete view inherits from ASTNode<corresponding NodeKind> to get the
+/// Idx member and a shared classof() implementation without vtables.
+template <NodeKind K> struct ASTNode {
+  NodeIndex Idx;
+
+  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I) {
+    return P.kindOf(I) == K;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Declarations
 //===----------------------------------------------------------------------===//
@@ -42,15 +53,11 @@ void assertKind(const NodePool &P, NodeIndex I, NodeKind Expected);
 ///   [nAttrs+2]      : BlockExpr (function body)
 ///
 /// Payload: makePayload(functionName, returnRegime)
-struct FnDecl {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
-
+struct FnDecl : ASTNode<NodeKind::FnDecl> {
   /// Interned name of the function.
   [[nodiscard]] InternedStr getName(const NodePool &P) const;
 
-  /// Regime of the return value (Fix / Mut / Proj / None for void functions).
+  /// Regime of the return value (Imm / Mut / Proj / None for void functions).
   [[nodiscard]] Regime getReturnRegime(const NodePool &P) const;
 
   /// Declaration-level @-attributes, in source order.
@@ -71,10 +78,7 @@ struct FnDecl {
 ///
 /// Child layout: [Attribute*, StructField*]
 /// Payload: InternedStr (struct name)
-struct StructDecl {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct StructDecl : ASTNode<NodeKind::StructDecl> {
   [[nodiscard]] InternedStr getName(const NodePool &P) const;
   [[nodiscard]] llvm::ArrayRef<NodeIndex>
   getAttributes(const NodePool &P) const;
@@ -85,10 +89,7 @@ struct StructDecl {
 ///
 /// Child layout: [Type]
 /// Payload: makePayload(fieldName, regime)
-struct StructField {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct StructField : ASTNode<NodeKind::StructField> {
   [[nodiscard]] InternedStr getName(const NodePool &P) const;
   [[nodiscard]] Regime getRegime(const NodePool &P) const;
   /// The declared type of this field.
@@ -100,10 +101,7 @@ struct StructField {
 /// Child layout: [Attribute*, (EnumVariantUnit | EnumVariantTuple |
 ///                             EnumVariantStruct)*]
 /// Payload: InternedStr (enum name)
-struct EnumDecl {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct EnumDecl : ASTNode<NodeKind::EnumDecl> {
   [[nodiscard]] InternedStr getName(const NodePool &P) const;
   [[nodiscard]] llvm::ArrayRef<NodeIndex>
   getAttributes(const NodePool &P) const;
@@ -114,10 +112,7 @@ struct EnumDecl {
 ///
 /// Child layout: [Type]
 /// Payload: makePayload(paramName, regime)
-struct Param {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct Param : ASTNode<NodeKind::Param> {
   [[nodiscard]] InternedStr getName(const NodePool &P) const;
   [[nodiscard]] Regime getRegime(const NodePool &P) const;
   [[nodiscard]] NodeIndex getType(const NodePool &P) const;
@@ -127,10 +122,7 @@ struct Param {
 ///
 /// Child layout: [Param*]
 /// Payload: 0
-struct ParamList {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct ParamList : ASTNode<NodeKind::ParamList> {
   [[nodiscard]] llvm::ArrayRef<NodeIndex> getParams(const NodePool &P) const;
 };
 
@@ -144,10 +136,7 @@ struct ParamList {
 ///   ChildCount == 1: no type annotation; child[0] = Expr (initialiser).
 ///   ChildCount == 2: child[0] = Type annotation, child[1] = Expr.
 /// Payload: makePayload(bindingName, regime)
-struct LetStmt {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct LetStmt : ASTNode<NodeKind::LetStmt> {
   [[nodiscard]] InternedStr getName(const NodePool &P) const;
   [[nodiscard]] Regime getRegime(const NodePool &P) const;
   /// Explicit type annotation, or NullNode if absent.
@@ -160,10 +149,7 @@ struct LetStmt {
 ///
 /// Child layout: [Expr?]  (zero children = bare `ret;`)
 /// Payload: 0
-struct RetStmt {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct RetStmt : ASTNode<NodeKind::RetStmt> {
   /// The return value expression, or NullNode for a bare `ret;`.
   [[nodiscard]] NodeIndex getExpr(const NodePool &P) const;
 };
@@ -174,10 +160,7 @@ struct RetStmt {
 ///   The optional final child without a trailing `;` is the block's yield
 ///   value.  All preceding children are statements.
 /// Payload: 0
-struct BlockExpr {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct BlockExpr : ASTNode<NodeKind::BlockExpr> {
   [[nodiscard]] llvm::ArrayRef<NodeIndex> getStmts(const NodePool &P) const;
   /// Tail expression (block yield value), or NullNode if absent.
   [[nodiscard]] NodeIndex getTailExpr(const NodePool &P) const;
@@ -189,10 +172,7 @@ struct BlockExpr {
 ///   ChildCount == 2: no else branch.
 ///   ChildCount == 3: child[2] is a BlockExpr or a nested IfExpr.
 /// Payload: 0
-struct IfExpr {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct IfExpr : ASTNode<NodeKind::IfExpr> {
   [[nodiscard]] NodeIndex getCondition(const NodePool &P) const;
   [[nodiscard]] NodeIndex getThenBranch(const NodePool &P) const;
   /// The else branch, or NullNode if absent.
@@ -207,10 +187,7 @@ struct IfExpr {
 ///
 /// Child layout: [Expr (lhs), Expr (rhs)]
 /// Payload: makeOpPayload(static_cast<uint16_t>(Token::Kind))
-struct BinaryExpr {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct BinaryExpr : ASTNode<NodeKind::BinaryExpr> {
   [[nodiscard]] NodeIndex getLhs(const NodePool &P) const;
   [[nodiscard]] NodeIndex getRhs(const NodePool &P) const;
   [[nodiscard]] lexer::Token::Kind getOp(const NodePool &P) const;
@@ -224,10 +201,7 @@ struct BinaryExpr {
 /// Note: op == Token::Kind::amp represents `&expr` — taking a projection of a
 /// Mut value (the rhs use of `&`). The distinct `ProjAssignExpr` covers the
 /// lhs use `&lhs = rhs`.
-struct UnaryExpr {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct UnaryExpr : ASTNode<NodeKind::UnaryExpr> {
   [[nodiscard]] NodeIndex getOperand(const NodePool &P) const;
   [[nodiscard]] lexer::Token::Kind getOp(const NodePool &P) const;
 };
@@ -240,10 +214,7 @@ struct UnaryExpr {
 ///
 /// Child layout: [Expr (projection target), Expr (rhs)]
 /// Payload: 0
-struct ProjAssignExpr {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct ProjAssignExpr : ASTNode<NodeKind::ProjAssignExpr> {
   /// The projection target (an IdentExpr, or a FieldExpr / IndexExpr chain).
   [[nodiscard]] NodeIndex getTarget(const NodePool &P) const;
   [[nodiscard]] NodeIndex getRhs(const NodePool &P) const;
@@ -253,10 +224,7 @@ struct ProjAssignExpr {
 ///
 /// Child layout: [Expr (callee), ArgList]
 /// Payload: 0
-struct CallExpr {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct CallExpr : ASTNode<NodeKind::CallExpr> {
   [[nodiscard]] NodeIndex getCallee(const NodePool &P) const;
   [[nodiscard]] llvm::ArrayRef<NodeIndex> getArgs(const NodePool &P) const;
 };
@@ -265,10 +233,7 @@ struct CallExpr {
 ///
 /// Child layout: [Expr (base)]
 /// Payload: InternedStr (field name)
-struct FieldExpr {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct FieldExpr : ASTNode<NodeKind::FieldExpr> {
   [[nodiscard]] NodeIndex getBase(const NodePool &P) const;
   [[nodiscard]] InternedStr getFieldName(const NodePool &P) const;
 };
@@ -277,10 +242,7 @@ struct FieldExpr {
 ///
 /// Child layout: []
 /// Payload: InternedStr (identifier name)
-struct IdentExpr {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct IdentExpr : ASTNode<NodeKind::IdentExpr> {
   [[nodiscard]] InternedStr getName(const NodePool &P) const;
 };
 
@@ -290,10 +252,7 @@ struct IdentExpr {
 /// Payload: InternedStr (source text of the literal as written, e.g. "42",
 /// "3.14f", "true", "'a'"). The semantic type is determined by the type
 /// checker, not the parser.
-struct LitExpr {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct LitExpr : ASTNode<NodeKind::LitExpr> {
   [[nodiscard]] InternedStr getText(const NodePool &P) const;
 };
 
@@ -305,10 +264,7 @@ struct LitExpr {
 ///
 /// Child layout: []
 /// Payload: InternedStr (type name)
-struct NamedType {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct NamedType : ASTNode<NodeKind::NamedType> {
   [[nodiscard]] InternedStr getName(const NodePool &P) const;
 };
 
@@ -316,10 +272,7 @@ struct NamedType {
 ///
 /// Child layout: [Type (element type), Expr (size)]
 /// Payload: 0
-struct ArrayType {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct ArrayType : ASTNode<NodeKind::ArrayType> {
   [[nodiscard]] NodeIndex getElementType(const NodePool &P) const;
   [[nodiscard]] NodeIndex getSizeExpr(const NodePool &P) const;
 };
@@ -329,10 +282,7 @@ struct ArrayType {
 /// Child layout: [Type (inner type)]
 /// Payload: InternedStr (qualifier name, e.g. "global", "shared", "host",
 /// "constant")
-struct AttrType {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct AttrType : ASTNode<NodeKind::AttrType> {
   [[nodiscard]] NodeIndex getInnerType(const NodePool &P) const;
   [[nodiscard]] InternedStr getQualifier(const NodePool &P) const;
 };
@@ -345,10 +295,7 @@ struct AttrType {
 ///
 /// Child layout: [Expr (scrutinee), MatchArm*]
 /// Payload: 0
-struct MatchExpr {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct MatchExpr : ASTNode<NodeKind::MatchExpr> {
   [[nodiscard]] NodeIndex getScrutinee(const NodePool &P) const;
   [[nodiscard]] llvm::ArrayRef<NodeIndex> getArms(const NodePool &P) const;
 };
@@ -357,10 +304,7 @@ struct MatchExpr {
 ///
 /// Child layout: [Pat, Expr]
 /// Payload: 0
-struct MatchArm {
-  NodeIndex Idx;
-
-  [[nodiscard]] static bool classof(const NodePool &P, NodeIndex I);
+struct MatchArm : ASTNode<NodeKind::MatchArm> {
   [[nodiscard]] NodeIndex getPattern(const NodePool &P) const;
   [[nodiscard]] NodeIndex getBody(const NodePool &P) const;
 };

@@ -108,9 +108,9 @@ void Parser::synchronize() {
 
 Regime Parser::parseRegime() {
   switch (peek()) {
-  case lexer::Token::Kind::kw_fix:
+  case lexer::Token::Kind::kw_imm:
     advance();
-    return Regime::Fix;
+    return Regime::Imm;
   case lexer::Token::Kind::kw_mut:
     advance();
     return Regime::Mut;

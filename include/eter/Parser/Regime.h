@@ -17,11 +17,11 @@ namespace eter::parser {
 /// struct field in the Eter language.
 ///
 /// The three-regime model guarantees memory safety without a garbage collector:
-///   - Fix:  immutable, shared. O(1) copy semantics for all types.
+///   - Imm:  immutable, shared. O(1) copy semantics for all types.
 ///   - Mut:  uniquely owned, mutable. Move semantics; invalidates the source.
 ///   - Proj: a live projection (view) of a Mut value. Reinitializable.
 ///   - None: no regime annotation (e.g., unit functions).
-enum class Regime : uint8_t { Fix, Mut, Proj, None };
+enum class Regime : uint8_t { Imm, Mut, Proj, None };
 
 /// Return a human-readable name for a regime (useful for diagnostics).
 [[nodiscard]] const char *regimeName(Regime R);

@@ -65,7 +65,7 @@ inline constexpr NodeIndex NullNode{};
 ///
 /// Nodes that carry a name AND an optional regime (FnDecl, LetStmt, Param,
 /// StructField, EnumVariant*, IdentPat, ForStmt):
-///     bits [31:30] = Regime  (0=Fix, 1=Mut, 2=Proj, 3=None)
+///     bits [31:30] = Regime  (0=Imm, 1=Mut, 2=Proj, 3=None)
 ///     bits [29: 0] = InternedStr (name, max ~1 billion unique strings)
 ///
 /// Nodes that carry only a name (StructDecl, EnumDecl, ModDecl, ConstDecl,

@@ -225,7 +225,7 @@ private:
   // Regime
   //===----------------------------------------------------------------------===//
 
-  /// Consume `fix`, `mut`, or `proj` if the current token matches, and return
+  /// Consume `imm`, `mut`, or `proj` if the current token matches, and return
   /// the corresponding `Regime`. Returns `Regime::None` without consuming any
   /// token if none of the regime keywords is present.
   Regime parseRegime();

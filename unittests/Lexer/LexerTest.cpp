@@ -576,7 +576,7 @@ TEST(LexerTest, LexMoreCompoundAssignments) {
 TEST(LexerTest, LexKeywords) {
   Lexer L;
   auto Buffer = createTestBuffer(
-      "as break const continue else enum false fix fn "
+      "as break const continue else enum false imm fn "
       "for if let match mod mut proj pub ret struct true use while");
   auto Items = L.lex(Buffer);
 
@@ -588,7 +588,7 @@ TEST(LexerTest, LexKeywords) {
   EXPECT_EQ(getToken(Items[4]).TokenKind, Token::Kind::kw_else);
   EXPECT_EQ(getToken(Items[5]).TokenKind, Token::Kind::kw_enum);
   EXPECT_EQ(getToken(Items[6]).TokenKind, Token::Kind::kw_false);
-  EXPECT_EQ(getToken(Items[7]).TokenKind, Token::Kind::kw_fix);
+  EXPECT_EQ(getToken(Items[7]).TokenKind, Token::Kind::kw_imm);
   EXPECT_EQ(getToken(Items[8]).TokenKind, Token::Kind::kw_fn);
   EXPECT_EQ(getToken(Items[9]).TokenKind, Token::Kind::kw_for);
   EXPECT_EQ(getToken(Items[10]).TokenKind, Token::Kind::kw_if);
