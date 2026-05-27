@@ -24,7 +24,6 @@ using eter::test::getError;
 using eter::test::getToken;
 using eter::test::isError;
 using eter::test::isToken;
-using eter::test::lexBuffer;
 
 //============================================================================//
 // Test: Lexer Static Helper Functions

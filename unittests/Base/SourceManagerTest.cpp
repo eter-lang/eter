@@ -15,7 +15,7 @@ using namespace eter;
 
 TEST(SourceManagerTest, GetLocationSingleLine) {
   auto Buffer = SourceBuffer::makeFromString("hello");
-  SourceManager SM(Buffer);
+  const SourceManager SM(Buffer);
 
   auto Loc = SM.getLocation(0);
   EXPECT_EQ(Loc.Line, 1u);
@@ -28,7 +28,7 @@ TEST(SourceManagerTest, GetLocationSingleLine) {
 
 TEST(SourceManagerTest, GetLocationMultipleLines) {
   auto Buffer = SourceBuffer::makeFromString("hello\nworld");
-  SourceManager SM(Buffer);
+  const SourceManager SM(Buffer);
 
   auto Loc = SM.getLocation(0);
   EXPECT_EQ(Loc.Line, 1u);
@@ -41,7 +41,7 @@ TEST(SourceManagerTest, GetLocationMultipleLines) {
 
 TEST(SourceManagerTest, GetLocationAfterNewline) {
   auto Buffer = SourceBuffer::makeFromString("line1\nline2\nline3");
-  SourceManager SM(Buffer);
+  const SourceManager SM(Buffer);
 
   auto Loc = SM.getLocation(5);
   EXPECT_EQ(Loc.Line, 1u);
@@ -54,7 +54,7 @@ TEST(SourceManagerTest, GetLocationAfterNewline) {
 
 TEST(SourceManagerTest, GetLocationEmptyBuffer) {
   auto Buffer = SourceBuffer::makeFromString("");
-  SourceManager SM(Buffer);
+  const SourceManager SM(Buffer);
 
   auto Loc = SM.getLocation(0);
   EXPECT_EQ(Loc.Line, 1u);
@@ -63,7 +63,7 @@ TEST(SourceManagerTest, GetLocationEmptyBuffer) {
 
 TEST(SourceManagerTest, Slice) {
   auto Buffer = SourceBuffer::makeFromString("hello world");
-  SourceManager SM(Buffer);
+  const SourceManager SM(Buffer);
 
   auto Slice = SM.slice(Span(0, 5));
   EXPECT_EQ(Slice, "hello");
@@ -74,7 +74,7 @@ TEST(SourceManagerTest, Slice) {
 
 TEST(SourceManagerTest, SliceEmpty) {
   auto Buffer = SourceBuffer::makeFromString("hello");
-  SourceManager SM(Buffer);
+  const SourceManager SM(Buffer);
 
   auto Slice = SM.slice(Span(2, 2));
   EXPECT_EQ(Slice, "");
@@ -82,21 +82,21 @@ TEST(SourceManagerTest, SliceEmpty) {
 
 TEST(SourceManagerTest, GetBuffer) {
   auto Buffer = SourceBuffer::makeFromString("test content");
-  SourceManager SM(Buffer);
+  const SourceManager SM(Buffer);
 
   EXPECT_EQ(SM.getBuffer(), "test content");
 }
 
 TEST(SourceManagerTest, GetFilename) {
   auto Buffer = SourceBuffer::makeFromString("content", "myfile.et");
-  SourceManager SM(Buffer);
+  const SourceManager SM(Buffer);
 
   EXPECT_EQ(SM.getFilename(), "myfile.et");
 }
 
 TEST(SourceManagerTest, LocationCaching) {
   auto Buffer = SourceBuffer::makeFromString("line1\nline2\nline3");
-  SourceManager SM(Buffer);
+  const SourceManager SM(Buffer);
 
   auto Loc1 = SM.getLocation(6);
   auto Loc2 = SM.getLocation(6);
