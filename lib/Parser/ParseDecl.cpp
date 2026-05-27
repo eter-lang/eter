@@ -44,25 +44,25 @@ NodeIndex Parser::parseModDecl() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseModDecl\n");
   using Kind = lexer::Token::Kind;
 
-  Span Start = expect(Kind::kw_mod, "expected 'mod'").TokenSpan;
+  const Span Start = expect(Kind::kw_mod, "expected 'mod'").TokenSpan;
 
-  lexer::Token NameTok =
+  const lexer::Token NameTok =
       expect(Kind::identifier, "expected module name after 'mod'");
-  InternedStr Name = Interner.intern(textOf(NameTok.TokenSpan));
+  const InternedStr Name = Interner.intern(textOf(NameTok.TokenSpan));
 
   if (consume(Kind::l_brace)) {
     // Inline module: mod name { TopLevelDecl* }
     llvm::SmallVector<NodeIndex, 8> Children;
     while (!check(Kind::r_brace) && !atEof())
       Children.push_back(parseTopLevelDecl(parseAttributes()));
-    Span End =
+    const Span End =
         expect(Kind::r_brace, "expected '}' to close module body").TokenSpan;
     return Pool.alloc(NodeKind::ModDecl, Span{Start.Start, End.End}, Children,
                       Name);
   }
 
   if (check(Kind::semi)) {
-    Span End = peekToken().TokenSpan;
+    const Span End = peekToken().TokenSpan;
     advance(); // consume ';'
     return Pool.allocLeaf(NodeKind::ModDeclFile, Span{Start.Start, End.End},
                           Name);
