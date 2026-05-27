@@ -57,7 +57,8 @@ static bool checkChildrenKinds(NodeIndex Node, Kinds... Expected) {
 
 // ========================================== TESTS
 // =================================
-TEST(ParserTest, ConstDecl) {
+
+TEST(ParserTestExpr, ConstDecl) {
   StringInterner si = StringInterner();
   Lexer L;
   SourceBuffer bg = createTestBuffer("const v : i32 = 3 + 4;");

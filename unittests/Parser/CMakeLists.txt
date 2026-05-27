@@ -7,20 +7,36 @@
 #===----------------------------------------------------------------------===#
 
 # Add the Lexer unit tests
-add_unittest(EterUnitTests ParserTest TestParserExpr.cpp)
-# add_unittest(EterUnitTests ParserTestExpr TestParserDecl.cpp)
+add_unittest(EterUnitTests ParserTestExpr TestParserExpr.cpp)
+add_unittest(EterUnitTests ParserTestDecl TestParserDecl.cpp)
 
 # Link against Eter libraries
-target_link_libraries(ParserTest PRIVATE
+target_link_libraries(ParserTestExpr PRIVATE
   EterBase
   EterParser
 )
 
-target_include_directories(ParserTest PRIVATE
+target_include_directories(ParserTestExpr PRIVATE
   ${CMAKE_SOURCE_DIR}/include
 )
 
-target_include_directories(ParserTest SYSTEM PRIVATE
+target_include_directories(ParserTestExpr SYSTEM PRIVATE
   ${LLVM_INCLUDE_DIRS}
   ${MLIR_INCLUDE_DIRS}
 )
+
+# Link against Eter libraries
+target_link_libraries(ParserTestDecl PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestDecl PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestDecl SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)
+
