@@ -45,6 +45,7 @@ print_usage() {
     echo "  check-all                            Run all lit and unit tests."
     echo "  clang-format [CLANG_FORMAT_COMMIT]   Format staged changed files compared to a git commit using clang-format."
     echo "  clang-tidy [CLANG_TIDY_COMMIT]       Run clang-tidy on staged changed files compared to a git commit."
+    echo "  tidy-all                             Run clang-tidy on all C/C++ files in the repository."
     echo "  clean                                Clean the build directory."
     echo "  help                                 Show this help message."
     echo ""
@@ -204,6 +205,18 @@ case $COMMAND in
         echo "$CHANGED_FILES"
         # Run clang-tidy on the changed files
         clang-tidy $CHANGED_FILES -p ${BUILD_DIR} --header-filter='.*' --warnings-as-errors='*'
+        ;;
+
+    tidy-all)
+        echo "[x] Running clang-tidy on all C/C++ files in the repository"
+        # Find all source files, excluding the build directory
+        ALL_FILES=$(find . -type f -not -path "*/${BUILD_DIR#./}/*" -not -path "*/.git/*" -not -path "*/docsrc/*" -not -path "*/docs/*" \( -name "*.cpp" -o -name "*.c" -o -name "*.cc" -o -name "*.cxx" \))
+        if [ -z "$ALL_FILES" ]; then
+            echo "[x] No C/C++ files found."
+            exit 0
+        fi
+        # Run clang-tidy
+        clang-tidy $ALL_FILES -p ${BUILD_DIR} --header-filter='.*' --warnings-as-errors='*'
         ;;
 
     check-commit-clang-format)
