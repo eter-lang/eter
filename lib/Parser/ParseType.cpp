@@ -16,6 +16,7 @@
 
 namespace eter::parser {
 
+// FIXME First check for primitive types, then custom types
 NodeIndex Parser::parseType() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseType\n");
   const lexer::Token Type = Stream.peekToken();

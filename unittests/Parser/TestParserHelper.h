@@ -26,8 +26,8 @@ using namespace eter::parser;
 
 namespace ParserTestHelper {
 
-static ParseResult Pr;
-static StringInterner Si;
+static ParseResult PR;
+static StringInterner SI;
 
 inline SourceBuffer createTestBuffer(llvm::StringRef Content) {
   return SourceBuffer::makeFromString(Content);
@@ -39,7 +39,7 @@ inline bool checkChildrenKinds(NodeIndex Node, Kinds... Expected) {
   static_assert((std::is_same_v<Kinds, NodeKind> && ...),
                 "All expected children arguments must be of type NodeKind");
 
-  const llvm::ArrayRef<NodeIndex> Children = Pr.Pool.childrenOf(Node);
+  const llvm::ArrayRef<NodeIndex> Children = PR.Pool.childrenOf(Node);
 
   // Early exit if the arity doesn't match the number of variadic arguments
   if (Children.size() != sizeof...(Expected))
@@ -48,12 +48,12 @@ inline bool checkChildrenKinds(NodeIndex Node, Kinds... Expected) {
   size_t Index = 0;
   // Fold expression checking each child's kind against the expected variadic
   // pack
-  return ((Pr.Pool.kindOf(Children[Index++]) == Expected) && ...);
+  return ((PR.Pool.kindOf(Children[Index++]) == Expected) && ...);
 }
 
-inline void checkInternedString(NodeIndex Ni, std::string Expected) {
+inline void checkInternedString(NodeIndex NI, std::string Expected) {
   const llvm::StringRef Stored =
-      Si.get(NodePool::payloadStr(Pr.Pool[Ni].Payload));
+      SI.get(NodePool::payloadStr(PR.Pool[NI].Payload));
   EXPECT_EQ(Stored, Expected);
 }
 

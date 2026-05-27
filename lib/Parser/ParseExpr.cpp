@@ -28,7 +28,6 @@ namespace eter::parser {
 NodeIndex Parser::parseExpr([[maybe_unused]] int MinBP) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseExpr minBP=" << MinBP
                           << "\n");
-  // llvm::report_fatal_error("TODO: implement Parser::parseExpr");
 
   std::vector<NodeIndex> Childrens;
   uint32_t Oper;
@@ -49,7 +48,7 @@ NodeIndex Parser::parseExpr([[maybe_unused]] int MinBP) {
     }
   }
 
-  Stream.advance();
+  Stream.advance(); // Discard ";"
 
   if (Childrens.size() == 1) { // Es. " let <name> : i32 = 10"
     return Childrens[0];

@@ -20,10 +20,10 @@
 
 namespace eter::parser {
 
+// FIXME Dispatch the correct Top Level Declarations
 NodeIndex Parser::parseTopLevelDecl(llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseTopLevelDecl\n");
   (void)Attrs;
-  // llvm::report_fatal_error("TODO: implement Parser::parseTopLevelDecl");
   return parseConstDecl();
 }
 
@@ -83,20 +83,20 @@ NodeIndex Parser::parseUseDecl() {
 }
 
 NodeIndex Parser::parseConstDecl() {
-  const uint32_t StartSpan =
-      advance().TokenSpan.Start; // "const" ->  <var name>
+  const uint32_t StartSpan = advance().TokenSpan.Start; // Discard "const"
   std::vector<NodeIndex> Children;
 
-  const InternedStr NameRef =
-      Interner.intern(Stream.textOf(advance().TokenSpan)); // <var name> -> ":"
-  advance();                                               //":" -> <type>
+  const InternedStr NameRef = Interner.intern(
+      Stream.textOf(advance().TokenSpan)); // Get the variable name
+  advance();                               //  Discard ":"
 
-  const NodeIndex Type = parseType(); //<type>
+  const NodeIndex Type = parseType(); // Parse the type. Note that for `const`
+                                      // declarations, the type is mandatory.
   Children.push_back(Type);
 
-  Stream.advance(); //"="
+  Stream.advance(); // Discard "="
   const NodeIndex RValue = parseExpr();
-  Stream.advance(); //";"
+  Stream.advance(); // Discard ";"
   Children.push_back(RValue);
 
   return Pool.alloc(NodeKind::ConstDecl,

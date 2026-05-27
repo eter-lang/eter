@@ -29,29 +29,26 @@ using namespace ParserTestHelper;
 // Testing the correct use of test suite. Remember to remove!
 using namespace std;
 
-// ========================================== TESTS
-// =================================
-
 TEST(ParserTestExpr, ConstDeclWithExpr) {
-  Si = StringInterner();
+  SI = StringInterner();
   Lexer L;
-  SourceBuffer Sb = createTestBuffer("const v : i32 = 3 + 4;");
-  auto Tokens = L.lex(Sb);
+  SourceBuffer SB = createTestBuffer("const v : i32 = 3 + 4;");
+  auto Tokens = L.lex(SB);
 
-  const TokenStream Ts = TokenStream(Tokens, Sb.getBuffer());
+  const TokenStream Ts = TokenStream(Tokens, SB.getBuffer());
 
-  Pr = Parser::parse(Ts, Si);
+  PR = Parser::parse(Ts, SI);
 
-  EXPECT_TRUE(checkChildrenKinds(Pr.Root, NodeKind::ConstDecl));
-  const NodeIndex ConstDeclNode = Pr.Pool.childrenOf(Pr.Root)[0];
+  EXPECT_TRUE(checkChildrenKinds(PR.Root, NodeKind::ConstDecl));
+  const NodeIndex ConstDeclNode = PR.Pool.childrenOf(PR.Root)[0];
 
   checkInternedString(ConstDeclNode, "v");
 
   EXPECT_TRUE(checkChildrenKinds(ConstDeclNode, NodeKind::NamedType,
                                  NodeKind::BinaryExpr));
 
-  const NodeIndex ExprNode = Pr.Pool.childrenOf(ConstDeclNode)[1];
-  EXPECT_EQ(NodePool::payloadOp(Pr.Pool[ExprNode].Payload),
+  const NodeIndex ExprNode = PR.Pool.childrenOf(ConstDeclNode)[1];
+  EXPECT_EQ(NodePool::payloadOp(PR.Pool[ExprNode].Payload),
             static_cast<uint16_t>(lexer::Token::Kind::plus));
 
   EXPECT_TRUE(
