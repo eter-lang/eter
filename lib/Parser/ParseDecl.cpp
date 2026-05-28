@@ -20,17 +20,55 @@
 
 namespace eter::parser {
 
-NodeIndex
-Parser::parseTopLevelDecl([[maybe_unused]] llvm::ArrayRef<NodeIndex> Attrs) {
+NodeIndex Parser::parseTopLevelDecl(llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseTopLevelDecl\n");
-  // FIXME: Dispatch the correct Top Level Declarations
-  return parseConstDecl();
+  using Kind = lexer::Token::Kind;
+
+  switch (peek()) {
+  case Kind::kw_fn:
+    return parseFnDecl(Attrs);
+  case Kind::kw_const:
+    return parseConstDecl();
+  case Kind::kw_mod:
+    return parseModDecl();
+  case Kind::kw_struct:
+    return parseStructDecl(Attrs);
+  case Kind::kw_enum:
+    return parseEnumDecl(Attrs);
+  case Kind::kw_use:
+    return parseUseDecl();
+  default: {
+    const lexer::Token Tok = peekToken();
+    addError(Tok.TokenSpan, "expected a top-level declaration");
+    advance(); // avoid infinite loop until synchronize() is implemented
+    return makeErrorNode(Tok.TokenSpan);
+  }
+  }
 }
 
-NodeIndex
-Parser::parseFnDecl([[maybe_unused]] llvm::ArrayRef<NodeIndex> Attrs) {
+NodeIndex Parser::parseFnDecl(llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseFnDecl\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseFnDecl");
+  using Kind = lexer::Token::Kind;
+
+  const Span Start = expect(Kind::kw_fn, "expected 'fn'").TokenSpan;
+
+  const Regime ReturnRegime = parseRegime();
+
+  const lexer::Token NameTok =
+      expect(Kind::identifier, "expected function name");
+  const InternedStr Name = Interner.intern(textOf(NameTok.TokenSpan));
+
+  llvm::SmallVector<NodeIndex, 8> Children(Attrs.begin(), Attrs.end());
+  Children.push_back(parseParamList());
+
+  if (consume(Kind::colon))
+    Children.push_back(parseType());
+
+  Children.push_back(parseBlockExpr());
+
+  return Pool.alloc(NodeKind::FnDecl,
+                    Span{Start.Start, Stream.previous().TokenSpan.End},
+                    Children, NodePool::makePayload(Name, ReturnRegime));
 }
 
 NodeIndex
@@ -84,12 +122,43 @@ NodeIndex Parser::parseUseDecl() {
 
 NodeIndex Parser::parseParamList() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseParamList\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseParamList");
+  using Kind = lexer::Token::Kind;
+
+  const Span Start =
+      expect(Kind::l_paren, "expected '(' to start parameter list").TokenSpan;
+
+  llvm::SmallVector<NodeIndex, 8> Children;
+  if (!check(Kind::r_paren)) {
+    Children.push_back(parseParam());
+    while (consume(Kind::comma))
+      Children.push_back(parseParam());
+  }
+
+  const Span End =
+      expect(Kind::r_paren, "expected ')' to close parameter list").TokenSpan;
+  return Pool.alloc(NodeKind::ParamList, Span{Start.Start, End.End}, Children);
 }
 
 NodeIndex Parser::parseParam() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseParam\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseParam");
+  using Kind = lexer::Token::Kind;
+
+  const uint32_t StartPos = peekToken().TokenSpan.Start;
+
+  const Regime R = parseRegime();
+
+  const lexer::Token NameTok =
+      expect(Kind::identifier, "expected parameter name");
+  const InternedStr Name = Interner.intern(textOf(NameTok.TokenSpan));
+
+  expect(Kind::colon, "expected ':' after parameter name");
+
+  const NodeIndex Type = parseType();
+
+  const NodeIndex Children[] = {Type};
+  return Pool.alloc(NodeKind::Param,
+                    Span{StartPos, Stream.previous().TokenSpan.End}, Children,
+                    NodePool::makePayload(Name, R));
 }
 
 NodeIndex Parser::parseStructField() {

@@ -23,3 +23,19 @@ target_include_directories(ParserTestConstDecl SYSTEM PRIVATE
   ${LLVM_INCLUDE_DIRS}
   ${MLIR_INCLUDE_DIRS}
 )
+
+add_unittest(EterUnitTests ParserTestFnDecl TestParserFnDecl.cpp)
+
+target_link_libraries(ParserTestFnDecl PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestFnDecl PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestFnDecl SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)

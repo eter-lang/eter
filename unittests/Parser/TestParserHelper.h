@@ -8,9 +8,13 @@
 
 #pragma once
 
+#include "eter/Base/SourceBuffer.h"
 #include "eter/Base/StringInterner.h"
+#include "eter/Lexer/Lexer.h"
 #include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
+#include "eter/Parser/Regime.h"
+#include "eter/Parser/TokenStream.h"
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/VirtualFileSystem.h>
@@ -55,6 +59,19 @@ inline void checkInternedString(NodeIndex NI, std::string Expected) {
   const llvm::StringRef Stored =
       SI.get(NodePool::payloadStr(PR.Pool[NI].Payload));
   EXPECT_EQ(Stored, Expected);
+}
+
+inline void checkRegime(NodeIndex NI, Regime Expected) {
+  EXPECT_EQ(NodePool::payloadRegime(PR.Pool[NI].Payload), Expected);
+}
+
+inline void parseSource(llvm::StringRef Source) {
+  eter::lexer::Lexer L;
+  SI = StringInterner();
+  SourceBuffer SB = createTestBuffer(Source);
+  auto Tokens = L.lex(SB);
+  const TokenStream Ts = TokenStream(Tokens, SB.getBuffer());
+  PR = Parser::parse(Ts, SI);
 }
 
 } // namespace ParserTestHelper

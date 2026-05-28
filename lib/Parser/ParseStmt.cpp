@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "eter/Base/Debug.h"
+#include "eter/Base/Span.h"
+#include "eter/Lexer/Token.h"
+#include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
 
 #include <llvm/Support/ErrorHandling.h>
@@ -53,7 +56,20 @@ NodeIndex Parser::parseMatchExpr() {
 
 NodeIndex Parser::parseBlockExpr() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseBlockExpr\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseBlockExpr");
+  using Kind = lexer::Token::Kind;
+
+  const Span Start = expect(Kind::l_brace, "expected '{'").TokenSpan;
+
+  // Statement parsing is not yet implemented
+  if (!check(Kind::r_brace) && !atEof()) {
+    llvm::report_fatal_error("TODO: implement Parser::parseBlockExpr");
+    while (!check(Kind::r_brace) && !atEof())
+      advance();
+  }
+
+  const Span End =
+      expect(Kind::r_brace, "expected '}' to close block").TokenSpan;
+  return Pool.allocLeaf(NodeKind::BlockExpr, Span{Start.Start, End.End});
 }
 
 NodeIndex Parser::parseMatchArm() {

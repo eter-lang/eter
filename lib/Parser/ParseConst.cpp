@@ -11,38 +11,38 @@
 #include "eter/Lexer/Token.h"
 #include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
-#include "eter/Parser/Regime.h"
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
-
-#include <cstdint>
 
 #define DEBUG_TYPE "parser-const-expr"
 
 namespace eter::parser {
 
 NodeIndex Parser::parseConstDecl() {
-  const uint32_t StartSpan = advance().TokenSpan.Start; // Discard "const"
-  std::vector<NodeIndex> Children;
+  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseConstDecl\n");
+  using Kind = lexer::Token::Kind;
 
-  const InternedStr NameRef = Interner.intern(
-      Stream.textOf(advance().TokenSpan)); // Get the variable name
-  advance();                               //  Discard ":"
+  const Span Start = expect(Kind::kw_const, "expected 'const'").TokenSpan;
 
-  const NodeIndex Type = parseType(); // Parse the type. Note that for `const`
-                                      // declarations the type is mandatory.
-  Children.push_back(Type);
+  const lexer::Token NameTok =
+      expect(Kind::identifier, "expected constant name");
+  const InternedStr Name = Interner.intern(textOf(NameTok.TokenSpan));
 
-  Stream.advance(); // Discard "="
-  const NodeIndex RValue = parseConstExpr();
-  Stream.advance(); // Discard ";"
-  Children.push_back(RValue);
+  expect(Kind::colon, "expected ':' after constant name");
+  const NodeIndex Type = parseType();
 
-  return Pool.alloc(NodeKind::ConstDecl,
-                    Span{StartSpan, Stream.previous().TokenSpan.End}, Children,
-                    NameRef);
+  expect(Kind::eq, "expected '=' in constant declaration");
+  const NodeIndex Value = parseConstExpr();
+
+  const Span End =
+      expect(Kind::semi, "expected ';' to terminate constant declaration")
+          .TokenSpan;
+
+  const NodeIndex Children[] = {Type, Value};
+  return Pool.alloc(NodeKind::ConstDecl, Span{Start.Start, End.End}, Children,
+                    Name);
 }
 
 NodeIndex Parser::parseConstExpr([[maybe_unused]] int MinBP) {

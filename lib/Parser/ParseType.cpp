@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "eter/Base/Debug.h"
+#include "eter/Base/StringInterner.h"
+#include "eter/Lexer/Token.h"
+#include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
 
 #include <llvm/Support/ErrorHandling.h>
@@ -19,13 +22,12 @@ namespace eter::parser {
 // FIXME First check for primitive types, then custom types
 NodeIndex Parser::parseType() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseType\n");
-  const lexer::Token Type = Stream.peekToken();
+  using Kind = lexer::Token::Kind;
 
-  NodeIndex TypeNode =
-      Pool.allocLeaf(NodeKind::NamedType, Type.TokenSpan,
-                     Interner.intern(Stream.textOf(Type.TokenSpan)));
-  Stream.advance();
-  return TypeNode;
+  const lexer::Token NameTok = expect(Kind::identifier, "expected type name");
+  const InternedStr Name = Interner.intern(textOf(NameTok.TokenSpan));
+
+  return Pool.allocLeaf(NodeKind::NamedType, NameTok.TokenSpan, Name);
 }
 
 NodeIndex Parser::parseNamedType() {
