@@ -50,7 +50,7 @@
 ETER_NODE(Error)
 
 /// Root node for a complete source file.
-/// Children: [Attribute*, TopLevelDecl*].  Payload: 0.
+/// Children: [FileDocComment*, Attribute*, TopLevelDecl*].  Payload: 0.
 ETER_NODE(SourceFile)
 
 /// An @-attribute, e.g. @gpu or @import_model("x.onnx").
@@ -61,40 +61,51 @@ ETER_NODE(Attribute)
 /// Children: [Expr*].  Payload: 0.
 ETER_NODE(ArgList)
 
+/// An outer doc comment (`/// …`), attached to the declaration it precedes.
+/// Children: [].  Payload: InternedStr (raw comment text, including the `///`
+/// prefix).
+ETER_NODE(DocComment)
+
+/// An inner / file-level doc comment (`//! …`), attached to the enclosing
+/// scope (the SourceFile when at the top, eventually a `mod {}` body).
+/// Children: [].  Payload: InternedStr (raw comment text, including the `//!`
+/// prefix).
+ETER_NODE(FileDocComment)
+
 //===----------------------------------------------------------------------===//
 // Declarations
 //===----------------------------------------------------------------------===//
 
 /// Function declaration: fn [regime] name(ParamList) [: ReturnType] BlockExpr
-/// Children: [Attribute*, ParamList, ReturnType?, BlockExpr].
+/// Children: [DocComment*, Attribute*, ParamList, ReturnType?, BlockExpr].
 /// Payload:  makePayload(name, returnRegime).
 ETER_DECL(FnDecl)
 
 /// Struct declaration: struct Name { StructField* }
-/// Children: [Attribute*, StructField*].  Payload: InternedStr (name).
+/// Children: [DocComment*, Attribute*, StructField*].  Payload: InternedStr (name).
 ETER_DECL(StructDecl)
 
 /// Enum declaration: enum Name { EnumVariant* }
-/// Children: [Attribute*, EnumVariant*].  Payload: InternedStr (name).
+/// Children: [DocComment*, Attribute*, EnumVariant*].  Payload: InternedStr (name).
 ETER_DECL(EnumDecl)
 
 /// Inline module declaration: mod name { TopLevelDecl* }
-/// Children: [TopLevelDecl*].  Payload: InternedStr (name).
+/// Children: [DocComment*, Attribute*, TopLevelDecl*].  Payload: InternedStr (name).
 ETER_DECL(ModDecl)
 
 /// File-based module declaration: mod name ;
 /// The Driver resolves this to a source file (foo.eter or foo/mod.et) and
 /// parses it as a separate pack unit. Resolved files share the same
 /// StringInterner as the root, enabling O(1) cross-file name comparison.
-/// Children: [].  Payload: InternedStr (module name).
+/// Children: [DocComment*, Attribute*].  Payload: InternedStr (module name).
 ETER_DECL(ModDeclFile)
 
 /// Use declaration: use path::item [as alias] ;
-/// Children: [].  Payload: InternedStr (full path string, interned).
+/// Children: [DocComment*, Attribute*].  Payload: InternedStr (full path string, interned).
 ETER_DECL(UseDecl)
 
 /// Constant declaration: const NAME: Type = Expr ;
-/// Children: [Type, Expr].  Payload: InternedStr (name).
+/// Children: [DocComment*, Attribute*, Type, Expr].  Payload: InternedStr (name).
 ETER_DECL(ConstDecl)
 
 /// A struct field with regime: [regime] name: Type

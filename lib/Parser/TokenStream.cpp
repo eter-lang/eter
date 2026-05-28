@@ -18,7 +18,14 @@ TokenStream::TokenStream(std::vector<lexer::LexerItem> Items,
   Tokens.reserve(Items.size());
   for (auto &Item : Items) {
     if (std::holds_alternative<lexer::Token>(Item)) {
-      Tokens.push_back(std::get<lexer::Token>(std::move(Item)));
+      auto T = std::get<lexer::Token>(std::move(Item));
+      // Regular comments (`//`, `/* */`) carry no semantic value for the
+      // parser and are dropped here. Doc comments (`///`) and file-level doc
+      // comments (`//!`) are kept so the parser can attach them to the
+      // declaration / source-file they document.
+      if (T.TokenKind == lexer::Token::Kind::comment)
+        continue;
+      Tokens.push_back(T);
     } else {
       auto &Err = std::get<lexer::LexerError>(Item);
       // Replace error position with an `unknown` token for parser recovery.

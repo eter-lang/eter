@@ -24,40 +24,44 @@ NodeIndex Parser::parseTopLevelDecl(llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseTopLevelDecl\n");
   using Kind = lexer::Token::Kind;
 
+  const llvm::SmallVector<NodeIndex, 4> Docs = parseDocComments();
+
   switch (peek()) {
   case Kind::kw_fn:
-    return parseFnDecl(Attrs);
+    return parseFnDecl(Docs, Attrs);
   case Kind::kw_const:
-    return parseConstDecl();
+    return parseConstDecl(Docs, Attrs);
   case Kind::kw_mod:
-    return parseModDecl();
+    return parseModDecl(Docs, Attrs);
   case Kind::kw_struct:
-    return parseStructDecl(Attrs);
+    return parseStructDecl(Docs, Attrs);
   case Kind::kw_enum:
-    return parseEnumDecl(Attrs);
+    return parseEnumDecl(Docs, Attrs);
   case Kind::kw_use:
-    return parseUseDecl();
+    return parseUseDecl(Docs, Attrs);
   default: {
     const lexer::Token Tok = peekToken();
-    addError(Tok.TokenSpan, "expected a top-level declaration");
+    addError(Tok.TokenSpan, DiagID::ExpectedTopLevelDecl);
     synchronize();
     return makeErrorNode(Tok.TokenSpan);
   }
   }
 }
 
-NodeIndex Parser::parseFnDecl(llvm::ArrayRef<NodeIndex> Attrs) {
+NodeIndex Parser::parseFnDecl(llvm::ArrayRef<NodeIndex> Docs,
+                              llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseFnDecl\n");
   using Kind = lexer::Token::Kind;
 
-  const Span Start = expect(Kind::kw_fn, "expected 'fn'").TokenSpan;
+  const Span Start = expect(Kind::kw_fn, DiagID::ExpectedFnKeyword).TokenSpan;
 
   const Regime ReturnRegime = parseRegime();
 
   const InternedStr Name =
-      expectAndIntern(Kind::identifier, "expected function name");
+      expectAndIntern(Kind::identifier, DiagID::ExpectedFnName);
 
-  llvm::SmallVector<NodeIndex, 8> Children(Attrs.begin(), Attrs.end());
+  llvm::SmallVector<NodeIndex, 8> Children(Docs.begin(), Docs.end());
+  Children.append(Attrs.begin(), Attrs.end());
   Children.push_back(parseParamList());
 
   if (consume(Kind::colon))
@@ -71,33 +75,36 @@ NodeIndex Parser::parseFnDecl(llvm::ArrayRef<NodeIndex> Attrs) {
 }
 
 NodeIndex
-Parser::parseStructDecl([[maybe_unused]] llvm::ArrayRef<NodeIndex> Attrs) {
+Parser::parseStructDecl([[maybe_unused]] llvm::ArrayRef<NodeIndex> Docs,
+                        [[maybe_unused]] llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseStructDecl\n");
   llvm::report_fatal_error("TODO: implement Parser::parseStructDecl");
 }
 
 NodeIndex
-Parser::parseEnumDecl([[maybe_unused]] llvm::ArrayRef<NodeIndex> Attrs) {
+Parser::parseEnumDecl([[maybe_unused]] llvm::ArrayRef<NodeIndex> Docs,
+                      [[maybe_unused]] llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseEnumDecl\n");
   llvm::report_fatal_error("TODO: implement Parser::parseEnumDecl");
 }
 
-NodeIndex Parser::parseModDecl() {
+NodeIndex Parser::parseModDecl(llvm::ArrayRef<NodeIndex> Docs,
+                               llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseModDecl\n");
   using Kind = lexer::Token::Kind;
 
-  const Span Start = expect(Kind::kw_mod, "expected 'mod'").TokenSpan;
+  const Span Start = expect(Kind::kw_mod, DiagID::ExpectedModKeyword).TokenSpan;
 
   const InternedStr Name =
-      expectAndIntern(Kind::identifier, "expected module name after 'mod'");
+      expectAndIntern(Kind::identifier, DiagID::ExpectedModName);
 
   if (consume(Kind::l_brace)) {
     // Inline module: mod name { TopLevelDecl* }
-    llvm::SmallVector<NodeIndex, 8> Children;
+    llvm::SmallVector<NodeIndex, 8> Children(Docs.begin(), Docs.end());
+    Children.append(Attrs.begin(), Attrs.end());
     while (!check(Kind::r_brace) && !atEof())
-      Children.push_back(parseTopLevelDecl(parseAttributes()));
-    const Span End =
-        expect(Kind::r_brace, "expected '}' to close module body").TokenSpan;
+      Children.push_back(parseTopLevelDecl({}));
+    const Span End = expect(Kind::r_brace, DiagID::ExpectedModClose).TokenSpan;
     return Pool.alloc(NodeKind::ModDecl, Span{Start.Start, End.End}, Children,
                       Name);
   }
@@ -105,15 +112,19 @@ NodeIndex Parser::parseModDecl() {
   if (check(Kind::semi)) {
     const Span End = peekToken().TokenSpan;
     advance(); // consume ';'
-    return Pool.allocLeaf(NodeKind::ModDeclFile, Span{Start.Start, End.End},
-                          Name);
+    llvm::SmallVector<NodeIndex, 4> Children(Docs.begin(), Docs.end());
+    Children.append(Attrs.begin(), Attrs.end());
+    return Pool.alloc(NodeKind::ModDeclFile, Span{Start.Start, End.End},
+                      Children, Name);
   }
 
-  addError(peekToken().TokenSpan, "expected '{' or ';' after module name");
+  addError(peekToken().TokenSpan, DiagID::ExpectedModOpenOrSemi);
   return makeErrorNode(peekToken().TokenSpan);
 }
 
-NodeIndex Parser::parseUseDecl() {
+NodeIndex
+Parser::parseUseDecl([[maybe_unused]] llvm::ArrayRef<NodeIndex> Docs,
+                     [[maybe_unused]] llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseUseDecl\n");
   llvm::report_fatal_error("TODO: implement Parser::parseUseDecl");
 }
@@ -123,7 +134,7 @@ NodeIndex Parser::parseParamList() {
   using Kind = lexer::Token::Kind;
 
   const Span Start =
-      expect(Kind::l_paren, "expected '(' to start parameter list").TokenSpan;
+      expect(Kind::l_paren, DiagID::ExpectedParamListOpen).TokenSpan;
 
   llvm::SmallVector<NodeIndex, 8> Children;
   if (!check(Kind::r_paren)) {
@@ -133,7 +144,7 @@ NodeIndex Parser::parseParamList() {
   }
 
   const Span End =
-      expect(Kind::r_paren, "expected ')' to close parameter list").TokenSpan;
+      expect(Kind::r_paren, DiagID::ExpectedParamListClose).TokenSpan;
   return Pool.alloc(NodeKind::ParamList, Span{Start.Start, End.End}, Children);
 }
 
@@ -146,9 +157,9 @@ NodeIndex Parser::parseParam() {
   const Regime R = parseRegime();
 
   const InternedStr Name =
-      expectAndIntern(Kind::identifier, "expected parameter name");
+      expectAndIntern(Kind::identifier, DiagID::ExpectedParamName);
 
-  expect(Kind::colon, "expected ':' after parameter name");
+  expect(Kind::colon, DiagID::ExpectedParamColon);
 
   const NodeIndex Type = parseType();
 

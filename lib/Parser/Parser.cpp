@@ -38,7 +38,7 @@ ParseResult Parser::parse(TokenStream Tokens, StringInterner &Interner) {
 //===----------------------------------------------------------------------===//
 
 Parser::Parser(TokenStream Tokens, NodePool &Pool, StringInterner &Interner,
-               std::vector<ParseError> &Errors)
+               std::vector<diag::PhaseDiagnostic> &Errors)
     : Stream(std::move(Tokens)), Pool(Pool), Interner(Interner),
       Errors(Errors) {}
 
@@ -50,14 +50,17 @@ NodeIndex Parser::parseSourceFile() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseSourceFile()\n");
   const Span StartOfFile = peekToken().TokenSpan;
 
-  std::vector<NodeIndex> TopLevelDecls;
+  std::vector<NodeIndex> Children;
+  for (const NodeIndex N : parseFileDocComments())
+    Children.push_back(N);
+
   while (!atEof()) {
-    TopLevelDecls.push_back(parseTopLevelDecl({}));
+    Children.push_back(parseTopLevelDecl({}));
   }
 
   const Span EndOfFile = Stream.previous().TokenSpan;
   return Pool.alloc(NodeKind::SourceFile,
-                    Span{StartOfFile.Start, EndOfFile.End}, TopLevelDecls);
+                    Span{StartOfFile.Start, EndOfFile.End}, Children);
 }
 
 //===----------------------------------------------------------------------===//
@@ -70,6 +73,29 @@ llvm::SmallVector<NodeIndex, 4> Parser::parseAttributes() {
 
 NodeIndex Parser::parseAttribute() {
   llvm::report_fatal_error("TODO: implement Parser::parseAttribute");
+}
+
+llvm::SmallVector<NodeIndex, 4> Parser::parseDocComments() {
+  using Kind = lexer::Token::Kind;
+  llvm::SmallVector<NodeIndex, 4> Out;
+  while (check(Kind::doc_comment)) {
+    const lexer::Token Tok = advance();
+    const InternedStr Text = Interner.intern(textOf(Tok.TokenSpan));
+    Out.push_back(Pool.allocLeaf(NodeKind::DocComment, Tok.TokenSpan, Text));
+  }
+  return Out;
+}
+
+llvm::SmallVector<NodeIndex, 4> Parser::parseFileDocComments() {
+  using Kind = lexer::Token::Kind;
+  llvm::SmallVector<NodeIndex, 4> Out;
+  while (check(Kind::file_doc_comment)) {
+    const lexer::Token Tok = advance();
+    const InternedStr Text = Interner.intern(textOf(Tok.TokenSpan));
+    Out.push_back(
+        Pool.allocLeaf(NodeKind::FileDocComment, Tok.TokenSpan, Text));
+  }
+  return Out;
 }
 
 //===----------------------------------------------------------------------===//
@@ -92,25 +118,28 @@ lexer::Token Parser::advance() { return Stream.advance(); }
 
 bool Parser::consume(lexer::Token::Kind K) { return Stream.consume(K); }
 
-lexer::Token Parser::expect(lexer::Token::Kind K, llvm::StringRef Context) {
+lexer::Token Parser::expect(lexer::Token::Kind K, DiagID D) {
   if (consume(K))
     return Stream.previous();
   auto T = Stream.peekToken();
-  addError(T.TokenSpan, Context);
+  addError(T.TokenSpan, D);
   return lexer::Token(lexer::Token::Kind::unknown, T.TokenSpan);
 }
 
-InternedStr Parser::expectAndIntern(lexer::Token::Kind K,
-                                    llvm::StringRef Context) {
-  return Interner.intern(textOf(expect(K, Context).TokenSpan));
+InternedStr Parser::expectAndIntern(lexer::Token::Kind K, DiagID D) {
+  return Interner.intern(textOf(expect(K, D).TokenSpan));
 }
 
 //===----------------------------------------------------------------------===//
 // Error recovery
 //===----------------------------------------------------------------------===//
 
-void Parser::addError(Span S, llvm::StringRef Msg) {
-  Errors.push_back(ParseError{S, Msg.str()});
+void Parser::addError(Span S, DiagID D) {
+  diag::PhaseDiagnostic PD;
+  PD.Ph = diag::Phase::Parser;
+  PD.LocalID = static_cast<uint16_t>(D);
+  PD.Loc = S;
+  Errors.push_back(std::move(PD));
 }
 
 NodeIndex Parser::makeErrorNode(Span S) {

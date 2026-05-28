@@ -9,10 +9,12 @@
 #ifndef ETER_PARSER_PARSER_H
 #define ETER_PARSER_PARSER_H
 
+#include "eter/Base/PhaseDiagnostic.h"
 #include "eter/Base/Span.h"
 #include "eter/Base/StringInterner.h"
 #include "eter/Lexer/Token.h"
 #include "eter/Parser/NodePool.h"
+#include "eter/Parser/ParserDiagnostics.h"
 #include "eter/Parser/Regime.h"
 #include "eter/Parser/TokenStream.h"
 
@@ -20,21 +22,10 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
 
-#include <string>
 #include <utility>
 #include <vector>
 
 namespace eter::parser {
-
-/// A single parse-time error.
-///
-/// Errors are collected inside `ParseResult`; the parser never writes to
-/// `DiagnosticEngine` directly. The caller (Driver) is responsible for emitting
-/// them via the existing diagnostic pipeline.
-struct ParseError {
-  Span Span;           ///< Source location of the error.
-  std::string Message; ///< Human-readable description.
-};
 
 /// The result of a complete parse run. Owns the entire AST.
 ///
@@ -53,11 +44,12 @@ struct ParseError {
 /// `ParseResult` still holds IDs) is safe as long as the raw `StringRef`
 /// text is not accessed via `StringInterner::get` after destruction.
 struct ParseResult {
-  NodePool Pool;                  ///< Owns all AST nodes.
-  NodeIndex Root;                 ///< Index of the SourceFile node.
-  std::vector<ParseError> Errors; ///< Collected parse errors.
-                                  ///< May be non-empty even when Root is valid
-                                  ///< — the parser is error-resilient.
+  NodePool Pool;  ///< Owns all AST nodes.
+  NodeIndex Root; ///< Index of the SourceFile node.
+  std::vector<diag::PhaseDiagnostic>
+      Errors; ///< Collected parse errors.
+              ///< May be non-empty even when Root is valid
+              ///< — the parser is error-resilient.
 
   /// Return true if no parse errors were recorded.
   [[nodiscard]] bool ok() const { return Errors.empty(); }
@@ -110,7 +102,7 @@ public:
 private:
   /// The only way to construct a `Parser` is via `Parser::parse()`.
   explicit Parser(TokenStream Tokens, NodePool &Pool, StringInterner &Interner,
-                  std::vector<ParseError> &Errors);
+                  std::vector<diag::PhaseDiagnostic> &Errors);
 
   //===----------------------------------------------------------------------===//
   // Top-level dispatch (cf. Parser.cpp)
@@ -121,25 +113,37 @@ private:
   llvm::SmallVector<NodeIndex, 4> parseAttributes();
   NodeIndex parseAttribute();
 
+  // Doc comments: `///` outer (attached to following decl) and `//!` inner
+  // (attached to enclosing scope). Both reach the parser as plain tokens —
+  // regular `//` comments are stripped earlier by `TokenStream`.
+  llvm::SmallVector<NodeIndex, 4> parseDocComments();
+  llvm::SmallVector<NodeIndex, 4> parseFileDocComments();
+
   //===----------------------------------------------------------------------===//
   // Declarations (cf. ParseDecl.cpp)
   //===----------------------------------------------------------------------===//
 
   // Each function is responsible for a single grammar production. Functions
-  // that accept `Attrs` receive already-parsed @-attribute nodes so that
-  // attributes are not re-parsed.
+  // that accept `Docs` / `Attrs` receive already-parsed DocComment and
+  // @-attribute nodes so that they are not re-parsed.
   NodeIndex parseTopLevelDecl(llvm::ArrayRef<NodeIndex> Attrs);
-  NodeIndex parseFnDecl(llvm::ArrayRef<NodeIndex> Attrs);
-  NodeIndex parseStructDecl(llvm::ArrayRef<NodeIndex> Attrs);
-  NodeIndex parseEnumDecl(llvm::ArrayRef<NodeIndex> Attrs);
-  NodeIndex parseModDecl();
-  NodeIndex parseUseDecl();
+  NodeIndex parseFnDecl(llvm::ArrayRef<NodeIndex> Docs,
+                        llvm::ArrayRef<NodeIndex> Attrs);
+  NodeIndex parseStructDecl(llvm::ArrayRef<NodeIndex> Docs,
+                            llvm::ArrayRef<NodeIndex> Attrs);
+  NodeIndex parseEnumDecl(llvm::ArrayRef<NodeIndex> Docs,
+                          llvm::ArrayRef<NodeIndex> Attrs);
+  NodeIndex parseModDecl(llvm::ArrayRef<NodeIndex> Docs,
+                         llvm::ArrayRef<NodeIndex> Attrs);
+  NodeIndex parseUseDecl(llvm::ArrayRef<NodeIndex> Docs,
+                         llvm::ArrayRef<NodeIndex> Attrs);
   NodeIndex parseParamList();
   NodeIndex parseParam();
   NodeIndex parseStructField();
   NodeIndex parseEnumVariant();
   // Const Declarations (cf. ParseConst.cpp)
-  NodeIndex parseConstDecl();
+  NodeIndex parseConstDecl(llvm::ArrayRef<NodeIndex> Docs,
+                           llvm::ArrayRef<NodeIndex> Attrs);
 
   // Statements (cf. ParseStmt.cpp)
   NodeIndex parseStmt();
@@ -257,9 +261,9 @@ private:
   bool consume(lexer::Token::Kind K);
 
   /// Consume a token of kind `K`. If the current token does not match, record
-  /// a parse error with `Context` as context information and return a
-  /// synthetic token with `Kind::unknown`.
-  lexer::Token expect(lexer::Token::Kind K, llvm::StringRef Context);
+  /// a parse error with diagnostic `D` and return a synthetic token with
+  /// `Kind::unknown`.
+  lexer::Token expect(lexer::Token::Kind K, DiagID D);
 
   /// Consume a token of kind `K`, intern its source text, and return the
   /// resulting `InternedStr`.
@@ -277,14 +281,14 @@ private:
   ///
   /// The consumed token remains accessible via `Stream.previous()` if the
   /// caller needs its `Span` (e.g., to widen a node's span).
-  InternedStr expectAndIntern(lexer::Token::Kind K, llvm::StringRef Context);
+  InternedStr expectAndIntern(lexer::Token::Kind K, DiagID D);
 
   //===----------------------------------------------------------------------===//
   // Error recovery
   //===----------------------------------------------------------------------===//
 
-  /// Record a parse error at span `S` with message `Msg`.
-  void addError(Span S, llvm::StringRef Msg);
+  /// Record a parse error at span `S` with diagnostic `D`.
+  void addError(Span S, DiagID D);
 
   /// Allocate a `NodeKind::Error` node covering span `S`.
   NodeIndex makeErrorNode(Span S);
@@ -313,7 +317,7 @@ private:
   /// The string interner owns all identifiers.
   StringInterner &Interner;
   /// The parse errors are collected inside `ParseResult`.
-  std::vector<ParseError> &Errors;
+  std::vector<diag::PhaseDiagnostic> &Errors;
 };
 
 } // namespace eter::parser

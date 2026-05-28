@@ -8,10 +8,166 @@
 
 #include "eter/Base/DiagnosticEngine.h"
 
+#include <llvm/ADT/StringRef.h>
 #include <llvm/Support/Compiler.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <algorithm>
+#include <cstdint>
+
 namespace eter {
+
+static unsigned digitWidth(uint32_t N) {
+  unsigned W = 1;
+  while (N >= 10) {
+    N /= 10;
+    ++W;
+  }
+  return W;
+}
+
+static llvm::raw_ostream::Colors levelColor(DiagnosticLevel L,
+                                            DiagnosticKind K) {
+  if (K == DiagnosticKind::InternalCompilerError)
+    return llvm::raw_ostream::MAGENTA;
+  switch (L) {
+  case DiagnosticLevel::Error:
+    return llvm::raw_ostream::RED;
+  case DiagnosticLevel::Warning:
+    return llvm::raw_ostream::YELLOW;
+  case DiagnosticLevel::Note:
+    return llvm::raw_ostream::CYAN;
+  }
+  return llvm::raw_ostream::SAVEDCOLOR;
+}
+
+static const char *levelTitle(DiagnosticLevel L, DiagnosticKind K) {
+  if (K == DiagnosticKind::InternalCompilerError)
+    return "internal compiler error";
+  switch (L) {
+  case DiagnosticLevel::Error:
+    return "error";
+  case DiagnosticLevel::Warning:
+    return "warning";
+  case DiagnosticLevel::Note:
+    return "note";
+  }
+  return "diagnostic";
+}
+
+static size_t findLineStart(llvm::StringRef B, size_t Off) {
+  if (Off == 0)
+    return 0;
+  if (Off > B.size())
+    Off = B.size();
+  // StringRef::rfind treats `From` as exclusive (it searches positions
+  // [0, From)), so passing `Off` here looks at positions [0, Off-1].
+  const size_t Nl = B.rfind('\n', Off);
+  return Nl == llvm::StringRef::npos ? 0 : Nl + 1;
+}
+
+static size_t findLineEnd(llvm::StringRef B, size_t Off) {
+  const size_t Nl = B.find('\n', Off);
+  return Nl == llvm::StringRef::npos ? B.size() : Nl;
+}
+
+static uint32_t countLines(llvm::StringRef B) {
+  if (B.empty())
+    return 0;
+  uint32_t N = 1;
+  for (const char C : B)
+    if (C == '\n')
+      ++N;
+  return N;
+}
+
+static void writeRepeated(llvm::raw_ostream &OS, unsigned Count, char C) {
+  for (unsigned I = 0; I < Count; ++I)
+    OS << C;
+}
+
+// Render a snippet block: 1 line of context before, the line(s) covered by
+// `S`, then 1 line of context after; with a gutter `  N | `, carets under
+// the spanned columns, and an optional caption next to the carets.
+static void printSnippet(llvm::raw_ostream &OS, const SourceManager &SM, Span S,
+                         llvm::StringRef Caption,
+                         llvm::raw_ostream::Colors Color) {
+  const llvm::StringRef Buf = SM.getBuffer();
+  if (Buf.empty())
+    return;
+
+  const size_t StartOff = std::min<size_t>(S.Start, Buf.size());
+  size_t EndOff = std::min<size_t>(S.End, Buf.size());
+  if (EndOff < StartOff)
+    EndOff = StartOff;
+
+  const SourceLocation StartLoc = SM.getLocation(StartOff);
+  const SourceLocation EndLoc = SM.getLocation(EndOff);
+  const uint32_t SpanStartLine = StartLoc.Line;
+  const uint32_t SpanEndLine = EndLoc.Line;
+  const uint32_t StartCol = StartLoc.Column;
+  const uint32_t EndCol = EndLoc.Column;
+
+  const uint32_t TotalLines = countLines(Buf);
+  const uint32_t CtxStartLine = SpanStartLine > 1 ? SpanStartLine - 1 : 1;
+  const uint32_t CtxEndLine = std::min(TotalLines, SpanEndLine + 1);
+  const unsigned GutterW = digitWidth(CtxEndLine);
+
+  size_t LineOff = findLineStart(Buf, StartOff);
+  for (uint32_t Step = 0; Step < SpanStartLine - CtxStartLine; ++Step) {
+    if (LineOff == 0)
+      break;
+    LineOff = findLineStart(Buf, LineOff - 1);
+  }
+
+  // Top border: "    |"
+  OS << " ";
+  OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
+  writeRepeated(OS, GutterW, ' ');
+  OS << " |\n";
+  OS.resetColor();
+
+  uint32_t CurLine = CtxStartLine;
+  while (CurLine <= CtxEndLine) {
+    const size_t LineEndOff = findLineEnd(Buf, LineOff);
+    const llvm::StringRef LineText = Buf.slice(LineOff, LineEndOff);
+    const bool InSpan = (CurLine >= SpanStartLine && CurLine <= SpanEndLine);
+
+    OS << " ";
+    OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
+    writeRepeated(OS, GutterW - digitWidth(CurLine), ' ');
+    OS << CurLine << " | ";
+    OS.resetColor();
+    OS << LineText << "\n";
+
+    if (InSpan) {
+      const uint32_t LineLen = static_cast<uint32_t>(LineEndOff - LineOff);
+      const uint32_t FromCol = (CurLine == SpanStartLine) ? StartCol : 1;
+      uint32_t ToCol = (CurLine == SpanEndLine) ? EndCol : LineLen + 1;
+      if (ToCol <= FromCol)
+        ToCol = FromCol + 1;
+      const uint32_t Width = ToCol - FromCol;
+
+      OS << " ";
+      OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
+      writeRepeated(OS, GutterW, ' ');
+      OS << " | ";
+      OS.resetColor();
+      writeRepeated(OS, FromCol - 1, ' ');
+      OS.changeColor(Color, /*Bold=*/true);
+      writeRepeated(OS, Width, '^');
+      if (!Caption.empty() && CurLine == SpanEndLine)
+        OS << ' ' << Caption;
+      OS.resetColor();
+      OS << "\n";
+    }
+
+    if (LineEndOff >= Buf.size())
+      break;
+    LineOff = LineEndOff + 1;
+    ++CurLine;
+  }
+}
 
 void SimpleDiagnosticEngine::emit(Diagnostic Diag) {
   Diagnostics.push_back(std::move(Diag));
@@ -85,81 +241,56 @@ DiagnosticBuilder<DiagnosticEngine> DiagnosticEngine::ice(Span Span) {
 }
 
 void DiagnosticEngine::print(const Diagnostic &Diag) const {
-  const char *LevelStr = (Diag.Kind == DiagnosticKind::InternalCompilerError)
-                             ? "internal compiler error"
-                         : (Diag.Level == DiagnosticLevel::Error)   ? "error"
-                         : (Diag.Level == DiagnosticLevel::Warning) ? "warning"
-                                                                    : "note";
+  llvm::raw_ostream &OS = llvm::outs();
+  const auto Color = levelColor(Diag.Level, Diag.Kind);
+  const char *Title = levelTitle(Diag.Level, Diag.Kind);
 
-  llvm::outs() << LevelStr << ": " << Diag.Message << "\n";
+  OS.changeColor(Color, /*Bold=*/true);
+  OS << Title;
+  OS.resetColor();
+  OS.changeColor(llvm::raw_ostream::SAVEDCOLOR, /*Bold=*/true);
+  OS << ": " << Diag.Message << "\n";
+  OS.resetColor();
 
   switch (Diag.Location.kind()) {
   case DiagnosticLocation::Kind::None:
     break;
   case DiagnosticLocation::Kind::File:
-    llvm::outs() << " --> " << Diag.Location.filename() << "\n";
+    OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
+    OS << " --> ";
+    OS.resetColor();
+    OS << Diag.Location.filename() << "\n";
     break;
   case DiagnosticLocation::Kind::Span: {
-    auto Span = Diag.Location.span();
-
-    auto Start = SM.getLocation(Span.Start);
-    auto End = SM.getLocation(Span.End);
-
-    llvm::outs() << " --> " << SM.getFilename() << ":" << Start.Line << ":"
-                 << Start.Column << "\n";
-
-    // Extract the line of source code corresponding to the span and print it
-    const llvm::StringRef Buffer = SM.getBuffer();
-
-    size_t LineStart = Buffer.rfind('\n', Span.Start);
-    if (LineStart == llvm::StringRef::npos)
-      LineStart = 0;
-    else
-      LineStart += 1;
-
-    size_t LineEnd = Buffer.find('\n', Span.Start);
-    if (LineEnd == llvm::StringRef::npos)
-      LineEnd = Buffer.size();
-    const llvm::StringRef Line = Buffer.slice(LineStart, LineEnd);
-    llvm::outs() << Line << "\n";
-    llvm::outs() << "     ";
-
-    // Caret alignment: print spaces until the start column, then print carets
-    // until the end column
-    for (uint32_t I = 1; I < Start.Column; I++)
-      llvm::outs() << " ";
-    const uint32_t EndCol =
-        (Span.End > LineEnd) ? (LineEnd - LineStart + 1) : End.Column;
-    const uint32_t Width =
-        (EndCol >= Start.Column) ? (EndCol - Start.Column + 1) : 1;
-
-    for (uint32_t I = 0; I < Width; I++)
-      llvm::outs() << "^";
-
-    llvm::outs() << "\n";
-
+    const Span Sp = Diag.Location.span();
+    const SourceLocation Start = SM.getLocation(Sp.Start);
+    OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
+    OS << " --> ";
+    OS.resetColor();
+    OS << SM.getFilename() << ":" << Start.Line << ":" << Start.Column << "\n";
+    printSnippet(OS, SM, Sp, /*Caption=*/"", Color);
     break;
   }
   }
 
-  // Print labels
-  for (const auto &Label : Diag.Labels) {
-    auto Loc = SM.getLocation(Label.DiagSpan.Start);
+  for (const auto &Label : Diag.Labels)
+    printSnippet(OS, SM, Label.DiagSpan, Label.getMessage(),
+                 llvm::raw_ostream::BLUE);
 
-    llvm::outs() << "  | " << Loc.Line << ":" << Loc.Column << " -> "
-                 << Label.getMessage() << "\n";
-  }
-
-  // Print notes
   for (const auto &Note : Diag.Notes) {
-    llvm::outs() << "  = note: " << Note << "\n";
+    OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
+    OS << " = note: ";
+    OS.resetColor();
+    OS << Note << "\n";
   }
 
-  // Print internal compiler error message if this is an ICE
   if (Diag.Kind == DiagnosticKind::InternalCompilerError) {
-    llvm::outs() << "\n=== INTERNAL COMPILER ERROR ===\n"
-                 << "This is a bug in the compiler. Please report it to the "
-                    "developers.\n";
+    OS << "\n";
+    OS.changeColor(llvm::raw_ostream::MAGENTA, /*Bold=*/true);
+    OS << "=== INTERNAL COMPILER ERROR ===\n";
+    OS.resetColor();
+    OS << "This is a bug in the compiler. Please report it to the "
+          "developers.\n";
   }
 }
 

@@ -9,11 +9,13 @@
 #ifndef UNITTESTS_PARSER_TESTPARSERHELPER_H
 #define UNITTESTS_PARSER_TESTPARSERHELPER_H
 
+#include "eter/Base/PhaseDiagnostic.h"
 #include "eter/Base/SourceBuffer.h"
 #include "eter/Base/StringInterner.h"
 #include "eter/Lexer/Lexer.h"
 #include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
+#include "eter/Parser/ParserDiagnostics.h"
 #include "eter/Parser/Regime.h"
 #include "eter/Parser/TokenStream.h"
 
@@ -73,6 +75,23 @@ inline void parseSource(llvm::StringRef Source) {
   auto Tokens = L.lex(SB);
   const TokenStream Ts = TokenStream(Tokens, SB.getBuffer());
   PR = Parser::parse(Ts, SI);
+}
+
+inline bool hasDiag(DiagID Want) {
+  for (const auto &D : PR.Errors) {
+    if (D.Ph != diag::Phase::Parser)
+      continue;
+    if (static_cast<DiagID>(D.LocalID) == Want)
+      return true;
+  }
+  return false;
+}
+
+inline void expectDiag(DiagID Want) {
+  if (!hasDiag(Want))
+    ADD_FAILURE() << "expected parser diagnostic "
+                  << static_cast<unsigned>(Want) << " (\""
+                  << messageFor(Want).str() << "\") in ParseResult";
 }
 
 } // namespace ParserTestHelper

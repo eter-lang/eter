@@ -10,6 +10,7 @@
 
 #include "eter/Base/Debug.h"
 #include "eter/Base/DiagnosticEngine.h"
+#include "eter/Base/PhaseDiagnostic.h"
 #include "eter/Base/SourceBuffer.h"
 #include "eter/Base/SourceManager.h"
 #include "eter/Driver/Driver.h"
@@ -18,6 +19,7 @@
 #include "eter/Lexer/Lexer.h"
 #include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
+#include "eter/Parser/ParserDiagnostics.h"
 #include "eter/Parser/TokenStream.h"
 
 #include <llvm/ADT/ScopeExit.h>
@@ -168,8 +170,17 @@ int Driver::parseFile(const std::string &Path, PackSession &Session,
     DE.error(LErr.ErrorSpan)
         .message(lexer::LexerError::getErrorString(LErr.ErrorKind))
         .emit();
-  for (const auto &PErr : Result.Errors)
-    DE.error(PErr.Span).message(PErr.Message).emit();
+  for (const auto &PErr : Result.Errors) {
+    const std::string Rendered = diag::renderMessage(
+        parser::messageFor(static_cast<parser::DiagID>(PErr.LocalID)),
+        PErr.Args);
+    auto B = DE.error(PErr.Loc).message(Rendered);
+    for (const auto &L : PErr.Labels)
+      B.label(L.DiagSpan, L.Message);
+    for (const auto &N : PErr.Notes)
+      B.note(N);
+    B.emit();
+  }
   DE.printAll();
 
   // Walk ModDeclFile nodes to discover child files.

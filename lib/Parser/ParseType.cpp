@@ -26,7 +26,7 @@ NodeIndex Parser::parseType() {
 
   const Span NameSpan = peekToken().TokenSpan;
   const InternedStr Name =
-      expectAndIntern(Kind::identifier, "expected type name");
+      expectAndIntern(Kind::identifier, DiagID::ExpectedTypeName);
 
   return Pool.allocLeaf(NodeKind::NamedType, NameSpan, Name);
 }

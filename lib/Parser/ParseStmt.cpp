@@ -58,7 +58,7 @@ NodeIndex Parser::parseBlockExpr() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseBlockExpr\n");
   using Kind = lexer::Token::Kind;
 
-  const Span Start = expect(Kind::l_brace, "expected '{'").TokenSpan;
+  const Span Start = expect(Kind::l_brace, DiagID::ExpectedBlockOpen).TokenSpan;
 
   // Statement parsing is not yet implemented
   if (!check(Kind::r_brace) && !atEof()) {
@@ -67,8 +67,7 @@ NodeIndex Parser::parseBlockExpr() {
       advance();
   }
 
-  const Span End =
-      expect(Kind::r_brace, "expected '}' to close block").TokenSpan;
+  const Span End = expect(Kind::r_brace, DiagID::ExpectedBlockClose).TokenSpan;
   return Pool.allocLeaf(NodeKind::BlockExpr, Span{Start.Start, End.End});
 }
 

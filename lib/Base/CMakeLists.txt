@@ -9,6 +9,7 @@
 add_library(EterBase
   Debug.cpp
   DiagnosticEngine.cpp
+  PhaseDiagnostic.cpp
   SourceBuffer.cpp
   SourceManager.cpp
   StringInterner.cpp

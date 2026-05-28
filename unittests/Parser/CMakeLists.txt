@@ -39,3 +39,35 @@ target_include_directories(ParserTestFnDecl SYSTEM PRIVATE
   ${LLVM_INCLUDE_DIRS}
   ${MLIR_INCLUDE_DIRS}
 )
+
+add_unittest(EterUnitTests ParserTestDiagnostics TestParserDiagnostics.cpp)
+
+target_link_libraries(ParserTestDiagnostics PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestDiagnostics PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestDiagnostics SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)
+
+add_unittest(EterUnitTests ParserTestDocComments TestParserDocComments.cpp)
+
+target_link_libraries(ParserTestDocComments PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestDocComments PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestDocComments SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)

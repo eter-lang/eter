@@ -1,0 +1,44 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the Eter Project, under the Apache License v2.0 with LLVM Exceptions.
+// See /LICENSE for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+/// \file
+/// Parser diagnostic IDs and their static message templates.
+///
+/// Uses the X-Macro pattern to generate the `parser::DiagID` enum and its
+/// `messageFor` lookup without duplicating the list. Templates may contain
+/// `{name}` placeholders resolved at emission time via
+/// `diag::renderMessage` against the `Args` carried in `PhaseDiagnostic`.
+/// To use this file, define `ETER_PARSE_DIAG(ID, Template)` before
+/// including it.
+
+#ifndef ETER_PARSE_DIAG
+#define ETER_PARSE_DIAG(X, Y)
+#endif
+
+ETER_PARSE_DIAG(ExpectedTopLevelDecl,    "expected a top-level declaration")
+ETER_PARSE_DIAG(ExpectedFnKeyword,       "expected 'fn'")
+ETER_PARSE_DIAG(ExpectedFnName,          "expected function name")
+ETER_PARSE_DIAG(ExpectedParamListOpen,   "expected '(' to start parameter list")
+ETER_PARSE_DIAG(ExpectedParamListClose,  "expected ')' to close parameter list")
+ETER_PARSE_DIAG(ExpectedParamName,       "expected parameter name")
+ETER_PARSE_DIAG(ExpectedParamColon,      "expected ':' after parameter name")
+ETER_PARSE_DIAG(ExpectedTypeName,        "expected type name")
+ETER_PARSE_DIAG(ExpectedModKeyword,      "expected 'mod'")
+ETER_PARSE_DIAG(ExpectedModName,         "expected module name after 'mod'")
+ETER_PARSE_DIAG(ExpectedModClose,        "expected '}' to close module body")
+ETER_PARSE_DIAG(ExpectedModOpenOrSemi,   "expected '{' or ';' after module name")
+ETER_PARSE_DIAG(ExpectedConstKeyword,    "expected 'const'")
+ETER_PARSE_DIAG(ExpectedConstName,       "expected constant name")
+ETER_PARSE_DIAG(ExpectedConstColon,      "expected ':' after constant name")
+ETER_PARSE_DIAG(ExpectedConstEquals,     "expected '=' in constant declaration")
+ETER_PARSE_DIAG(ExpectedConstSemi,       "expected ';' to terminate constant declaration")
+ETER_PARSE_DIAG(ExpectedConstLiteral,    "expected literal expression in const expression")
+ETER_PARSE_DIAG(ExpectedBlockOpen,       "expected '{'")
+ETER_PARSE_DIAG(ExpectedBlockClose,      "expected '}' to close block")
+
+#undef ETER_PARSE_DIAG
