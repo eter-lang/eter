@@ -26,9 +26,8 @@ NodeIndex Parser::parseConstDecl() {
 
   const Span Start = expect(Kind::kw_const, "expected 'const'").TokenSpan;
 
-  const lexer::Token NameTok =
-      expect(Kind::identifier, "expected constant name");
-  const InternedStr Name = Interner.intern(textOf(NameTok.TokenSpan));
+  const InternedStr Name =
+      expectAndIntern(Kind::identifier, "expected constant name");
 
   expect(Kind::colon, "expected ':' after constant name");
   const NodeIndex Type = parseType();

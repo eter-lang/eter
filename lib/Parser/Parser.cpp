@@ -100,6 +100,11 @@ lexer::Token Parser::expect(lexer::Token::Kind K, llvm::StringRef Context) {
   return lexer::Token(lexer::Token::Kind::unknown, T.TokenSpan);
 }
 
+InternedStr Parser::expectAndIntern(lexer::Token::Kind K,
+                                    llvm::StringRef Context) {
+  return Interner.intern(textOf(expect(K, Context).TokenSpan));
+}
+
 //===----------------------------------------------------------------------===//
 // Error recovery
 //===----------------------------------------------------------------------===//

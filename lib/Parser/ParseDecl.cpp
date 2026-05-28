@@ -54,9 +54,8 @@ NodeIndex Parser::parseFnDecl(llvm::ArrayRef<NodeIndex> Attrs) {
 
   const Regime ReturnRegime = parseRegime();
 
-  const lexer::Token NameTok =
-      expect(Kind::identifier, "expected function name");
-  const InternedStr Name = Interner.intern(textOf(NameTok.TokenSpan));
+  const InternedStr Name =
+      expectAndIntern(Kind::identifier, "expected function name");
 
   llvm::SmallVector<NodeIndex, 8> Children(Attrs.begin(), Attrs.end());
   Children.push_back(parseParamList());
@@ -89,9 +88,8 @@ NodeIndex Parser::parseModDecl() {
 
   const Span Start = expect(Kind::kw_mod, "expected 'mod'").TokenSpan;
 
-  const lexer::Token NameTok =
-      expect(Kind::identifier, "expected module name after 'mod'");
-  const InternedStr Name = Interner.intern(textOf(NameTok.TokenSpan));
+  const InternedStr Name =
+      expectAndIntern(Kind::identifier, "expected module name after 'mod'");
 
   if (consume(Kind::l_brace)) {
     // Inline module: mod name { TopLevelDecl* }
@@ -147,9 +145,8 @@ NodeIndex Parser::parseParam() {
 
   const Regime R = parseRegime();
 
-  const lexer::Token NameTok =
-      expect(Kind::identifier, "expected parameter name");
-  const InternedStr Name = Interner.intern(textOf(NameTok.TokenSpan));
+  const InternedStr Name =
+      expectAndIntern(Kind::identifier, "expected parameter name");
 
   expect(Kind::colon, "expected ':' after parameter name");
 

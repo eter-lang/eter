@@ -24,10 +24,11 @@ NodeIndex Parser::parseType() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseType\n");
   using Kind = lexer::Token::Kind;
 
-  const lexer::Token NameTok = expect(Kind::identifier, "expected type name");
-  const InternedStr Name = Interner.intern(textOf(NameTok.TokenSpan));
+  const Span NameSpan = peekToken().TokenSpan;
+  const InternedStr Name =
+      expectAndIntern(Kind::identifier, "expected type name");
 
-  return Pool.allocLeaf(NodeKind::NamedType, NameTok.TokenSpan, Name);
+  return Pool.allocLeaf(NodeKind::NamedType, NameSpan, Name);
 }
 
 NodeIndex Parser::parseNamedType() {

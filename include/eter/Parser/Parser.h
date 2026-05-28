@@ -261,6 +261,24 @@ private:
   /// synthetic token with `Kind::unknown`.
   lexer::Token expect(lexer::Token::Kind K, llvm::StringRef Context);
 
+  /// Consume a token of kind `K`, intern its source text, and return the
+  /// resulting `InternedStr`.
+  ///
+  /// Intended for tokens whose textual representation *is* their semantic
+  /// value (e.g., `identifier`, path/import segments). String and character
+  /// literals carry quoting and escapes that must be processed before
+  /// interning, and numeric literals are parsed into typed values — neither
+  /// should be routed through this helper.
+  ///
+  /// On a kind mismatch, `expect` records a parse error and returns a
+  /// synthetic `unknown` token; this helper still returns a well-formed
+  /// `InternedStr` (over the empty text of that synthetic token), so the
+  /// caller can keep building the AST without branching on the error.
+  ///
+  /// The consumed token remains accessible via `Stream.previous()` if the
+  /// caller needs its `Span` (e.g., to widen a node's span).
+  InternedStr expectAndIntern(lexer::Token::Kind K, llvm::StringRef Context);
+
   //===----------------------------------------------------------------------===//
   // Error recovery
   //===----------------------------------------------------------------------===//
