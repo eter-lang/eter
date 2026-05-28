@@ -113,7 +113,33 @@ NodeIndex Parser::makeErrorNode(Span S) {
 }
 
 void Parser::synchronize() {
-  llvm::report_fatal_error("TODO: implement Parser::synchronize");
+  using Kind = lexer::Token::Kind;
+
+  // Consume at least one token to guarantee forward progress; the caller has
+  // already recorded a parse error for the offending token.
+  if (!atEof())
+    advance();
+
+  while (!atEof()) {
+    // Just-consumed `;` closed a statement — recovery is complete.
+    if (Stream.previous().TokenKind == Kind::semi)
+      return;
+
+    // The next token starts a fresh top-level item or closes the enclosing
+    // block — stop without consuming so the caller can resume there.
+    switch (peek()) {
+    case Kind::r_brace:
+    case Kind::kw_fn:
+    case Kind::kw_struct:
+    case Kind::kw_enum:
+    case Kind::kw_mod:
+    case Kind::kw_use:
+    case Kind::kw_const:
+      return;
+    default:
+      advance();
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//

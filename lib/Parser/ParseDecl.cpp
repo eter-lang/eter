@@ -40,7 +40,7 @@ NodeIndex Parser::parseTopLevelDecl(llvm::ArrayRef<NodeIndex> Attrs) {
   default: {
     const lexer::Token Tok = peekToken();
     addError(Tok.TokenSpan, "expected a top-level declaration");
-    advance(); // avoid infinite loop until synchronize() is implemented
+    synchronize();
     return makeErrorNode(Tok.TokenSpan);
   }
   }
