@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef UNITTESTS_PARSER_TESTPARSERHELPER_H
+#define UNITTESTS_PARSER_TESTPARSERHELPER_H
 
 #include "eter/Base/SourceBuffer.h"
 #include "eter/Base/StringInterner.h"
@@ -75,3 +76,5 @@ inline void parseSource(llvm::StringRef Source) {
 }
 
 } // namespace ParserTestHelper
+
+#endif // UNITTESTS_PARSER_TESTPARSERHELPER_H
