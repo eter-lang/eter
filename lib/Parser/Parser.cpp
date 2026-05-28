@@ -49,13 +49,11 @@ Parser::Parser(TokenStream Tokens, NodePool &Pool, StringInterner &Interner,
 
 NodeIndex Parser::parseSourceFile() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseSourceFile()\n");
-  // llvm::report_fatal_error("TODO: implement Parser::parseSourceFile");
   const Span StartOfFile = peekToken().TokenSpan;
 
   std::vector<NodeIndex> TopLevelDecls;
   while (!atEof()) {
-    auto Attributes = parseAttributes();
-    TopLevelDecls.push_back(parseTopLevelDecl(Attributes));
+    TopLevelDecls.push_back(parseTopLevelDecl({}));
   }
 
   const Span EndOfFile = Stream.previous().TokenSpan;
@@ -68,8 +66,7 @@ NodeIndex Parser::parseSourceFile() {
 //===----------------------------------------------------------------------===//
 
 llvm::SmallVector<NodeIndex, 4> Parser::parseAttributes() {
-  // llvm::report_fatal_error("TODO: implement Parser::parseAttributes");
-  return {NullNode};
+  llvm::report_fatal_error("TODO: implement Parser::parseAttributes");
 }
 
 NodeIndex Parser::parseAttribute() {
