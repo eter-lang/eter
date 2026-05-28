@@ -25,8 +25,6 @@ using namespace eter;
 using namespace eter::parser;
 using namespace eter::lexer;
 using namespace ParserTestHelper;
-// Testing the correct use of test suite. Remember to remove!
-using namespace std;
 
 TEST(ParserTestDecl, ConstDeclWithIntLit) {
   Lexer L;
