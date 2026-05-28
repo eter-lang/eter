@@ -20,28 +20,28 @@
 
 namespace eter::parser {
 
-// FIXME Dispatch the correct Top Level Declarations
-NodeIndex Parser::parseTopLevelDecl(llvm::ArrayRef<NodeIndex> Attrs) {
+NodeIndex
+Parser::parseTopLevelDecl([[maybe_unused]] llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseTopLevelDecl\n");
-  (void)Attrs;
+  // FIXME: Dispatch the correct Top Level Declarations
   return parseConstDecl();
 }
 
-NodeIndex Parser::parseFnDecl(llvm::ArrayRef<NodeIndex> Attrs) {
+NodeIndex
+Parser::parseFnDecl([[maybe_unused]] llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseFnDecl\n");
-  (void)Attrs;
   llvm::report_fatal_error("TODO: implement Parser::parseFnDecl");
 }
 
-NodeIndex Parser::parseStructDecl(llvm::ArrayRef<NodeIndex> Attrs) {
+NodeIndex
+Parser::parseStructDecl([[maybe_unused]] llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseStructDecl\n");
-  (void)Attrs;
   llvm::report_fatal_error("TODO: implement Parser::parseStructDecl");
 }
 
-NodeIndex Parser::parseEnumDecl(llvm::ArrayRef<NodeIndex> Attrs) {
+NodeIndex
+Parser::parseEnumDecl([[maybe_unused]] llvm::ArrayRef<NodeIndex> Attrs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseEnumDecl\n");
-  (void)Attrs;
   llvm::report_fatal_error("TODO: implement Parser::parseEnumDecl");
 }
 
@@ -80,28 +80,6 @@ NodeIndex Parser::parseModDecl() {
 NodeIndex Parser::parseUseDecl() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseUseDecl\n");
   llvm::report_fatal_error("TODO: implement Parser::parseUseDecl");
-}
-
-NodeIndex Parser::parseConstDecl() {
-  const uint32_t StartSpan = advance().TokenSpan.Start; // Discard "const"
-  std::vector<NodeIndex> Children;
-
-  const InternedStr NameRef = Interner.intern(
-      Stream.textOf(advance().TokenSpan)); // Get the variable name
-  advance();                               //  Discard ":"
-
-  const NodeIndex Type = parseType(); // Parse the type. Note that for `const`
-                                      // declarations, the type is mandatory.
-  Children.push_back(Type);
-
-  Stream.advance(); // Discard "="
-  const NodeIndex RValue = parseExpr();
-  Stream.advance(); // Discard ";"
-  Children.push_back(RValue);
-
-  return Pool.alloc(NodeKind::ConstDecl,
-                    Span{StartSpan, Stream.previous().TokenSpan.End}, Children,
-                    NameRef);
 }
 
 NodeIndex Parser::parseParamList() {

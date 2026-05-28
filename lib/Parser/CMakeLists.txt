@@ -8,6 +8,7 @@
 
 add_library(EterParser
     Parser.cpp
+    ParseConst.cpp
     ParseDecl.cpp
     ParseStmt.cpp
     ParseExpr.cpp

@@ -134,11 +134,12 @@ private:
   NodeIndex parseEnumDecl(llvm::ArrayRef<NodeIndex> Attrs);
   NodeIndex parseModDecl();
   NodeIndex parseUseDecl();
-  NodeIndex parseConstDecl();
   NodeIndex parseParamList();
   NodeIndex parseParam();
   NodeIndex parseStructField();
   NodeIndex parseEnumVariant();
+  // Const Declarations (cf. ParseConst.cpp)
+  NodeIndex parseConstDecl();
 
   // Statements (cf. ParseStmt.cpp)
   NodeIndex parseStmt();
@@ -156,6 +157,19 @@ private:
   NodeIndex parseMatchArm();
 
   //===----------------------------------------------------------------------===//
+  // Const Expressions (cf. ParseConst.cpp)
+  //===----------------------------------------------------------------------===//
+
+  /// Pratt const expression entry point.
+  /// \param MinBP Minimum binding power; controls the precedence level at
+  ///              which the current call will stop consuming operators.
+  ///
+  /// FIXME(bruzzone): At this state of the implementation, `parseConstExpr`
+  /// will accept
+  ///                  only literals.
+  NodeIndex parseConstExpr(int MinBP = 0);
+
+  //===----------------------------------------------------------------------===//
   // Expressions (cf. ParseExpr.cpp)
   //===----------------------------------------------------------------------===//
 
@@ -164,6 +178,7 @@ private:
   ///              which the current call will stop consuming operators.
   NodeIndex parseExpr(int MinBP = 0);
   NodeIndex parsePrefixExpr();
+  NodeIndex parseLitExpr(const lexer::Token &Tok);
   NodeIndex parsePostfixOrCallExpr(NodeIndex Lhs);
   NodeIndex parseArgList();
 

@@ -36,19 +36,14 @@ NodeIndex Parser::parseExpr([[maybe_unused]] int MinBP) {
 
     if (Tok.TokenKind == lexer::Token::Kind::plus) {
       Oper = NodePool::makeOpPayload(static_cast<uint16_t>(Tok.TokenKind));
-
     } else {
-      const NodeIndex Operand = Pool.allocLeaf(
-          NodeKind::LitExpr, Tok.TokenSpan,
-          NodePool::makePayload(Interner.intern(textOf(Tok.TokenSpan)),
-                                Regime::None));
-      Childrens.push_back(Operand);
+      Childrens.push_back(parseLitExpr(Tok));
     }
   }
 
   Stream.advance(); // Discard ";"
 
-  if (Childrens.size() == 1) { // Es. " let <name> : i32 = 10"
+  if (Childrens.size() == 1) { // Es. let <name>: i32 = 10;
     return Childrens[0];
   }
 
@@ -58,9 +53,29 @@ NodeIndex Parser::parseExpr([[maybe_unused]] int MinBP) {
       Oper);
 }
 
+NodeIndex Parser::parseLitExpr(const lexer::Token &Tok) {
+  return Pool.allocLeaf(
+      NodeKind::LitExpr, Tok.TokenSpan,
+      NodePool::makePayload(Interner.intern(textOf(Tok.TokenSpan)),
+                            Regime::None));
+}
+
 NodeIndex Parser::parsePrefixExpr() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parsePrefixExpr\n");
-  llvm::report_fatal_error("TODO: implement Parser::parsePrefixExpr");
+  const lexer::Token Tok = Stream.peekToken();
+
+  switch (Tok.TokenKind) {
+  case lexer::Token::Kind::integer_literal:
+  case lexer::Token::Kind::float_literal:
+  case lexer::Token::Kind::char_literal:
+  case lexer::Token::Kind::string_literal:
+  case lexer::Token::Kind::kw_true:
+  case lexer::Token::Kind::kw_false:
+    Stream.advance();
+    return parseLitExpr(Tok);
+  default:
+    llvm::report_fatal_error("TODO: implement Parser::parsePrefixExpr");
+  }
 }
 
 NodeIndex Parser::parsePostfixOrCallExpr(NodeIndex Lhs) {
