@@ -27,7 +27,7 @@ NodeIndex Parser::parseStmt() {
 
   using Kind = lexer::Token::Kind;
 
-  lexer::Token Tok = peekToken();
+  const lexer::Token Tok = peekToken();
 
   switch (Tok.TokenKind) {
   case Kind::kw_let:
@@ -44,8 +44,23 @@ NodeIndex Parser::parseStmt() {
     return parseBlockExpr();
   case Kind::kw_ret:
     return parseRetStmt();
+  // Expression statements — tokens that can start an expression followed by ';'
+  case Kind::identifier:
+  case Kind::integer_literal:
+  case Kind::float_literal:
+  case Kind::char_literal:
+  case Kind::string_literal:
+  case Kind::kw_true:
+  case Kind::kw_false:
+  case Kind::l_paren:
+  case Kind::bang:
+  case Kind::minus:
+  case Kind::amp: {
+    NodeIndex Expr = parseExpr(0);
+    expect(Kind::semi, "expected ';' after expression");
+    return Expr;
+  }
   default:
-    // TODO: implement Hadling of implicit return statements
     addError(Tok.TokenSpan, "expected statement");
     synchronize();
     return makeErrorNode(Tok.TokenSpan);
