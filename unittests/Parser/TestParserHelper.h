@@ -50,6 +50,7 @@ inline bool checkChildrenKinds(NodeIndex Node, Kinds... Expected) {
   if (Children.size() != sizeof...(Expected))
     return false;
 
+  // NOLINTNEXTILNE (misc-const-correctness)
   size_t Index = 0;
   // Fold expression checking each child's kind against the expected variadic
   // pack
