@@ -38,23 +38,25 @@ inline SourceBuffer createTestBuffer(llvm::StringRef Content) {
   return SourceBuffer::makeFromString(Content);
 }
 
+template <typename... Kinds, std::size_t... Is>
+inline bool checkChildrenKindsImpl(const llvm::ArrayRef<NodeIndex> Children,
+                                   std::index_sequence<Is...>,
+                                   Kinds... Expected) {
+  return ((PR.Pool.kindOf(Children[Is]) == Expected) && ...);
+}
+
 template <typename... Kinds>
 inline bool checkChildrenKinds(NodeIndex Node, Kinds... Expected) {
-  // Ensure the caller only passes NodeKind arguments
   static_assert((std::is_same_v<Kinds, NodeKind> && ...),
                 "All expected children arguments must be of type NodeKind");
 
   const llvm::ArrayRef<NodeIndex> Children = PR.Pool.childrenOf(Node);
 
-  // Early exit if the arity doesn't match the number of variadic arguments
   if (Children.size() != sizeof...(Expected))
     return false;
 
-  // NOLINTNEXTLINE (misc-const-correctness)
-  size_t Index = 0;
-  // Fold expression checking each child's kind against the expected variadic
-  // pack
-  return ((PR.Pool.kindOf(Children[Index++]) == Expected) && ...);
+  return checkChildrenKindsImpl(
+      Children, std::make_index_sequence<sizeof...(Expected)>{}, Expected...);
 }
 
 inline void checkInternedString(NodeIndex NI, std::string Expected) {
