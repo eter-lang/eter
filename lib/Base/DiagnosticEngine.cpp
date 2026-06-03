@@ -241,7 +241,7 @@ DiagnosticBuilder<DiagnosticEngine> DiagnosticEngine::ice(Span Span) {
 }
 
 void DiagnosticEngine::print(const Diagnostic &Diag) const {
-  llvm::raw_ostream &OS = llvm::outs();
+  llvm::raw_ostream &OS = llvm::errs();
   const auto Color = levelColor(Diag.Level, Diag.Kind);
   const char *Title = levelTitle(Diag.Level, Diag.Kind);
 
