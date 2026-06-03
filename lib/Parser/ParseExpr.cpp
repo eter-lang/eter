@@ -102,13 +102,69 @@ NodeIndex Parser::parsePrefixExpr() {
 
 NodeIndex Parser::parsePostfixOrCallExpr(NodeIndex Lhs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parsePostfixOrCallExpr\n");
-  // TODO: handle .field, (args), [index], ?
-  return Lhs;
+
+  using Kind = lexer::Token::Kind;
+
+  while (true) {
+    switch (peek()) {
+    case Kind::l_paren: {
+      const NodeIndex Args = parseArgList();
+      Lhs = Pool.alloc(NodeKind::CallExpr,
+                       Span{Pool.spanOf(Lhs).Start, Pool.spanOf(Args).End},
+                       {Lhs, Args});
+      continue;
+    }
+    case Kind::dot: {
+      advance();
+      const InternedStr Field =
+          expectAndIntern(Kind::identifier, DiagID::ExpectedFieldName);
+      Lhs = Pool.alloc(
+          NodeKind::FieldExpr,
+          Span{Pool.spanOf(Lhs).Start, Stream.previous().TokenSpan.End}, {Lhs},
+          NodePool::makePayload(Field, Regime::None));
+      continue;
+    }
+    case Kind::l_square: {
+      advance();
+      const NodeIndex Index = parseExpr();
+      const Span Close =
+          expect(Kind::r_square, DiagID::ExpectedRSquare).TokenSpan;
+      Lhs = Pool.alloc(NodeKind::IndexExpr,
+                       Span{Pool.spanOf(Lhs).Start, Close.End}, {Lhs, Index});
+      continue;
+    }
+    case Kind::question: {
+      advance();
+      Lhs = Pool.alloc(
+          NodeKind::PropagateExpr,
+          Span{Pool.spanOf(Lhs).Start, Stream.previous().TokenSpan.End}, {Lhs});
+      continue;
+    }
+    default:
+      return Lhs;
+    }
+  }
 }
 
 NodeIndex Parser::parseArgList() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseArgList\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseArgList");
+
+  using Kind = lexer::Token::Kind;
+
+  const Span Start =
+      expect(Kind::l_paren, DiagID::ExpectedArgListClose).TokenSpan;
+
+  llvm::SmallVector<NodeIndex, 8> Args;
+  if (!check(Kind::r_paren)) {
+    Args.push_back(parseExpr());
+    while (consume(Kind::comma))
+      Args.push_back(parseExpr());
+  }
+
+  const Span End =
+      expect(Kind::r_paren, DiagID::ExpectedArgListClose).TokenSpan;
+
+  return Pool.alloc(NodeKind::ArgList, Span{Start.Start, End.End}, Args);
 }
 
 std::pair<int, int> Parser::infixBindingPower(lexer::Token::Kind K) {

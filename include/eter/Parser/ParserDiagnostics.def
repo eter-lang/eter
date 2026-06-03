@@ -51,5 +51,8 @@ ETER_PARSE_DIAG(ExpectedColonAfterName,  "expected ':' after name")
 ETER_PARSE_DIAG(ExpectedEqAfterType,     "expected '=' after type")
 ETER_PARSE_DIAG(ExpectedLetSemi,         "expected ';' after let statement")
 ETER_PARSE_DIAG(ExpectedExpr,            "expected expression")
+ETER_PARSE_DIAG(ExpectedArgListClose,    "expected ')' to close argument list")
+ETER_PARSE_DIAG(ExpectedRSquare,         "expected ']' to close index expression")
+ETER_PARSE_DIAG(ExpectedFieldName,       "expected field name after '.'")
 
 #undef ETER_PARSE_DIAG
