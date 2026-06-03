@@ -115,7 +115,29 @@ NodeIndex Parser::parseRetStmt() {
 
 NodeIndex Parser::parseIfExpr() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseIfExpr\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseIfExpr");
+
+  using Kind = lexer::Token::Kind;
+
+  const Span Start = expect(Kind::kw_if, DiagID::ExpectedIfKeyword).TokenSpan;
+  expect(Kind::l_paren, DiagID::ExpectedOpenParen);
+
+  llvm::SmallVector<NodeIndex, 3> Children;
+  Children.push_back(parseExpr());
+
+  expect(Kind::r_paren, DiagID::ExpectedClosedParen);
+  Children.push_back(parseBlockExpr());
+
+  if (check(Kind::kw_else)) {
+    advance();
+    if (check(Kind::kw_if))
+      Children.push_back(parseIfExpr());
+    else
+      Children.push_back(parseBlockExpr());
+  }
+
+  return Pool.alloc(NodeKind::IfExpr,
+                    Span{Start.Start, Stream.previous().TokenSpan.End},
+                    Children);
 }
 
 NodeIndex Parser::parseForStmt() {
@@ -125,7 +147,23 @@ NodeIndex Parser::parseForStmt() {
 
 NodeIndex Parser::parseWhileStmt() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseWhileStmt\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseWhileStmt");
+
+  using Kind = lexer::Token::Kind;
+
+  const Span Start =
+      expect(Kind::kw_while, DiagID::ExpectedWhileKeyword).TokenSpan;
+  expect(Kind::l_paren, DiagID::ExpectedOpenParen);
+
+  llvm::SmallVector<NodeIndex, 2> Children;
+  Children.push_back(parseExpr());
+
+  expect(Kind::r_paren, DiagID::ExpectedClosedParen);
+
+  Children.push_back(parseBlockExpr());
+
+  return Pool.alloc(NodeKind::WhileStmt,
+                    Span{Start.Start, Stream.previous().TokenSpan.End},
+                    Children);
 }
 
 NodeIndex Parser::parseMatchExpr() {
