@@ -44,10 +44,12 @@ ETER_PARSE_DIAG(ExpectedBlockClose,      "expected '}' to close block")
 ETER_PARSE_DIAG(ExpectedSemiAfterExpr,   "expected ';' after expression")
 ETER_PARSE_DIAG(ExpectedStmt,            "expected statement")
 ETER_PARSE_DIAG(ExpectedLetKeyword,      "expected 'let'")
+ETER_PARSE_DIAG(ExpectedRetKeyword,      "expected 'ret'")
 ETER_PARSE_DIAG(ExpectedRegimeAfterLet,  "expected regime after let")
 ETER_PARSE_DIAG(ExpectedLetName,         "expected name after regime")
 ETER_PARSE_DIAG(ExpectedColonAfterName,  "expected ':' after name")
 ETER_PARSE_DIAG(ExpectedEqAfterType,     "expected '=' after type")
 ETER_PARSE_DIAG(ExpectedLetSemi,         "expected ';' after let statement")
+ETER_PARSE_DIAG(ExpectedExpr,            "expected expression")
 
 #undef ETER_PARSE_DIAG

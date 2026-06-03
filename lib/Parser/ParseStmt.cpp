@@ -100,7 +100,17 @@ NodeIndex Parser::parseLetStmt() {
 
 NodeIndex Parser::parseRetStmt() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseRetStmt\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseRetStmt");
+
+  using Kind = lexer::Token::Kind;
+
+  const Span Start = expect(Kind::kw_ret, DiagID::ExpectedRetKeyword).TokenSpan;
+
+  llvm::SmallVector<NodeIndex, 1> Children;
+  Children.push_back(parseExpr());
+
+  const Span End = expect(Kind::semi, DiagID::ExpectedSemiAfterExpr).TokenSpan;
+
+  return Pool.alloc(NodeKind::RetStmt, Span{Start.Start, End.End}, Children);
 }
 
 NodeIndex Parser::parseIfExpr() {

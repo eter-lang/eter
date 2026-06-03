@@ -94,7 +94,9 @@ NodeIndex Parser::parsePrefixExpr() {
         NodePool::makeOpPayload(static_cast<uint16_t>(Tok.TokenKind)));
   }
   default:
-    llvm::report_fatal_error("TODO: implement Parser::parsePrefixExpr");
+    advance();
+    addError(Tok.TokenSpan, DiagID::ExpectedExpr);
+    return makeErrorNode(Tok.TokenSpan);
   }
 }
 
