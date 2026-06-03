@@ -79,7 +79,7 @@ NodeIndex Parser::parsePrefixExpr() {
   case Kind::l_paren: {
     advance();
     NodeIndex Inner = parseExpr(0);
-    expect(Kind::r_paren, "expected ')' to close parenthesized expression");
+    expect(Kind::r_paren, DiagID::ExpectedParenExprClose);
     return Inner;
   }
   case Kind::bang:

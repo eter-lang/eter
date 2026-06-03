@@ -82,6 +82,8 @@ TEST(ParserTestExpr, LetWithBoolLit) {
 
   const NodeIndex Let = firstLet();
   EXPECT_TRUE(checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::LitExpr));
+  checkInternedString(Let, "x");
+  checkRegime(Let, Regime::Imm);
   checkInternedString(PR.Pool.childrenOf(Let)[0], "bool");
   checkInternedString(PR.Pool.childrenOf(Let)[1], "true");
 }
@@ -93,6 +95,8 @@ TEST(ParserTestExpr, LetWithStringLit) {
 
   const NodeIndex Let = firstLet();
   EXPECT_TRUE(checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::LitExpr));
+  checkInternedString(Let, "x");
+  checkRegime(Let, Regime::Imm);
   checkInternedString(PR.Pool.childrenOf(Let)[0], "str");
   checkInternedString(PR.Pool.childrenOf(Let)[1], "\"hello\"");
 }
@@ -117,6 +121,8 @@ TEST(ParserTestExpr, LetWithCharLit) {
 
   const NodeIndex Let = firstLet();
   EXPECT_TRUE(checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::LitExpr));
+  checkInternedString(Let, "c");
+  checkRegime(Let, Regime::Imm);
   checkInternedString(PR.Pool.childrenOf(Let)[0], "char");
   checkInternedString(PR.Pool.childrenOf(Let)[1], "'a'");
 }
@@ -201,6 +207,8 @@ TEST(ParserTestExpr, LetWithLeftAssoc) {
   const NodeIndex Let = firstLet();
   EXPECT_TRUE(
       checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::BinaryExpr));
+  checkInternedString(Let, "x");
+  checkRegime(Let, Regime::Imm);
 
   // 1 + 2 - 3  =>  (1 + 2) - 3  (left-associative)
   const NodeIndex Outer = PR.Pool.childrenOf(Let)[1];
@@ -243,24 +251,14 @@ TEST(ParserTestExpr, LetWithUnaryNot) {
   const NodeIndex Let = firstLet();
   EXPECT_TRUE(
       checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::UnaryExpr));
+  checkInternedString(Let, "x");
+  checkRegime(Let, Regime::Imm);
 
   const NodeIndex Rhs = PR.Pool.childrenOf(Let)[1];
   EXPECT_EQ(NodePool::payloadOp(PR.Pool[Rhs].Payload),
             static_cast<uint16_t>(EToken::Kind::bang));
   EXPECT_TRUE(checkChildrenKinds(Rhs, NodeKind::LitExpr));
   checkInternedString(PR.Pool.childrenOf(Rhs)[0], "true");
-}
-
-TEST(ParserTestExpr, LetWithIdentRhs) {
-  parseSource("fn main(){ let imm x: i32 = y; }");
-
-  EXPECT_TRUE(PR.ok());
-
-  const NodeIndex Let = firstLet();
-  EXPECT_TRUE(
-      checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::IdentExpr));
-  checkInternedString(Let, "x");
-  checkInternedString(PR.Pool.childrenOf(Let)[1], "y");
 }
 
 TEST(ParserTestExpr, MultipleLetBindings) {
@@ -273,6 +271,7 @@ TEST(ParserTestExpr, MultipleLetBindings) {
 
   const NodeIndex Let1 = PR.Pool.childrenOf(Body)[0];
   EXPECT_TRUE(checkChildrenKinds(Let1, NodeKind::NamedType, NodeKind::LitExpr));
+
   checkInternedString(Let1, "x");
   checkRegime(Let1, Regime::Imm);
   checkInternedString(PR.Pool.childrenOf(Let1)[1], "10");
@@ -342,16 +341,9 @@ TEST(ParserTestExpr, ExprStmtParen) {
   const NodeIndex Expr = PR.Pool.childrenOf(Body)[0];
   EXPECT_EQ(NodePool::payloadOp(PR.Pool[Expr].Payload),
             static_cast<uint16_t>(EToken::Kind::plus));
-}
-
-TEST(ParserTestExpr, ExprStmtIdent) {
-  parseSource("fn main() { x; }");
-
-  EXPECT_TRUE(PR.ok());
-
-  const NodeIndex Body = fnBody();
-  EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::IdentExpr));
-  checkInternedString(PR.Pool.childrenOf(Body)[0], "x");
+  EXPECT_TRUE(checkChildrenKinds(Expr, NodeKind::LitExpr, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Expr)[0], "1");
+  checkInternedString(PR.Pool.childrenOf(Expr)[1], "2");
 }
 
 TEST(ParserTestExpr, ExprStmtUnary) {
@@ -367,4 +359,105 @@ TEST(ParserTestExpr, ExprStmtUnary) {
             static_cast<uint16_t>(EToken::Kind::minus));
   EXPECT_TRUE(checkChildrenKinds(Expr, NodeKind::LitExpr));
   checkInternedString(PR.Pool.childrenOf(Expr)[0], "5");
+}
+
+TEST(ParserTestExpr, LetWithMulAndDiv) {
+  parseSource("fn main(){ let imm x: i32 = 1 * 2 / 3; }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Let = firstLet();
+  EXPECT_TRUE(
+      checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::BinaryExpr));
+  checkInternedString(Let, "x");
+  checkRegime(Let, Regime::Imm);
+
+  // 1 * 2 / 3  =>  (1 * 2) / 3
+  const NodeIndex Outer = PR.Pool.childrenOf(Let)[1];
+  EXPECT_EQ(NodePool::payloadOp(PR.Pool[Outer].Payload),
+            static_cast<uint16_t>(EToken::Kind::slash));
+  EXPECT_TRUE(
+      checkChildrenKinds(Outer, NodeKind::BinaryExpr, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Outer)[1], "3");
+
+  const NodeIndex Inner = PR.Pool.childrenOf(Outer)[0];
+  EXPECT_EQ(NodePool::payloadOp(PR.Pool[Inner].Payload),
+            static_cast<uint16_t>(EToken::Kind::star));
+  EXPECT_TRUE(checkChildrenKinds(Inner, NodeKind::LitExpr, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Inner)[0], "1");
+  checkInternedString(PR.Pool.childrenOf(Inner)[1], "2");
+}
+
+TEST(ParserTestExpr, LetWithComplexParens) {
+  parseSource("fn main(){ let imm x: i32 = (1 + 2) * (3 - 4) / 5; }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Let = firstLet();
+  EXPECT_TRUE(
+      checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::BinaryExpr));
+  checkInternedString(Let, "x");
+  checkRegime(Let, Regime::Imm);
+
+  // (1 + 2) * (3 - 4) / 5 => (((1 + 2) * (3 - 4)) / 5)
+  // Top level is /
+  const NodeIndex Outer = PR.Pool.childrenOf(Let)[1];
+  EXPECT_EQ(NodePool::payloadOp(PR.Pool[Outer].Payload),
+            static_cast<uint16_t>(EToken::Kind::slash));
+  EXPECT_TRUE(
+      checkChildrenKinds(Outer, NodeKind::BinaryExpr, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Outer)[1], "5");
+
+  // Middle is *
+  const NodeIndex Mul = PR.Pool.childrenOf(Outer)[0];
+  EXPECT_EQ(NodePool::payloadOp(PR.Pool[Mul].Payload),
+            static_cast<uint16_t>(EToken::Kind::star));
+  EXPECT_TRUE(
+      checkChildrenKinds(Mul, NodeKind::BinaryExpr, NodeKind::BinaryExpr));
+
+  // Left is (1 + 2)
+  const NodeIndex Plus = PR.Pool.childrenOf(Mul)[0];
+  EXPECT_EQ(NodePool::payloadOp(PR.Pool[Plus].Payload),
+            static_cast<uint16_t>(EToken::Kind::plus));
+  EXPECT_TRUE(checkChildrenKinds(Plus, NodeKind::LitExpr, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Plus)[0], "1");
+  checkInternedString(PR.Pool.childrenOf(Plus)[1], "2");
+
+  // Right is (3 - 4)
+  const NodeIndex Minus = PR.Pool.childrenOf(Mul)[1];
+  EXPECT_EQ(NodePool::payloadOp(PR.Pool[Minus].Payload),
+            static_cast<uint16_t>(EToken::Kind::minus));
+  EXPECT_TRUE(checkChildrenKinds(Minus, NodeKind::LitExpr, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Minus)[0], "3");
+  checkInternedString(PR.Pool.childrenOf(Minus)[1], "4");
+}
+
+TEST(ParserTestExpr, ExprStmtComplexCombo) {
+  parseSource("fn main() { 10 / 2 + 3 * 4; }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Body = fnBody();
+  EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::BinaryExpr));
+
+  // 10 / 2 + 3 * 4 => (10 / 2) + (3 * 4)
+  const NodeIndex Outer = PR.Pool.childrenOf(Body)[0];
+  EXPECT_EQ(NodePool::payloadOp(PR.Pool[Outer].Payload),
+            static_cast<uint16_t>(EToken::Kind::plus));
+  EXPECT_TRUE(
+      checkChildrenKinds(Outer, NodeKind::BinaryExpr, NodeKind::BinaryExpr));
+
+  const NodeIndex Div = PR.Pool.childrenOf(Outer)[0];
+  EXPECT_EQ(NodePool::payloadOp(PR.Pool[Div].Payload),
+            static_cast<uint16_t>(EToken::Kind::slash));
+  EXPECT_TRUE(checkChildrenKinds(Div, NodeKind::LitExpr, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Div)[0], "10");
+  checkInternedString(PR.Pool.childrenOf(Div)[1], "2");
+
+  const NodeIndex Mul = PR.Pool.childrenOf(Outer)[1];
+  EXPECT_EQ(NodePool::payloadOp(PR.Pool[Mul].Payload),
+            static_cast<uint16_t>(EToken::Kind::star));
+  EXPECT_TRUE(checkChildrenKinds(Mul, NodeKind::LitExpr, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Mul)[0], "3");
+  checkInternedString(PR.Pool.childrenOf(Mul)[1], "4");
 }

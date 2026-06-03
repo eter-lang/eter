@@ -57,11 +57,11 @@ NodeIndex Parser::parseStmt() {
   case Kind::minus:
   case Kind::amp: {
     NodeIndex Expr = parseExpr(0);
-    expect(Kind::semi, "expected ';' after expression");
+    expect(Kind::semi, DiagID::ExpectedSemiAfterExpr);
     return Expr;
   }
   default:
-    addError(Tok.TokenSpan, "expected statement");
+    addError(Tok.TokenSpan, DiagID::ExpectedStmt);
     synchronize();
     return makeErrorNode(Tok.TokenSpan);
   }
@@ -72,26 +72,26 @@ NodeIndex Parser::parseLetStmt() {
 
   using Kind = lexer::Token::Kind;
 
-  const Span Start = expect(Kind::kw_let, "Expected 'let'").TokenSpan;
+  const Span Start = expect(Kind::kw_let, DiagID::ExpectedLetKeyword).TokenSpan;
 
   const Regime LetRegime = parseRegime();
 
   if (LetRegime == Regime::None)
-    addError(Stream.previous().TokenSpan, "expected regime after let");
+    addError(Stream.previous().TokenSpan, DiagID::ExpectedRegimeAfterLet);
 
   const InternedStr Name =
-      expectAndIntern(Kind::identifier, "expected name after regime");
+      expectAndIntern(Kind::identifier, DiagID::ExpectedLetName);
 
-  expect(Kind::colon, "expected ':' after name");
+  expect(Kind::colon, DiagID::ExpectedColonAfterName);
 
   llvm::SmallVector<NodeIndex, 2> Children;
   Children.push_back(parseType());
 
-  expect(Kind::eq, "expected '=' after type");
+  expect(Kind::eq, DiagID::ExpectedEqAfterType);
 
   Children.push_back(parseExpr());
 
-  expect(Kind::semi, "expected ';' after let statement");
+  expect(Kind::semi, DiagID::ExpectedLetSemi);
 
   return Pool.alloc(NodeKind::LetStmt,
                     Span{Start.Start, Stream.previous().TokenSpan.End},
@@ -136,7 +136,7 @@ NodeIndex Parser::parseBlockExpr() {
   }
 
   const Span End = expect(Kind::r_brace, DiagID::ExpectedBlockClose).TokenSpan;
-  return Pool.allocLeaf(NodeKind::BlockExpr, Span{Start.Start, End.End});
+  return Pool.alloc(NodeKind::BlockExpr, Span{Start.Start, End.End}, Children);
 }
 
 NodeIndex Parser::parseMatchArm() {
