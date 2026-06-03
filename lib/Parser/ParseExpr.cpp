@@ -23,34 +23,29 @@
 
 namespace eter::parser {
 
-NodeIndex Parser::parseExpr([[maybe_unused]] int MinBP) {
+NodeIndex Parser::parseExpr(int MinBP) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseExpr minBP=" << MinBP
                           << "\n");
 
-  std::vector<NodeIndex> Childrens;
-  uint32_t Oper;
-  const lexer::Token Start = Stream.peekToken();
+  NodeIndex Lhs = parsePrefixExpr();
 
-  while (!Stream.check(lexer::Token::Kind::semi)) {
-    const lexer::Token Tok = Stream.advance();
+  while (true) {
+    Lhs = parsePostfixOrCallExpr(Lhs);
 
-    if (Tok.TokenKind == lexer::Token::Kind::plus) {
-      Oper = NodePool::makeOpPayload(static_cast<uint16_t>(Tok.TokenKind));
-    } else {
-      Childrens.push_back(parseLitExpr(Tok));
-    }
+    const auto [LeftBP, RightBP] = infixBindingPower(peek());
+    if (LeftBP < MinBP)
+      break;
+
+    const lexer::Token Op = advance();
+    const NodeIndex Rhs = parseExpr(RightBP);
+
+    Lhs = Pool.alloc(
+        NodeKind::BinaryExpr,
+        Span{Pool.spanOf(Lhs).Start, Pool.spanOf(Rhs).End}, {Lhs, Rhs},
+        NodePool::makeOpPayload(static_cast<uint16_t>(Op.TokenKind)));
   }
 
-  Stream.advance(); // Discard ";"
-
-  if (Childrens.size() == 1) { // Es. let <name>: i32 = 10;
-    return Childrens[0];
-  }
-
-  return Pool.alloc(
-      NodeKind::BinaryExpr,
-      Span{Start.TokenSpan.Start, Stream.previous().TokenSpan.End}, Childrens,
-      Oper);
+  return Lhs;
 }
 
 NodeIndex Parser::parseLitExpr(const lexer::Token &Tok) {
@@ -62,17 +57,42 @@ NodeIndex Parser::parseLitExpr(const lexer::Token &Tok) {
 
 NodeIndex Parser::parsePrefixExpr() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parsePrefixExpr\n");
+
+  using Kind = lexer::Token::Kind;
+
   const lexer::Token Tok = Stream.peekToken();
 
   switch (Tok.TokenKind) {
-  case lexer::Token::Kind::integer_literal:
-  case lexer::Token::Kind::float_literal:
-  case lexer::Token::Kind::char_literal:
-  case lexer::Token::Kind::string_literal:
-  case lexer::Token::Kind::kw_true:
-  case lexer::Token::Kind::kw_false:
-    Stream.advance();
+  case Kind::integer_literal:
+  case Kind::float_literal:
+  case Kind::char_literal:
+  case Kind::string_literal:
+  case Kind::kw_true:
+  case Kind::kw_false:
+    advance();
     return parseLitExpr(Tok);
+  case Kind::identifier: {
+    advance();
+    return Pool.allocLeaf(NodeKind::IdentExpr, Tok.TokenSpan,
+                          Interner.intern(textOf(Tok.TokenSpan)));
+  }
+  case Kind::l_paren: {
+    advance();
+    NodeIndex Inner = parseExpr(0);
+    expect(Kind::r_paren, "expected ')' to close parenthesized expression");
+    return Inner;
+  }
+  case Kind::bang:
+  case Kind::minus:
+  case Kind::amp: {
+    const int RhsBP = prefixBindingPower(Tok.TokenKind);
+    advance();
+    const NodeIndex Operand = parseExpr(RhsBP);
+    return Pool.alloc(
+        NodeKind::UnaryExpr,
+        Span{Tok.TokenSpan.Start, Pool.spanOf(Operand).End}, {Operand},
+        NodePool::makeOpPayload(static_cast<uint16_t>(Tok.TokenKind)));
+  }
   default:
     llvm::report_fatal_error("TODO: implement Parser::parsePrefixExpr");
   }
@@ -80,8 +100,8 @@ NodeIndex Parser::parsePrefixExpr() {
 
 NodeIndex Parser::parsePostfixOrCallExpr(NodeIndex Lhs) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parsePostfixOrCallExpr\n");
-  (void)Lhs;
-  llvm::report_fatal_error("TODO: implement Parser::parsePostfixOrCallExpr");
+  // TODO: handle .field, (args), [index], ?
+  return Lhs;
 }
 
 NodeIndex Parser::parseArgList() {

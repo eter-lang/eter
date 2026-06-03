@@ -8,10 +8,13 @@
 
 #include "eter/Base/Debug.h"
 #include "eter/Base/Span.h"
+#include "eter/Base/StringInterner.h"
 #include "eter/Lexer/Token.h"
 #include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
+#include "eter/Parser/Regime.h"
 
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -21,12 +24,63 @@ namespace eter::parser {
 
 NodeIndex Parser::parseStmt() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseStmt\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseStmt");
+
+  using Kind = lexer::Token::Kind;
+
+  lexer::Token Tok = peekToken();
+
+  switch (Tok.TokenKind) {
+  case Kind::kw_let:
+    return parseLetStmt();
+  case Kind::kw_if:
+    return parseIfExpr();
+  case Kind::kw_for:
+    return parseForStmt();
+  case Kind::kw_while:
+    return parseWhileStmt();
+  case Kind::kw_match:
+    return parseMatchExpr();
+  case Kind::l_brace:
+    return parseBlockExpr();
+  case Kind::kw_ret:
+    return parseRetStmt();
+  default:
+    // TODO: implement Hadling of implicit return statements
+    addError(Tok.TokenSpan, "expected statement");
+    synchronize();
+    return makeErrorNode(Tok.TokenSpan);
+  }
 }
 
 NodeIndex Parser::parseLetStmt() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseLetStmt\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseLetStmt");
+
+  using Kind = lexer::Token::Kind;
+
+  const Span Start = expect(Kind::kw_let, "Expected 'let'").TokenSpan;
+
+  const Regime LetRegime = parseRegime();
+
+  if (LetRegime == Regime::None)
+    addError(Stream.previous().TokenSpan, "expected regime after let");
+
+  const InternedStr Name =
+      expectAndIntern(Kind::identifier, "expected name after regime");
+
+  expect(Kind::colon, "expected ':' after name");
+
+  llvm::SmallVector<NodeIndex, 2> Children;
+  Children.push_back(parseType());
+
+  expect(Kind::eq, "expected '=' after type");
+
+  Children.push_back(parseExpr());
+
+  expect(Kind::semi, "expected ';' after let statement");
+
+  return Pool.alloc(NodeKind::LetStmt,
+                    Span{Start.Start, Stream.previous().TokenSpan.End},
+                    Children, NodePool::makePayload(Name, LetRegime));
 }
 
 NodeIndex Parser::parseRetStmt() {
@@ -60,11 +114,10 @@ NodeIndex Parser::parseBlockExpr() {
 
   const Span Start = expect(Kind::l_brace, DiagID::ExpectedBlockOpen).TokenSpan;
 
-  // Statement parsing is not yet implemented
-  if (!check(Kind::r_brace) && !atEof()) {
-    llvm::report_fatal_error("TODO: implement Parser::parseBlockExpr");
-    while (!check(Kind::r_brace) && !atEof())
-      advance();
+  llvm::SmallVector<NodeIndex, 8> Children;
+
+  while (!check(Kind::r_brace) && !atEof()) {
+    Children.push_back(parseStmt());
   }
 
   const Span End = expect(Kind::r_brace, DiagID::ExpectedBlockClose).TokenSpan;
