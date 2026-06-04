@@ -86,6 +86,9 @@ pythonenv*
 # Apple Metal C++ SDK downloaded locally
 /docsrc/examples/apple-metal/metal-cpp/
 docsrc/examples/apple-metal/metal-cpp_*.zip
+# CTest / CMake scratch directories (created on top-level ctest invocation)
+/Testing/
+/__cmake_systeminformation/
 # Ignore Python virtual environments anywhere in the repository
 venv/
 .venv/

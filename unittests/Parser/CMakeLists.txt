@@ -85,3 +85,19 @@ target_include_directories(ParserTestExpr SYSTEM PRIVATE
   ${LLVM_INCLUDE_DIRS}
   ${MLIR_INCLUDE_DIRS}
 )
+
+add_unittest(EterUnitTests ParserTestStmt ParseStatementTest.cpp)
+
+target_link_libraries(ParserTestStmt PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestStmt PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestStmt SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)

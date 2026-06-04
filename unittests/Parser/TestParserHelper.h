@@ -22,8 +22,6 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/VirtualFileSystem.h>
 
-#include <eter/Base/SourceBuffer.h>
-#include <eter/Parser/Parser.h>
 #include <string>
 
 #include "gtest/gtest.h"
@@ -35,6 +33,7 @@ namespace ParserTestHelper {
 
 static ParseResult PR;
 static StringInterner SI;
+static std::string SourceText;
 
 inline SourceBuffer createTestBuffer(llvm::StringRef Content) {
   return SourceBuffer::makeFromString(Content);
@@ -72,10 +71,19 @@ inline void checkRegime(NodeIndex NI, Regime Expected) {
 inline void parseSource(llvm::StringRef Source) {
   eter::lexer::Lexer L;
   SI = StringInterner();
+  SourceText = Source.str();
   SourceBuffer SB = createTestBuffer(Source);
   auto Tokens = L.lex(SB);
   const TokenStream Ts = TokenStream(Tokens, SB.getBuffer());
   PR = Parser::parse(Ts, SI);
+}
+
+inline void checkSpan(NodeIndex NI, llvm::StringRef Expected) {
+  const Span S = PR.Pool.spanOf(NI);
+  const llvm::StringRef Actual =
+      llvm::StringRef(SourceText).substr(S.Start, S.End - S.Start);
+  EXPECT_EQ(Actual, Expected)
+      << "  node span at offsets [" << S.Start << ", " << S.End << ")";
 }
 
 inline bool hasDiag(DiagID Want) {

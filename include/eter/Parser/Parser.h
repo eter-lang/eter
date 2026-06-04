@@ -296,7 +296,11 @@ private:
   /// Advance past tokens until a synchronisation point:
   ///   - A `;` (end of the current statement), or
   ///   - A `}` (end of the current block), or
-  ///   - A top-level declaration keyword: fn, struct, enum, mod, use, const.
+  ///   - A top-level declaration keyword: fn, struct, enum, mod, use, const, or
+  ///   - A statement-introducing keyword: let, if, while, for, match, ret.
+  ///
+  /// The broader keyword set is a strict superset of the top-level set, so the
+  /// same routine is correct for both top-level and block-internal recovery.
   void synchronize();
 
   //===----------------------------------------------------------------------===//

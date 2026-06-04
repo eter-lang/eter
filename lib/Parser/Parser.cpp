@@ -159,8 +159,11 @@ void Parser::synchronize() {
     if (Stream.previous().TokenKind == Kind::semi)
       return;
 
-    // The next token starts a fresh top-level item or closes the enclosing
-    // block — stop without consuming so the caller can resume there.
+    // The next token starts a fresh top-level item, a fresh statement, or
+    // closes the enclosing block — stop without consuming so the caller can
+    // resume there. The keyword set is the union of top-level declarations
+    // and statement introducers, so the same routine is correct for both
+    // top-level and block-internal recovery.
     switch (peek()) {
     case Kind::r_brace:
     case Kind::kw_fn:
@@ -169,6 +172,12 @@ void Parser::synchronize() {
     case Kind::kw_mod:
     case Kind::kw_use:
     case Kind::kw_const:
+    case Kind::kw_let:
+    case Kind::kw_if:
+    case Kind::kw_while:
+    case Kind::kw_for:
+    case Kind::kw_match:
+    case Kind::kw_ret:
       return;
     default:
       advance();

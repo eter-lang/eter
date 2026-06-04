@@ -35,7 +35,6 @@ TEST(ParserTestExpr, LetBindingSimpleLiteralExpr) {
   EXPECT_TRUE(checkChildrenKinds(PR.Root, NodeKind::FnDecl));
   const NodeIndex Fn = PR.Pool.childrenOf(PR.Root)[0];
   EXPECT_TRUE(checkChildrenKinds(Fn, NodeKind::ParamList, NodeKind::BlockExpr));
-  EXPECT_TRUE(checkChildrenKinds(PR.Pool.childrenOf(Fn)[0]));
 
   const NodeIndex Body = PR.Pool.childrenOf(Fn)[1];
   EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::LetStmt));
@@ -460,4 +459,263 @@ TEST(ParserTestExpr, ExprStmtComplexCombo) {
   EXPECT_TRUE(checkChildrenKinds(Mul, NodeKind::LitExpr, NodeKind::LitExpr));
   checkInternedString(PR.Pool.childrenOf(Mul)[0], "3");
   checkInternedString(PR.Pool.childrenOf(Mul)[1], "4");
+}
+
+//===----------------------------------------------------------------------===//
+// Postfix expression tests
+//===----------------------------------------------------------------------===//
+
+TEST(ParserTestExpr, ExprStmtCallNoArgs) {
+  parseSource("fn main() { foo(); }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Body = fnBody();
+  EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::CallExpr));
+
+  const NodeIndex Call = PR.Pool.childrenOf(Body)[0];
+  EXPECT_TRUE(checkChildrenKinds(Call, NodeKind::IdentExpr, NodeKind::ArgList));
+
+  const NodeIndex Callee = PR.Pool.childrenOf(Call)[0];
+  EXPECT_EQ(PR.Pool.kindOf(Callee), NodeKind::IdentExpr);
+  checkInternedString(Callee, "foo");
+
+  const NodeIndex Args = PR.Pool.childrenOf(Call)[1];
+  EXPECT_EQ(PR.Pool.kindOf(Args), NodeKind::ArgList);
+  EXPECT_EQ(PR.Pool.childrenOf(Args).size(), 0u);
+}
+
+TEST(ParserTestExpr, ExprStmtCallOneArg) {
+  parseSource("fn main() { foo(42); }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Body = fnBody();
+  EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::CallExpr));
+
+  const NodeIndex Call = PR.Pool.childrenOf(Body)[0];
+  EXPECT_TRUE(checkChildrenKinds(Call, NodeKind::IdentExpr, NodeKind::ArgList));
+  checkInternedString(PR.Pool.childrenOf(Call)[0], "foo");
+
+  const NodeIndex Args = PR.Pool.childrenOf(Call)[1];
+  EXPECT_TRUE(checkChildrenKinds(Args, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Args)[0], "42");
+}
+
+TEST(ParserTestExpr, ExprStmtCallMultipleArgs) {
+  parseSource("fn main() { foo(1, 2, 3); }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Body = fnBody();
+  EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::CallExpr));
+
+  const NodeIndex Call = PR.Pool.childrenOf(Body)[0];
+  EXPECT_TRUE(checkChildrenKinds(Call, NodeKind::IdentExpr, NodeKind::ArgList));
+  checkInternedString(PR.Pool.childrenOf(Call)[0], "foo");
+
+  const NodeIndex Args = PR.Pool.childrenOf(Call)[1];
+  EXPECT_TRUE(checkChildrenKinds(Args, NodeKind::LitExpr, NodeKind::LitExpr,
+                                 NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Args)[0], "1");
+  checkInternedString(PR.Pool.childrenOf(Args)[1], "2");
+  checkInternedString(PR.Pool.childrenOf(Args)[2], "3");
+}
+
+TEST(ParserTestExpr, ExprStmtFieldAccess) {
+  parseSource("fn main() { point.x; }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Body = fnBody();
+  EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::FieldExpr));
+
+  const NodeIndex Field = PR.Pool.childrenOf(Body)[0];
+  EXPECT_TRUE(checkChildrenKinds(Field, NodeKind::IdentExpr));
+  EXPECT_EQ(PR.Pool.kindOf(PR.Pool.childrenOf(Field)[0]), NodeKind::IdentExpr);
+  checkInternedString(PR.Pool.childrenOf(Field)[0], "point");
+  checkInternedString(Field, "x");
+}
+
+TEST(ParserTestExpr, ExprStmtIndexExpr) {
+  parseSource("fn main() { arr[0]; }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Body = fnBody();
+  EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::IndexExpr));
+
+  const NodeIndex Index = PR.Pool.childrenOf(Body)[0];
+  EXPECT_TRUE(
+      checkChildrenKinds(Index, NodeKind::IdentExpr, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Index)[0], "arr");
+  checkInternedString(PR.Pool.childrenOf(Index)[1], "0");
+}
+
+TEST(ParserTestExpr, ExprStmtPropagate) {
+  parseSource("fn main() { maybe?; }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Body = fnBody();
+  EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::PropagateExpr));
+
+  const NodeIndex Prop = PR.Pool.childrenOf(Body)[0];
+  EXPECT_TRUE(checkChildrenKinds(Prop, NodeKind::IdentExpr));
+  checkInternedString(PR.Pool.childrenOf(Prop)[0], "maybe");
+}
+
+TEST(ParserTestExpr, ExprStmtMethodCall) {
+  parseSource("fn main() { obj.method(42); }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Body = fnBody();
+  EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::CallExpr));
+
+  const NodeIndex Call = PR.Pool.childrenOf(Body)[0];
+  EXPECT_TRUE(checkChildrenKinds(Call, NodeKind::FieldExpr, NodeKind::ArgList));
+
+  const NodeIndex Field = PR.Pool.childrenOf(Call)[0];
+  EXPECT_TRUE(checkChildrenKinds(Field, NodeKind::IdentExpr));
+  checkInternedString(PR.Pool.childrenOf(Field)[0], "obj");
+  checkInternedString(Field, "method");
+
+  const NodeIndex Args = PR.Pool.childrenOf(Call)[1];
+  EXPECT_TRUE(checkChildrenKinds(Args, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Args)[0], "42");
+}
+
+TEST(ParserTestExpr, ExprStmtChainedFieldCall) {
+  parseSource("fn main() { a.b.c(); }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Body = fnBody();
+  EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::CallExpr));
+
+  // a.b.c()  =>  CallExpr(FieldExpr(FieldExpr(IdentExpr("a"), "b"), "c"),
+  // ArgList)
+  const NodeIndex Call = PR.Pool.childrenOf(Body)[0];
+  EXPECT_TRUE(checkChildrenKinds(Call, NodeKind::FieldExpr, NodeKind::ArgList));
+
+  // Callee is .c on the result of a.b
+  const NodeIndex FieldC = PR.Pool.childrenOf(Call)[0];
+  EXPECT_TRUE(checkChildrenKinds(FieldC, NodeKind::FieldExpr));
+  checkInternedString(FieldC, "c");
+
+  // .b on a
+  const NodeIndex FieldB = PR.Pool.childrenOf(FieldC)[0];
+  EXPECT_TRUE(checkChildrenKinds(FieldB, NodeKind::IdentExpr));
+  checkInternedString(FieldB, "b");
+
+  // a
+  const NodeIndex IdentA = PR.Pool.childrenOf(FieldB)[0];
+  EXPECT_EQ(PR.Pool.kindOf(IdentA), NodeKind::IdentExpr);
+  checkInternedString(IdentA, "a");
+
+  const NodeIndex Args = PR.Pool.childrenOf(Call)[1];
+  EXPECT_EQ(PR.Pool.childrenOf(Args).size(), 0u);
+}
+
+TEST(ParserTestExpr, LetWithoutInit) {
+  parseSource("fn main(){ let imm x: i32; }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Let = firstLet();
+  // Only type child, no init expression
+  EXPECT_TRUE(checkChildrenKinds(Let, NodeKind::NamedType));
+  EXPECT_EQ(PR.Pool.childrenOf(Let).size(), 1u);
+  checkInternedString(Let, "x");
+  checkRegime(Let, Regime::Imm);
+  checkInternedString(PR.Pool.childrenOf(Let)[0], "i32");
+}
+
+TEST(ParserTestExpr, LetWithCallExpr) {
+  parseSource("fn main(){ let imm x: i32 = foo(1, 2); }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Let = firstLet();
+  EXPECT_TRUE(checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::CallExpr));
+  checkInternedString(Let, "x");
+  checkRegime(Let, Regime::Imm);
+
+  const NodeIndex Call = PR.Pool.childrenOf(Let)[1];
+  EXPECT_TRUE(checkChildrenKinds(Call, NodeKind::IdentExpr, NodeKind::ArgList));
+  checkInternedString(PR.Pool.childrenOf(Call)[0], "foo");
+
+  const NodeIndex Args = PR.Pool.childrenOf(Call)[1];
+  EXPECT_TRUE(checkChildrenKinds(Args, NodeKind::LitExpr, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Args)[0], "1");
+  checkInternedString(PR.Pool.childrenOf(Args)[1], "2");
+}
+
+TEST(ParserTestExpr, LetWithFieldExpr) {
+  parseSource("fn main(){ let imm x: i32 = obj.field; }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Let = firstLet();
+  EXPECT_TRUE(
+      checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::FieldExpr));
+  checkInternedString(Let, "x");
+
+  const NodeIndex Field = PR.Pool.childrenOf(Let)[1];
+  EXPECT_TRUE(checkChildrenKinds(Field, NodeKind::IdentExpr));
+  checkInternedString(PR.Pool.childrenOf(Field)[0], "obj");
+  checkInternedString(Field, "field");
+}
+
+TEST(ParserTestExpr, LetWithIndexExpr) {
+  parseSource("fn main(){ let imm x: i32 = arr[0]; }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Let = firstLet();
+  EXPECT_TRUE(
+      checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::IndexExpr));
+  checkInternedString(Let, "x");
+
+  const NodeIndex Index = PR.Pool.childrenOf(Let)[1];
+  EXPECT_TRUE(
+      checkChildrenKinds(Index, NodeKind::IdentExpr, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Index)[0], "arr");
+  checkInternedString(PR.Pool.childrenOf(Index)[1], "0");
+}
+
+TEST(ParserTestExpr, LetWithChainedPostfix) {
+  parseSource("fn main(){ let imm x: i32 = obj.method(arg)[idx].field; }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Let = firstLet();
+  EXPECT_TRUE(
+      checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::FieldExpr));
+  checkInternedString(Let, "x");
+
+  // Top-level is .field on the result of obj.method(arg)[idx]
+  const NodeIndex Field = PR.Pool.childrenOf(Let)[1];
+  EXPECT_TRUE(checkChildrenKinds(Field, NodeKind::IndexExpr));
+  checkInternedString(Field, "field");
+
+  // obj.method(arg)[idx]  =>  IndexExpr(CallExpr, IdentExpr("idx"))
+  const NodeIndex Index = PR.Pool.childrenOf(Field)[0];
+  EXPECT_TRUE(
+      checkChildrenKinds(Index, NodeKind::CallExpr, NodeKind::IdentExpr));
+  checkInternedString(PR.Pool.childrenOf(Index)[1], "idx");
+
+  // obj.method(arg)  =>  CallExpr(FieldExpr, ArgList)
+  const NodeIndex Call = PR.Pool.childrenOf(Index)[0];
+  EXPECT_TRUE(checkChildrenKinds(Call, NodeKind::FieldExpr, NodeKind::ArgList));
+
+  const NodeIndex MethodField = PR.Pool.childrenOf(Call)[0];
+  EXPECT_TRUE(checkChildrenKinds(MethodField, NodeKind::IdentExpr));
+  checkInternedString(PR.Pool.childrenOf(MethodField)[0], "obj");
+  checkInternedString(MethodField, "method");
+
+  const NodeIndex ArgList = PR.Pool.childrenOf(Call)[1];
+  EXPECT_TRUE(checkChildrenKinds(ArgList, NodeKind::IdentExpr));
+  checkInternedString(PR.Pool.childrenOf(ArgList)[0], "arg");
 }

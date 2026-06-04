@@ -8,7 +8,6 @@
 
 #include "eter/Base/Debug.h"
 #include "eter/Base/Span.h"
-#include "eter/Base/StringInterner.h"
 #include "eter/Lexer/Token.h"
 #include "eter/Parser/NodePool.h"
 #include "eter/Parser/Parser.h"
@@ -57,6 +56,13 @@ NodeIndex Parser::parseStmt() {
   case Kind::minus:
   case Kind::amp: {
     NodeIndex Expr = parseExpr(0);
+    // If expression parsing failed, resync to the next statement boundary
+    // before continuing. Otherwise still emit a missing-`;` diagnostic if
+    // needed and let the surrounding block handle the resulting position.
+    if (Pool.kindOf(Expr) == NodeKind::Error) {
+      synchronize();
+      return Expr;
+    }
     expect(Kind::semi, DiagID::ExpectedSemiAfterExpr);
     return Expr;
   }
@@ -77,7 +83,7 @@ NodeIndex Parser::parseLetStmt() {
   const Regime LetRegime = parseRegime();
 
   if (LetRegime == Regime::None)
-    addError(Stream.previous().TokenSpan, DiagID::ExpectedRegimeAfterLet);
+    addError(peekToken().TokenSpan, DiagID::ExpectedRegimeAfterLet);
 
   const InternedStr Name =
       expectAndIntern(Kind::identifier, DiagID::ExpectedLetName);
@@ -105,7 +111,8 @@ NodeIndex Parser::parseRetStmt() {
   const Span Start = expect(Kind::kw_ret, DiagID::ExpectedRetKeyword).TokenSpan;
 
   llvm::SmallVector<NodeIndex, 1> Children;
-  Children.push_back(parseExpr());
+  if (!check(Kind::semi))
+    Children.push_back(parseExpr());
 
   const Span End = expect(Kind::semi, DiagID::ExpectedSemiAfterExpr).TokenSpan;
 
@@ -139,11 +146,6 @@ NodeIndex Parser::parseIfExpr() {
                     Children);
 }
 
-NodeIndex Parser::parseForStmt() {
-  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseForStmt\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseForStmt");
-}
-
 NodeIndex Parser::parseWhileStmt() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseWhileStmt\n");
 
@@ -163,6 +165,11 @@ NodeIndex Parser::parseWhileStmt() {
   return Pool.alloc(NodeKind::WhileStmt,
                     Span{Start.Start, Stream.previous().TokenSpan.End},
                     Children);
+}
+
+NodeIndex Parser::parseForStmt() {
+  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseForStmt\n");
+  llvm::report_fatal_error("TODO: implement Parser::parseForStmt");
 }
 
 NodeIndex Parser::parseMatchExpr() {

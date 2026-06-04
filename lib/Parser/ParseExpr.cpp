@@ -95,10 +95,19 @@ NodeIndex Parser::parsePrefixExpr() {
   }
   // NOTE: Add case Kind::l_brace: return parseBlockExpr(); to allow blocks
   // in expression position (e.g. let x = { 42 }).
-  default:
-    advance();
+  default: {
+    // Don't consume structural boundaries (sync tokens): leaving them in the
+    // stream lets the enclosing block / statement list recover to the next `;`
+    // or `}` without a cascade of misleading errors.
+    const Kind K = Tok.TokenKind;
+    const bool IsSync = K == Kind::semi || K == Kind::r_brace ||
+                        K == Kind::r_paren || K == Kind::r_square ||
+                        K == Kind::comma;
+    if (!IsSync)
+      advance();
     addError(Tok.TokenSpan, DiagID::ExpectedExpr);
     return makeErrorNode(Tok.TokenSpan);
+  }
   }
 }
 
@@ -154,7 +163,7 @@ NodeIndex Parser::parseArgList() {
   using Kind = lexer::Token::Kind;
 
   const Span Start =
-      expect(Kind::l_paren, DiagID::ExpectedArgListClose).TokenSpan;
+      expect(Kind::l_paren, DiagID::ExpectedArgListOpen).TokenSpan;
 
   llvm::SmallVector<NodeIndex, 8> Args;
   if (!check(Kind::r_paren)) {

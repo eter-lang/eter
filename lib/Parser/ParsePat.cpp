@@ -49,7 +49,7 @@ NodeIndex Parser::parsePat() {
                           Interner.intern(textOf(Tok.TokenSpan)));
   }
   default:
-    addError(Tok.TokenSpan, DiagID::ExpectedMatchArm);
+    addError(Tok.TokenSpan, DiagID::ExpectedPattern);
     advance();
     return makeErrorNode(Tok.TokenSpan);
   }
