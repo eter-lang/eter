@@ -136,8 +136,8 @@ ETER_DECL(ParamList)
 // Statements
 //===----------------------------------------------------------------------===//
 
-/// Let binding: let [regime] name [: Type] = Expr ;
-/// Children: [Type?, Expr].  Payload: makePayload(name, regime).
+/// Let binding: let [regime] name [: Type] [= Expr] ;
+/// Children: [Type?, Expr?].  Payload: makePayload(name, regime).
 ETER_STMT(LetStmt)
 
 /// An expression used as a statement (must end with ';' in Eter).

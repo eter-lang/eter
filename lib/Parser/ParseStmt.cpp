@@ -87,9 +87,8 @@ NodeIndex Parser::parseLetStmt() {
   llvm::SmallVector<NodeIndex, 2> Children;
   Children.push_back(parseType());
 
-  expect(Kind::eq, DiagID::ExpectedEqAfterType);
-
-  Children.push_back(parseExpr());
+  if (consume(Kind::eq))
+    Children.push_back(parseExpr());
 
   expect(Kind::semi, DiagID::ExpectedLetSemi);
 
@@ -168,7 +167,45 @@ NodeIndex Parser::parseWhileStmt() {
 
 NodeIndex Parser::parseMatchExpr() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseMatchExpr\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseMatchExpr");
+
+  using Kind = lexer::Token::Kind;
+
+  const Span Start =
+      expect(Kind::kw_match, DiagID::ExpectedMatchKeyword).TokenSpan;
+
+  const NodeIndex Scrutinee = parseExpr();
+
+  expect(Kind::l_brace, DiagID::ExpectedBlockOpen);
+
+  llvm::SmallVector<NodeIndex, 8> Arms;
+  while (!check(Kind::r_brace) && !atEof()) {
+    Arms.push_back(parseMatchArm());
+  }
+
+  const Span End = expect(Kind::r_brace, DiagID::ExpectedBlockClose).TokenSpan;
+
+  llvm::SmallVector<NodeIndex, 8> Children;
+  Children.push_back(Scrutinee);
+  Children.append(Arms.begin(), Arms.end());
+  return Pool.alloc(NodeKind::MatchExpr, Span{Start.Start, End.End}, Children);
+}
+
+NodeIndex Parser::parseMatchArm() {
+  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseMatchArm\n");
+
+  using Kind = lexer::Token::Kind;
+
+  const NodeIndex Pat = parsePat();
+
+  expect(Kind::fat_arrow, DiagID::ExpectedFatArrow);
+
+  const NodeIndex Value = parseExpr();
+
+  consume(Kind::comma);
+
+  return Pool.alloc(NodeKind::MatchArm,
+                    Span{Pool.spanOf(Pat).Start, Pool.spanOf(Value).End},
+                    {Pat, Value});
 }
 
 NodeIndex Parser::parseBlockExpr() {
@@ -185,11 +222,6 @@ NodeIndex Parser::parseBlockExpr() {
 
   const Span End = expect(Kind::r_brace, DiagID::ExpectedBlockClose).TokenSpan;
   return Pool.alloc(NodeKind::BlockExpr, Span{Start.Start, End.End}, Children);
-}
-
-NodeIndex Parser::parseMatchArm() {
-  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseMatchArm\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseMatchArm");
 }
 
 } // namespace eter::parser

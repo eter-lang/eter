@@ -93,6 +93,8 @@ NodeIndex Parser::parsePrefixExpr() {
         Span{Tok.TokenSpan.Start, Pool.spanOf(Operand).End}, {Operand},
         NodePool::makeOpPayload(static_cast<uint16_t>(Tok.TokenKind)));
   }
+  // NOTE: Add case Kind::l_brace: return parseBlockExpr(); to allow blocks
+  // in expression position (e.g. let x = { 42 }).
   default:
     advance();
     addError(Tok.TokenSpan, DiagID::ExpectedExpr);
