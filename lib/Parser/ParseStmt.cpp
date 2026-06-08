@@ -125,12 +125,10 @@ NodeIndex Parser::parseIfExpr() {
   using Kind = lexer::Token::Kind;
 
   const Span Start = expect(Kind::kw_if, DiagID::ExpectedIfKeyword).TokenSpan;
-  expect(Kind::l_paren, DiagID::ExpectedOpenParen);
 
   llvm::SmallVector<NodeIndex, 3> Children;
   Children.push_back(parseExpr());
 
-  expect(Kind::r_paren, DiagID::ExpectedClosedParen);
   Children.push_back(parseBlockExpr());
 
   if (check(Kind::kw_else)) {
@@ -153,12 +151,9 @@ NodeIndex Parser::parseWhileStmt() {
 
   const Span Start =
       expect(Kind::kw_while, DiagID::ExpectedWhileKeyword).TokenSpan;
-  expect(Kind::l_paren, DiagID::ExpectedOpenParen);
 
   llvm::SmallVector<NodeIndex, 2> Children;
   Children.push_back(parseExpr());
-
-  expect(Kind::r_paren, DiagID::ExpectedClosedParen);
 
   Children.push_back(parseBlockExpr());
 

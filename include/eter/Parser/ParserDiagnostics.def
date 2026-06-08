@@ -58,8 +58,6 @@ ETER_PARSE_DIAG(ExpectedFieldName,       "expected field name after '.'")
 ETER_PARSE_DIAG(ExpectedIfKeyword,       "expected 'if'")
 ETER_PARSE_DIAG(ExpectedWhileKeyword,    "expected 'while'")
 
-ETER_PARSE_DIAG(ExpectedOpenParen,       "expected '('")
-ETER_PARSE_DIAG(ExpectedClosedParen,     "expected ')'")
 ETER_PARSE_DIAG(ExpectedMatchKeyword,    "expected 'match'")
 ETER_PARSE_DIAG(ExpectedFatArrow,       "expected '=>' after pattern")
 ETER_PARSE_DIAG(ExpectedMatchArm,        "expected match arm")
