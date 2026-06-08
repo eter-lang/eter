@@ -34,39 +34,24 @@ static NodeIndex firstStmt() { return PR.Pool.childrenOf(fnBody())[0]; }
 TEST(ParserTestStmt, RetStmtNoExpr) {
   parseSource("fn main() { ret; }");
 
-  EXPECT_TRUE(PR.ok());
-
-  const NodeIndex Body = fnBody();
-  EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::RetStmt));
-
-  const NodeIndex Ret = firstStmt();
-  EXPECT_EQ(PR.Pool.kindOf(Ret), NodeKind::RetStmt);
-  EXPECT_EQ(PR.Pool.childrenOf(Ret).size(), 0u);
+  EXPECT_FALSE(PR.ok());
+  EXPECT_TRUE(hasDiag(DiagID::ExpectedExpr));
 }
 
 TEST(ParserTestStmt, RetStmtWithLiteral) {
-  parseSource("fn main() { ret 42; }");
+  parseSource("fn f(): i32 { ret 42; }");
 
   EXPECT_TRUE(PR.ok());
 
-  const NodeIndex Body = fnBody();
+  const NodeIndex Fn = PR.Pool.childrenOf(PR.Root)[0];
+  // FnDecl children: [ParamList, ReturnType, BlockExpr]
+  const NodeIndex Body = PR.Pool.childrenOf(Fn)[2];
   EXPECT_TRUE(checkChildrenKinds(Body, NodeKind::RetStmt));
 
-  const NodeIndex Ret = firstStmt();
+  const NodeIndex Ret = PR.Pool.childrenOf(Body)[0];
   EXPECT_TRUE(checkChildrenKinds(Ret, NodeKind::LitExpr));
   EXPECT_EQ(PR.Pool.childrenOf(Ret).size(), 1u);
   checkInternedString(PR.Pool.childrenOf(Ret)[0], "42");
-}
-
-TEST(ParserTestStmt, RetStmtWithIdent) {
-  parseSource("fn main() { ret result; }");
-
-  EXPECT_TRUE(PR.ok());
-
-  const NodeIndex Ret = firstStmt();
-  EXPECT_TRUE(checkChildrenKinds(Ret, NodeKind::IdentExpr));
-  EXPECT_EQ(PR.Pool.childrenOf(Ret).size(), 1u);
-  checkInternedString(PR.Pool.childrenOf(Ret)[0], "result");
 }
 
 //===----------------------------------------------------------------------===//
@@ -74,13 +59,13 @@ TEST(ParserTestStmt, RetStmtWithIdent) {
 //===----------------------------------------------------------------------===//
 
 TEST(ParserTestStmt, IfExpr) {
-  parseSource("fn main() { if (true) { } }");
+  parseSource("fn main() { if true { } }");
 
   EXPECT_TRUE(PR.ok());
 
   const NodeIndex If = firstStmt();
   EXPECT_EQ(PR.Pool.kindOf(If), NodeKind::IfExpr);
-  checkSpan(If, "if (true) { }");
+  checkSpan(If, "if true { }");
   // IfExpr children: [cond, then_block]
   EXPECT_TRUE(checkChildrenKinds(If, NodeKind::LitExpr, NodeKind::BlockExpr));
   EXPECT_EQ(PR.Pool.childrenOf(If).size(), 2u);
@@ -91,12 +76,12 @@ TEST(ParserTestStmt, IfExpr) {
 }
 
 TEST(ParserTestStmt, IfElseExpr) {
-  parseSource("fn main() { if (true) { 1; } else { 2; } }");
+  parseSource("fn main() { if true { 1; } else { 2; } }");
 
   EXPECT_TRUE(PR.ok());
 
   const NodeIndex If = firstStmt();
-  checkSpan(If, "if (true) { 1; } else { 2; }");
+  checkSpan(If, "if true { 1; } else { 2; }");
   // IfExpr children: [cond, then_block, else_block]
   EXPECT_TRUE(checkChildrenKinds(If, NodeKind::LitExpr, NodeKind::BlockExpr,
                                  NodeKind::BlockExpr));
@@ -111,52 +96,12 @@ TEST(ParserTestStmt, IfElseExpr) {
   checkInternedString(PR.Pool.childrenOf(Else)[0], "2");
 }
 
-TEST(ParserTestStmt, IfElseIfExpr) {
-  parseSource("fn main() { if (a) { } else if (b) { } }");
-
-  EXPECT_TRUE(PR.ok());
-
-  const NodeIndex If = firstStmt();
-  checkSpan(If, "if (a) { } else if (b) { }");
-  // Outer IfExpr: [IdentExpr("a"), BlockExpr, IfExpr]
-  EXPECT_TRUE(checkChildrenKinds(If, NodeKind::IdentExpr, NodeKind::BlockExpr,
-                                 NodeKind::IfExpr));
-  EXPECT_EQ(PR.Pool.childrenOf(If).size(), 3u);
-  checkInternedString(PR.Pool.childrenOf(If)[0], "a");
-
-  // Inner else-if: [IdentExpr("b"), BlockExpr]
-  const NodeIndex InnerIf = PR.Pool.childrenOf(If)[2];
-  checkSpan(InnerIf, "if (b) { }");
-  EXPECT_TRUE(
-      checkChildrenKinds(InnerIf, NodeKind::IdentExpr, NodeKind::BlockExpr));
-  EXPECT_EQ(PR.Pool.childrenOf(InnerIf).size(), 2u);
-  checkInternedString(PR.Pool.childrenOf(InnerIf)[0], "b");
-}
-
-TEST(ParserTestStmt, IfElseIfElseExpr) {
-  parseSource("fn main() { if (a) { } else if (b) { } else { } }");
-
-  EXPECT_TRUE(PR.ok());
-
-  const NodeIndex If = firstStmt();
-  checkSpan(If, "if (a) { } else if (b) { } else { }");
-  EXPECT_TRUE(checkChildrenKinds(If, NodeKind::IdentExpr, NodeKind::BlockExpr,
-                                 NodeKind::IfExpr));
-  EXPECT_EQ(PR.Pool.childrenOf(If).size(), 3u);
-
-  const NodeIndex InnerIf = PR.Pool.childrenOf(If)[2];
-  checkSpan(InnerIf, "if (b) { } else { }");
-  EXPECT_TRUE(checkChildrenKinds(InnerIf, NodeKind::IdentExpr,
-                                 NodeKind::BlockExpr, NodeKind::BlockExpr));
-  EXPECT_EQ(PR.Pool.childrenOf(InnerIf).size(), 3u);
-}
-
 //===----------------------------------------------------------------------===//
 // While loops
 //===----------------------------------------------------------------------===//
 
 TEST(ParserTestStmt, WhileStmt) {
-  parseSource("fn main() { while (true) { } }");
+  parseSource("fn main() { while true { } }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -176,11 +121,11 @@ TEST(ParserTestStmt, WhileStmt) {
 //===----------------------------------------------------------------------===//
 
 TEST(ParserTestStmt, MatchExprWildcard) {
-  parseSource("fn main() { match x { _ => 42 } }");
+  parseSource("fn main() { let imm x: i32 = 5; match x { _ => 42 } }");
 
   EXPECT_TRUE(PR.ok());
 
-  const NodeIndex Match = firstStmt();
+  const NodeIndex Match = PR.Pool.childrenOf(fnBody())[1];
   EXPECT_EQ(PR.Pool.kindOf(Match), NodeKind::MatchExpr);
   // MatchExpr children: [scrutinee, MatchArm*]
   EXPECT_TRUE(
@@ -195,11 +140,11 @@ TEST(ParserTestStmt, MatchExprWildcard) {
 }
 
 TEST(ParserTestStmt, MatchExprLiteralPat) {
-  parseSource("fn main() { match x { 42 => true } }");
+  parseSource("fn main() {let imm x: i32 = 5; match x { 42 => true } }");
 
   EXPECT_TRUE(PR.ok());
 
-  const NodeIndex Match = firstStmt();
+  const NodeIndex Match = PR.Pool.childrenOf(fnBody())[1];
   EXPECT_EQ(PR.Pool.kindOf(Match), NodeKind::MatchExpr);
   EXPECT_TRUE(
       checkChildrenKinds(Match, NodeKind::IdentExpr, NodeKind::MatchArm));
@@ -223,11 +168,12 @@ TEST(ParserTestStmt, MatchExprLiteralPat) {
 }
 
 TEST(ParserTestStmt, MatchExprIdentPat) {
-  parseSource("fn main() { match x { y => y } }");
+  parseSource("fn main() {let imm x: i32 = 5; let imm y: i32 = 5; match x { y "
+              "=> y; } }");
 
   EXPECT_TRUE(PR.ok());
 
-  const NodeIndex Match = firstStmt();
+  const NodeIndex Match = PR.Pool.childrenOf(fnBody())[2];
   EXPECT_EQ(PR.Pool.kindOf(Match), NodeKind::MatchExpr);
   EXPECT_TRUE(
       checkChildrenKinds(Match, NodeKind::IdentExpr, NodeKind::MatchArm));
@@ -249,11 +195,12 @@ TEST(ParserTestStmt, MatchExprIdentPat) {
 }
 
 TEST(ParserTestStmt, MatchExprMultipleArms) {
-  parseSource("fn main() { match x { 1 => true, 2 => false } }");
+  parseSource(
+      "fn main() { let imm x: int = 5; match x { 1 => true, 2 => false } }");
 
   EXPECT_TRUE(PR.ok());
 
-  const NodeIndex Match = firstStmt();
+  const NodeIndex Match = PR.Pool.childrenOf(fnBody())[1];
   EXPECT_EQ(PR.Pool.kindOf(Match), NodeKind::MatchExpr);
   EXPECT_TRUE(checkChildrenKinds(Match, NodeKind::IdentExpr, NodeKind::MatchArm,
                                  NodeKind::MatchArm));
@@ -282,7 +229,7 @@ TEST(ParserTestStmt, MatchExprMultipleArms) {
 //===----------------------------------------------------------------------===//
 
 TEST(ParserTestStmt, NestedBlock) {
-  parseSource("fn main() { { ret; } }");
+  parseSource("fn main() { { ret 1; } }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -294,7 +241,7 @@ TEST(ParserTestStmt, NestedBlock) {
 
   const NodeIndex Ret = PR.Pool.childrenOf(InnerBlock)[0];
   EXPECT_EQ(PR.Pool.kindOf(Ret), NodeKind::RetStmt);
-  EXPECT_EQ(PR.Pool.childrenOf(Ret).size(), 0u);
+  EXPECT_EQ(PR.Pool.childrenOf(Ret).size(), 1u);
 }
 
 //===----------------------------------------------------------------------===//

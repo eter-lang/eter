@@ -39,6 +39,9 @@ NodeIndex Parser::parseExpr(int MinBP) {
     const lexer::Token Op = advance();
     const NodeIndex Rhs = parseExpr(RightBP);
 
+    if (Pool.kindOf(Rhs) == NodeKind::Error)
+      return Rhs;
+
     Lhs = Pool.alloc(
         NodeKind::BinaryExpr,
         Span{Pool.spanOf(Lhs).Start, Pool.spanOf(Rhs).End}, {Lhs, Rhs},

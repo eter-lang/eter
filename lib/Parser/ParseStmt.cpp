@@ -96,6 +96,11 @@ NodeIndex Parser::parseLetStmt() {
   if (consume(Kind::eq))
     Children.push_back(parseExpr());
 
+  if (!Children.empty() && Pool.kindOf(Children.back()) == NodeKind::Error) {
+    while (!check(Kind::semi) && !atEof())
+      advance();
+  }
+
   expect(Kind::semi, DiagID::ExpectedLetSemi);
 
   return Pool.alloc(NodeKind::LetStmt,
@@ -110,13 +115,11 @@ NodeIndex Parser::parseRetStmt() {
 
   const Span Start = expect(Kind::kw_ret, DiagID::ExpectedRetKeyword).TokenSpan;
 
-  llvm::SmallVector<NodeIndex, 1> Children;
-  if (!check(Kind::semi))
-    Children.push_back(parseExpr());
+  const NodeIndex RetExpr = parseExpr();
 
   const Span End = expect(Kind::semi, DiagID::ExpectedSemiAfterExpr).TokenSpan;
 
-  return Pool.alloc(NodeKind::RetStmt, Span{Start.Start, End.End}, Children);
+  return Pool.alloc(NodeKind::RetStmt, Span{Start.Start, End.End}, {RetExpr});
 }
 
 NodeIndex Parser::parseIfExpr() {
@@ -203,7 +206,8 @@ NodeIndex Parser::parseMatchArm() {
 
   const NodeIndex Value = parseExpr();
 
-  consume(Kind::comma);
+  if (!consume(Kind::comma))
+    consume(Kind::semi);
 
   return Pool.alloc(NodeKind::MatchArm,
                     Span{Pool.spanOf(Pat).Start, Pool.spanOf(Value).End},
