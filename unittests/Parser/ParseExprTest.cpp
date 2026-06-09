@@ -538,7 +538,7 @@ TEST(ParserTestExpr, LetWithoutInit) {
 }
 
 TEST(ParserTestExpr, LetWithCallExpr) {
-  parseSource("fn foo(x: int, y: int): i32 {ret x+y;} "
+  parseSource("fn foo(x: i32, y: i32): i32 {ret x+y;} "
               "fn main(){ let imm x: i32 = foo(1, 2); }");
 
   EXPECT_TRUE(PR.ok());

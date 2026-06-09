@@ -27,28 +27,28 @@ NodeIndex Parser::parseExpr(int MinBP) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseExpr minBP=" << MinBP
                           << "\n");
 
-  NodeIndex Lhs = parsePrefixExpr();
+  NodeIndex LHS = parsePrefixExpr();
 
   while (true) {
-    Lhs = parsePostfixOrCallExpr(Lhs);
+    LHS = parsePostfixOrCallExpr(LHS);
 
     const auto [LeftBP, RightBP] = infixBindingPower(peek());
     if (LeftBP < MinBP)
       break;
 
     const lexer::Token Op = advance();
-    const NodeIndex Rhs = parseExpr(RightBP);
+    const NodeIndex RHS = parseExpr(RightBP);
 
-    if (Pool.kindOf(Rhs) == NodeKind::Error)
-      return Rhs;
+    if (Pool.kindOf(RHS) == NodeKind::Error)
+      return RHS;
 
-    Lhs = Pool.alloc(
+    LHS = Pool.alloc(
         NodeKind::BinaryExpr,
-        Span{Pool.spanOf(Lhs).Start, Pool.spanOf(Rhs).End}, {Lhs, Rhs},
+        Span{Pool.spanOf(LHS).Start, Pool.spanOf(RHS).End}, {LHS, RHS},
         NodePool::makeOpPayload(static_cast<uint16_t>(Op.TokenKind)));
   }
 
-  return Lhs;
+  return LHS;
 }
 
 NodeIndex Parser::parseLitExpr(const lexer::Token &Tok) {
