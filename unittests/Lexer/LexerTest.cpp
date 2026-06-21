@@ -341,12 +341,10 @@ TEST(LexerTest, LexArrow) {
   auto Buffer = createTestBuffer("->");
   auto Items = L.lex(Buffer);
 
-  // Arrow is a reserved symbol, should produce an error + eof
+  // Arrow is a valid symbol token
   ASSERT_EQ(Items.size(), 2);
-  EXPECT_TRUE(isError(Items[0])) << "Expected LexerError for reserved arrow";
-  if (isError(Items[0])) {
-    EXPECT_EQ(getError(Items[0]).ErrorKind, LexerError::Kind::ReservedSymbol);
-  }
+  EXPECT_TRUE(isToken(Items[0]));
+  EXPECT_EQ(getToken(Items[0]).TokenKind, Token::Kind::arrow);
   EXPECT_TRUE(isToken(Items[1]));
   EXPECT_EQ(getToken(Items[1]).TokenKind, Token::Kind::eof);
 }

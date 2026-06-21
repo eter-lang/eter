@@ -19,7 +19,6 @@
 
 namespace eter::parser {
 
-// FIXME First check for primitive types, then custom types
 NodeIndex Parser::parseType() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseType\n");
   using Kind = lexer::Token::Kind;
@@ -52,8 +51,11 @@ NodeIndex Parser::parseNamedType() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseNamedType\n");
   using Kind = lexer::Token::Kind;
 
-  Span Full = peekToken().TokenSpan;
-  expect(Kind::identifier, DiagID::ExpectedTypeName);
+  if (!check(Kind::identifier) && !check(Kind::kw_Self)) {
+    addError(peekToken().TokenSpan, DiagID::ExpectedTypeName);
+    return makeErrorNode(peekToken().TokenSpan);
+  }
+  Span Full = advance().TokenSpan;
 
   // Qualified name: name :: name (:: name)*  (e.g. math::Vec).
   parsePathSegments(Full);
@@ -96,7 +98,7 @@ NodeIndex Parser::parseTensorType() {
   parseCommaSeparated(Children, Kind::r_square,
                       [this] { return parseConstExpr(); });
   if (Children.size() == 1)
-    addError(peekToken().TokenSpan, DiagID::ExpectedTensorSize);
+    addError(peekToken().TokenSpan, DiagID::ExpectedTensorLitDim);
 
   const Span End =
       expect(Kind::r_square, DiagID::ExpectedTensorTypeClose).TokenSpan;

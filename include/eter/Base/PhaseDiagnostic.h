@@ -39,6 +39,7 @@ struct PhaseDiagnostic {
   Span Loc;
   llvm::SmallVector<DiagnosticLabel, 2> Labels;
   llvm::SmallVector<std::string, 2> Notes;
+  llvm::SmallVector<std::string, 2> Helps;
   llvm::SmallVector<std::pair<llvm::StringRef, std::string>, 0> Args;
 };
 

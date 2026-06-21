@@ -50,14 +50,10 @@
 ETER_NODE(Error)
 
 /// Root node for a complete source file.
-/// Children: [FileDocComment*, Attribute*, TopLevelDecl*].  Payload: 0.
+/// Children: [FileDocComment*, TopLevelDecl*].  Payload: 0.
 ETER_NODE(SourceFile)
 
-/// An @-attribute, e.g. @gpu or @import_model("x.onnx").
-/// Children: [ArgList?].  Payload: InternedStr (attribute name, without @).
-ETER_NODE(Attribute)
-
-/// A list of call or attribute arguments.
+/// A list of call arguments.
 /// Children: [Expr*].  Payload: 0.
 ETER_NODE(ArgList)
 
@@ -77,40 +73,49 @@ ETER_NODE(FileDocComment)
 //===----------------------------------------------------------------------===//
 
 /// Function declaration: fn [regime] name(ParamList) [: ReturnType] BlockExpr
-/// Children: [DocComment*, Attribute*, ParamList, ReturnType?, BlockExpr].
+/// Children: [DocComment*, ParamList, ReturnType?, BlockExpr].
 /// Payload:  makePayload(name, returnRegime).
 ETER_DECL(FnDecl)
 
 /// Struct declaration: struct Name { StructField* }
-/// Children: [DocComment*, Attribute*, StructField*].  Payload: InternedStr (name).
+/// Children: [DocComment*, StructField*].  Payload: InternedStr (name).
 ETER_DECL(StructDecl)
 
 /// Enum declaration: enum Name { EnumVariant* }
-/// Children: [DocComment*, Attribute*, EnumVariant*].  Payload: InternedStr (name).
+/// Children: [DocComment*, EnumVariant*].  Payload: InternedStr (name).
 ETER_DECL(EnumDecl)
 
 /// Union declaration: union Name { StructField* }
-/// Children: [DocComment*, Attribute*, StructField*].  Payload: InternedStr (name).
+/// Children: [DocComment*, StructField*].  Payload: InternedStr (name).
 ETER_DECL(UnionDecl)
 
 /// Inline module declaration: mod name { TopLevelDecl* }
-/// Children: [DocComment*, Attribute*, TopLevelDecl*].  Payload: InternedStr (name).
+/// Children: [DocComment*, TopLevelDecl*].  Payload: InternedStr (name).
 ETER_DECL(ModDecl)
 
 /// File-based module declaration: mod name ;
 /// The Driver resolves this to a source file (foo.eter or foo/mod.et) and
 /// parses it as a separate pack unit. Resolved files share the same
 /// StringInterner as the root, enabling O(1) cross-file name comparison.
-/// Children: [DocComment*, Attribute*].  Payload: InternedStr (module name).
+/// Children: [DocComment*].  Payload: InternedStr (module name).
 ETER_DECL(ModDeclFile)
 
 /// Use declaration: use path::item [as alias] ;
-/// Children: [DocComment*, Attribute*].  Payload: InternedStr (full path string, interned).
+/// Children: [DocComment*].  Payload: InternedStr (full path string, interned).
 ETER_DECL(UseDecl)
 
 /// Constant declaration: const NAME: Type = Expr ;
-/// Children: [DocComment*, Attribute*, Type, Expr].  Payload: InternedStr (name).
+/// Children: [DocComment*, Type, Expr].  Payload: InternedStr (name).
 ETER_DECL(ConstDecl)
+
+/// Trait declaration: trait Name { FnDecl* }
+/// Children: [DocComment*, FnDecl*].  Payload: InternedStr (trait name).
+ETER_DECL(TraitDecl)
+
+/// Impl block: impl [Trait for] Type { FnDecl* }
+/// Children: [DocComment*, TraitType?, Type, FnDecl*].
+/// TraitType is NullNode for inherent impls. Payload: 0.
+ETER_DECL(ImplDecl)
 
 /// A struct field with regime: [regime] name: Type
 /// Children: [Type].  Payload: makePayload(name, regime).
@@ -136,6 +141,23 @@ ETER_DECL(Param)
 /// The parenthesised list of parameters in a function declaration.
 /// Children: [Param*].  Payload: 0.
 ETER_DECL(ParamList)
+
+//===----------------------------------------------------------------------===//
+// Generics
+//===----------------------------------------------------------------------===//
+
+/// Generic type parameter: T or T: Bound
+/// Children: [Type?]  (bound type, NullNode if unbounded)
+/// Payload: name (InternedStr)
+ETER_DECL(GenericParam)
+
+/// Generic parameter list: < GenericParam* >
+/// Children: [GenericParam*].  Payload: 0.
+ETER_DECL(GenericParamList)
+
+/// Generic type argument in instantiation: < Type* >
+/// Children: [Type*].  Payload: 0.
+ETER_EXPR(GenericArgList)
 
 //===----------------------------------------------------------------------===//
 // Statements
@@ -168,6 +190,10 @@ ETER_STMT(BreakStmt)
 /// continue ;
 /// Children: [].  Payload: 0.
 ETER_STMT(ContinueStmt)
+
+/// Unsafe block: unsafe { Stmt* [Expr] }
+/// Children: [Stmt*, Expr?].  Payload: 0.
+ETER_EXPR(UnsafeBlock)
 
 //===----------------------------------------------------------------------===//
 // Expressions
@@ -205,7 +231,11 @@ ETER_EXPR(BinaryExpr)
 /// Payload: makeOpPayload(static_cast<uint16_t>(Token::Kind)).
 ETER_EXPR(UnaryExpr)
 
-/// Projection assignment: &lhs = rhs
+/// Cast expression: expr as Type
+/// Children: [Expr, Type].  Payload: 0.
+ETER_EXPR(CastExpr)
+
+/// Projection assignment: *lhs = rhs
 /// Write a value through a projection variable or projected field path.
 /// Semantically distinct from a regular assignment (BinaryExpr with op=eq).
 /// Children: [Expr (projection target), Expr (rhs)].  Payload: 0.

@@ -110,28 +110,28 @@ TEST(ParserTestStructDecl, StructDeclMissingName) {
   parseSource("struct { imm x: i32 }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedStructName);
+  expectDiag(DiagID::ExpectedName);
 }
 
 TEST(ParserTestStructDecl, StructDeclMissingOpenBrace) {
   parseSource("struct S imm x: i32 }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedStructOpen);
+  expectDiag(DiagID::ExpectedOpen);
 }
 
 TEST(ParserTestStructDecl, StructDeclMissingCloseBrace) {
   parseSource("struct S { imm x: i32");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedStructClose);
+  expectDiag(DiagID::ExpectedClose);
 }
 
 TEST(ParserTestStructDecl, StructDeclMissingFieldColon) {
   parseSource("struct S { imm x i32 }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedStructFieldColon);
+  expectDiag(DiagID::ExpectedColon);
 }
 
 TEST(ParserTestStructDecl, StructDeclMissingFieldType) {
@@ -158,7 +158,7 @@ TEST(ParserTestStructDecl, StructDeclRegimeWithoutNameSingleError) {
   parseSource("struct X { imm }\nfn main() {}");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedStructFieldName);
+  expectDiag(DiagID::ExpectedName);
   EXPECT_EQ(PR.Errors.size(), 1u);
 
   const llvm::ArrayRef<NodeIndex> Top = PR.Pool.childrenOf(PR.Root);
@@ -172,7 +172,7 @@ TEST(ParserTestStructDecl, StructDeclBadFieldStartSingleError) {
   parseSource("struct S { 42 }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedStructFieldName);
+  expectDiag(DiagID::ExpectedName);
   EXPECT_EQ(PR.Errors.size(), 1u);
 }
 
@@ -180,7 +180,7 @@ TEST(ParserTestStructDecl, StructDeclMissingColonAndTypeSingleError) {
   parseSource("struct S { imm x }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedStructFieldColon);
+  expectDiag(DiagID::ExpectedColon);
   EXPECT_EQ(PR.Errors.size(), 1u);
 }
 
@@ -188,7 +188,7 @@ TEST(ParserTestStructDecl, StructDeclBadFieldSkipsToNextField) {
   parseSource("struct S { imm 42: i32, imm y: f32 }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedStructFieldName);
+  expectDiag(DiagID::ExpectedName);
   EXPECT_EQ(PR.Errors.size(), 1u);
 
   // The bad field becomes an Error node; the following field still parses.
@@ -202,7 +202,7 @@ TEST(ParserTestStructDecl, StructDeclRecoversToNextDecl) {
   parseSource("struct S { imm x i32 } fn main() {}");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedStructFieldColon);
+  expectDiag(DiagID::ExpectedColon);
 
   const llvm::ArrayRef<NodeIndex> Top = PR.Pool.childrenOf(PR.Root);
   ASSERT_EQ(Top.size(), 2u);

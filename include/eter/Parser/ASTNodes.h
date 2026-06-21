@@ -46,11 +46,10 @@ template <NodeKind K> struct ASTNode {
 /// Typed view over a `FnDecl` node.
 ///
 /// Child layout (childrenOf indices):
-///   [0 .. nAttrs-1] : Attribute nodes (zero or more, in source order)
-///   [nAttrs]        : ParamList
-///   [nAttrs+1]      : ReturnType (NamedType / ArrayType / AttrType), or
-///                     NullNode when the function returns nothing
-///   [nAttrs+2]      : BlockExpr (function body)
+///   [0] : ParamList
+///   [1] : ReturnType (NamedType / ArrayType / AttrType), or
+///         NullNode when the function returns nothing
+///   [2] : BlockExpr (function body)
 ///
 /// Payload: makePayload(functionName, returnRegime)
 struct FnDecl : ASTNode<NodeKind::FnDecl> {
@@ -59,10 +58,6 @@ struct FnDecl : ASTNode<NodeKind::FnDecl> {
 
   /// Regime of the return value (Imm / Mut / Proj / None for void functions).
   [[nodiscard]] Regime getReturnRegime(const NodePool &P) const;
-
-  /// Declaration-level @-attributes, in source order.
-  [[nodiscard]] llvm::ArrayRef<NodeIndex>
-  getAttributes(const NodePool &P) const;
 
   /// The ParamList node.
   [[nodiscard]] NodeIndex getParamList(const NodePool &P) const;
@@ -76,12 +71,10 @@ struct FnDecl : ASTNode<NodeKind::FnDecl> {
 
 /// Typed view over a `StructDecl` node.
 ///
-/// Child layout: [Attribute*, StructField*]
+/// Child layout: [StructField*]
 /// Payload: InternedStr (struct name)
 struct StructDecl : ASTNode<NodeKind::StructDecl> {
   [[nodiscard]] InternedStr getName(const NodePool &P) const;
-  [[nodiscard]] llvm::ArrayRef<NodeIndex>
-  getAttributes(const NodePool &P) const;
   [[nodiscard]] llvm::ArrayRef<NodeIndex> getFields(const NodePool &P) const;
 };
 
@@ -98,24 +91,19 @@ struct StructField : ASTNode<NodeKind::StructField> {
 
 /// Typed view over an `EnumDecl` node.
 ///
-/// Child layout: [Attribute*, (EnumVariantUnit | EnumVariantTuple |
-///                             EnumVariantStruct)*]
+/// Child layout: [(EnumVariantUnit | EnumVariantTuple | EnumVariantStruct)*]
 /// Payload: InternedStr (enum name)
 struct EnumDecl : ASTNode<NodeKind::EnumDecl> {
   [[nodiscard]] InternedStr getName(const NodePool &P) const;
-  [[nodiscard]] llvm::ArrayRef<NodeIndex>
-  getAttributes(const NodePool &P) const;
   [[nodiscard]] llvm::ArrayRef<NodeIndex> getVariants(const NodePool &P) const;
 };
 
 /// Typed view over a `UnionDecl` node.
 ///
-/// Child layout: [Attribute*, StructField*]
+/// Child layout: [StructField*]
 /// Payload: InternedStr (union name)
 struct UnionDecl : ASTNode<NodeKind::UnionDecl> {
   [[nodiscard]] InternedStr getName(const NodePool &P) const;
-  [[nodiscard]] llvm::ArrayRef<NodeIndex>
-  getAttributes(const NodePool &P) const;
   [[nodiscard]] llvm::ArrayRef<NodeIndex> getFields(const NodePool &P) const;
 };
 
@@ -135,6 +123,42 @@ struct Param : ASTNode<NodeKind::Param> {
 /// Payload: 0
 struct ParamList : ASTNode<NodeKind::ParamList> {
   [[nodiscard]] llvm::ArrayRef<NodeIndex> getParams(const NodePool &P) const;
+};
+
+/// Typed view over a `GenericParam` node.
+///
+/// Child layout: [Type?]  (bound type, NullNode if unbounded)
+/// Payload: InternedStr (parameter name, e.g. "T")
+struct GenericParam : ASTNode<NodeKind::GenericParam> {
+  [[nodiscard]] InternedStr getName(const NodePool &P) const;
+  /// The bound type, or NullNode if unbounded.
+  [[nodiscard]] NodeIndex getBound(const NodePool &P) const;
+};
+
+/// Typed view over a `GenericParamList` node.
+///
+/// Child layout: [GenericParam*]
+/// Payload: 0
+struct GenericParamList : ASTNode<NodeKind::GenericParamList> {
+  [[nodiscard]] llvm::ArrayRef<NodeIndex> getParams(const NodePool &P) const;
+};
+
+/// Typed view over a `GenericArgList` node.
+///
+/// Child layout: [Type*]
+/// Payload: 0
+struct GenericArgList : ASTNode<NodeKind::GenericArgList> {
+  [[nodiscard]] llvm::ArrayRef<NodeIndex> getArgs(const NodePool &P) const;
+};
+
+/// Typed view over a `UseDecl` node.
+///
+/// Child layout: [DocComment*]
+/// Payload: InternedStr (full path text, e.g. "foo::bar::Baz")
+/// Flags: PubFlag (if `pub use`)
+struct UseDecl : ASTNode<NodeKind::UseDecl> {
+  /// The full use path (e.g. "foo::bar::Baz").
+  [[nodiscard]] InternedStr getPath(const NodePool &P) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -211,14 +235,14 @@ struct BinaryExpr : ASTNode<NodeKind::BinaryExpr> {
 /// Payload: makeOpPayload(static_cast<uint16_t>(Token::Kind))
 ///
 /// Note: op == Token::Kind::amp represents `&expr` — taking a projection of a
-/// Mut value (the rhs use of `&`). The distinct `ProjAssignExpr` covers the
-/// lhs use `&lhs = rhs`.
+/// Mut value. op == Token::Kind::star represents `*expr` — dereference.
+/// The distinct `ProjAssignExpr` covers `*lhs = rhs`.
 struct UnaryExpr : ASTNode<NodeKind::UnaryExpr> {
   [[nodiscard]] NodeIndex getOperand(const NodePool &P) const;
   [[nodiscard]] lexer::Token::Kind getOp(const NodePool &P) const;
 };
 
-/// Typed view over a `ProjAssignExpr` node (`&lhs = rhs`).
+/// Typed view over a `ProjAssignExpr` node (`*lhs = rhs`).
 ///
 /// Write a value through a projection variable or projected field path.
 /// This is semantically distinct from a regular assignment (BinaryExpr with
@@ -230,6 +254,17 @@ struct ProjAssignExpr : ASTNode<NodeKind::ProjAssignExpr> {
   /// The projection target (an IdentExpr, or a FieldExpr / IndexExpr chain).
   [[nodiscard]] NodeIndex getTarget(const NodePool &P) const;
   [[nodiscard]] NodeIndex getRhs(const NodePool &P) const;
+};
+
+/// Typed view over a `CastExpr` node (`expr as Type`).
+///
+/// Child layout: [Expr, Type]
+/// Payload: 0
+struct CastExpr : ASTNode<NodeKind::CastExpr> {
+  /// The expression being cast.
+  [[nodiscard]] NodeIndex getExpr(const NodePool &P) const;
+  /// The target type.
+  [[nodiscard]] NodeIndex getType(const NodePool &P) const;
 };
 
 /// Typed view over a `CallExpr` node.
@@ -425,6 +460,46 @@ struct MatchExpr : ASTNode<NodeKind::MatchExpr> {
 struct MatchArm : ASTNode<NodeKind::MatchArm> {
   [[nodiscard]] NodeIndex getPattern(const NodePool &P) const;
   [[nodiscard]] NodeIndex getBody(const NodePool &P) const;
+};
+
+//===----------------------------------------------------------------------===//
+// Traits and Impls
+//===----------------------------------------------------------------------===//
+
+/// Typed view over a `TraitDecl` node.
+///
+/// Child layout: [DocComment*, FnDecl*]
+/// Payload: InternedStr (trait name)
+struct TraitDecl : ASTNode<NodeKind::TraitDecl> {
+  [[nodiscard]] InternedStr getName(const NodePool &P) const;
+  [[nodiscard]] llvm::ArrayRef<NodeIndex> getMethods(const NodePool &P) const;
+};
+
+/// Typed view over an `ImplDecl` node.
+///
+/// Child layout: [DocComment*, TraitType?, Type, FnDecl*]
+///   TraitType is NullNode for inherent impls (impl Type { ... }).
+///   For trait impls (impl Trait for Type { ... }), TraitType is the
+///   trait's NamedType/PathExpr node.
+/// Payload: 0
+struct ImplDecl : ASTNode<NodeKind::ImplDecl> {
+  /// The trait type, or NullNode for inherent impls.
+  [[nodiscard]] NodeIndex getTrait(const NodePool &P) const;
+  /// The implementing type.
+  [[nodiscard]] NodeIndex getType(const NodePool &P) const;
+  /// The method implementations.
+  [[nodiscard]] llvm::ArrayRef<NodeIndex> getMethods(const NodePool &P) const;
+};
+
+/// Typed view over an `UnsafeBlock` node.
+///
+/// Child layout: [Stmt*, Expr?]  (same layout as BlockExpr)
+///   The optional final child without a trailing `;` is the block's yield
+///   value. All preceding children are statements.
+/// Payload: 0
+struct UnsafeBlock : ASTNode<NodeKind::UnsafeBlock> {
+  [[nodiscard]] llvm::ArrayRef<NodeIndex> getStmts(const NodePool &P) const;
+  [[nodiscard]] NodeIndex getTailExpr(const NodePool &P) const;
 };
 
 } // namespace eter::parser

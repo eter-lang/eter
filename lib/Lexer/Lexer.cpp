@@ -275,7 +275,7 @@ std::vector<LexerItem> Lexer::lex(SourceBuffer &SourceBuffer, Span Span) {
         Kind = Token::Kind::minus_eq;
       } else if (CurPtr < BufferEnd && *CurPtr == '>') {
         CurPtr++;
-        Kind = Token::Kind::reserved_arrow;
+        Kind = Token::Kind::arrow;
       } else {
         Kind = Token::Kind::minus;
       }

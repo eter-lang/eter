@@ -55,24 +55,12 @@ NodeIndex Parser::parseSourceFile() {
     Children.push_back(N);
 
   while (!atEof()) {
-    Children.push_back(parseTopLevelDecl({}));
+    Children.push_back(parseTopLevelDecl());
   }
 
   const Span EndOfFile = Stream.previous().TokenSpan;
   return Pool.alloc(NodeKind::SourceFile,
                     Span{StartOfFile.Start, EndOfFile.End}, Children);
-}
-
-//===----------------------------------------------------------------------===//
-// Attributes
-//===----------------------------------------------------------------------===//
-
-llvm::SmallVector<NodeIndex, 4> Parser::parseAttributes() {
-  llvm::report_fatal_error("TODO: implement Parser::parseAttributes");
-}
-
-NodeIndex Parser::parseAttribute() {
-  llvm::report_fatal_error("TODO: implement Parser::parseAttribute");
 }
 
 llvm::SmallVector<NodeIndex, 4> Parser::parseDocComments() {
@@ -118,16 +106,36 @@ lexer::Token Parser::advance() { return Stream.advance(); }
 
 bool Parser::consume(lexer::Token::Kind K) { return Stream.consume(K); }
 
-lexer::Token Parser::expect(lexer::Token::Kind K, DiagID D) {
+lexer::Token Parser::expect(lexer::Token::Kind K, DiagID D,
+                            llvm::StringRef Context) {
   if (consume(K))
     return Stream.previous();
   auto T = Stream.peekToken();
-  addError(T.TokenSpan, D);
+  const llvm::StringRef Name = lexer::Token::getTokenName(K);
+  const llvm::StringRef Found = lexer::Token::getTokenName(T.TokenKind);
+  auto B = diag(T.TokenSpan, D)
+               .arg("tok", Name.str())
+               .arg("keyword", Name.str())
+               .arg("found", Found.str());
+  if (!Context.empty())
+    B.arg("context", Context.str());
   return lexer::Token(lexer::Token::Kind::unknown, T.TokenSpan);
 }
 
 InternedStr Parser::expectAndIntern(lexer::Token::Kind K, DiagID D) {
   return Interner.intern(textOf(expect(K, D).TokenSpan));
+}
+
+InternedStr Parser::expectName(lexer::Token::Kind K,
+                               llvm::StringRef Construct) {
+  if (consume(K))
+    return Interner.intern(textOf(Stream.previous().TokenSpan));
+  auto T = Stream.peekToken();
+  const llvm::StringRef Found = lexer::Token::getTokenName(T.TokenKind);
+  diag(T.TokenSpan, DiagID::ExpectedName)
+      .arg("construct", Construct.str())
+      .arg("found", Found.str());
+  return Interner.intern(textOf(T.TokenSpan));
 }
 
 //===----------------------------------------------------------------------===//
@@ -180,16 +188,19 @@ bool Parser::parsePathSegments(Span &PathSpan) {
 }
 
 //===----------------------------------------------------------------------===//
-// Error recovery
+// Diagnostics
 //===----------------------------------------------------------------------===//
 
-void Parser::addError(Span S, DiagID D) {
+Parser::DiagBuilder Parser::diag(Span S, DiagID D) {
   diag::PhaseDiagnostic PD;
   PD.Ph = diag::Phase::Parser;
   PD.LocalID = static_cast<uint16_t>(D);
   PD.Loc = S;
   Errors.push_back(std::move(PD));
+  return DiagBuilder(Errors.back());
 }
+
+void Parser::addError(Span S, DiagID D) { diag(S, D); }
 
 NodeIndex Parser::makeErrorNode(Span S) {
   return Pool.allocLeaf(NodeKind::Error, S);
@@ -222,6 +233,11 @@ void Parser::synchronize() {
     case Kind::kw_mod:
     case Kind::kw_use:
     case Kind::kw_const:
+    case Kind::kw_trait:
+    case Kind::kw_impl:
+    case Kind::kw_unsafe:
+    case Kind::kw_break:
+    case Kind::kw_continue:
     case Kind::kw_let:
     case Kind::kw_if:
     case Kind::kw_while:

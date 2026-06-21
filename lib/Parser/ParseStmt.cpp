@@ -38,12 +38,16 @@ NodeIndex Parser::parseStmt() {
     return parseForStmt();
   case Kind::kw_while:
     return parseWhileStmt();
-  case Kind::kw_match:
-    return parseMatchExpr();
   case Kind::l_brace:
     return parseBlockExpr();
   case Kind::kw_ret:
     return parseRetStmt();
+  case Kind::kw_break:
+    return parseBreakStmt();
+  case Kind::kw_continue:
+    return parseContinueStmt();
+  case Kind::kw_unsafe:
+    return parseUnsafeBlock();
   // Expression statements — tokens that can start an expression followed by ';'
   case Kind::identifier:
   case Kind::integer_literal:
@@ -57,7 +61,9 @@ NodeIndex Parser::parseStmt() {
   case Kind::bang:
   case Kind::minus:
   case Kind::amp:
-  case Kind::kw_tensor: {
+  case Kind::star:
+  case Kind::kw_tensor:
+  case Kind::kw_match: {
     NodeIndex Expr = parseExpr(0);
     // If expression parsing failed, resync to the next statement boundary
     // before continuing. Otherwise still emit a missing-`;` diagnostic if
@@ -66,7 +72,18 @@ NodeIndex Parser::parseStmt() {
       synchronize();
       return Expr;
     }
-    expect(Kind::semi, DiagID::ExpectedSemiAfterExpr);
+    if (!consume(Kind::semi)) {
+      const Span PrevEnd = Stream.previous().TokenSpan;
+      const lexer::Token Next = peekToken();
+      const auto Found = lexer::Token::getTokenName(Next.TokenKind);
+      const Span Insert = {PrevEnd.End, PrevEnd.End};
+      diag(Insert, DiagID::ExpectedSemi)
+          .arg("context", "after expression")
+          .arg("found", Found.str())
+          .help("add `;` here")
+          .note("in Eter, expression statements must end with `;`")
+          .label(Next.TokenSpan, "unexpected token");
+    }
     return Expr;
   }
   default:
@@ -81,12 +98,11 @@ NodeIndex Parser::parseLetStmt() {
 
   using Kind = lexer::Token::Kind;
 
-  const Span Start = expect(Kind::kw_let, DiagID::ExpectedLetKeyword).TokenSpan;
+  const Span Start = expect(Kind::kw_let, DiagID::ExpectedKeyword).TokenSpan;
 
   const Regime LetRegime = parseRegime();
 
-  const InternedStr Name =
-      expectAndIntern(Kind::identifier, DiagID::ExpectedLetName);
+  const InternedStr Name = expectName(Kind::identifier, "variable");
 
   llvm::SmallVector<NodeIndex, 2> Children;
   if (consume(Kind::colon))
@@ -102,8 +118,16 @@ NodeIndex Parser::parseLetStmt() {
     while (!check(Kind::semi) && !check(Kind::r_brace) && !atEof())
       advance();
     consume(Kind::semi);
-  } else {
-    expect(Kind::semi, DiagID::ExpectedLetSemi);
+  } else if (!consume(Kind::semi)) {
+    const Span PrevEnd = Stream.previous().TokenSpan;
+    const lexer::Token Next = peekToken();
+    const auto Found = lexer::Token::getTokenName(Next.TokenKind);
+    diag(PrevEnd, DiagID::ExpectedSemi)
+        .arg("context", "in let statement")
+        .arg("found", Found.str())
+        .help("add `;` here")
+        .note("all statements must end with `;` in Eter")
+        .label(Next.TokenSpan, "unexpected token");
   }
 
   return Pool.alloc(NodeKind::LetStmt,
@@ -116,11 +140,12 @@ NodeIndex Parser::parseRetStmt() {
 
   using Kind = lexer::Token::Kind;
 
-  const Span Start = expect(Kind::kw_ret, DiagID::ExpectedRetKeyword).TokenSpan;
+  const Span Start = expect(Kind::kw_ret, DiagID::ExpectedKeyword).TokenSpan;
 
   const NodeIndex RetExpr = parseExpr();
 
-  const Span End = expect(Kind::semi, DiagID::ExpectedSemiAfterExpr).TokenSpan;
+  const Span End =
+      expect(Kind::semi, DiagID::ExpectedSemi, "after expression").TokenSpan;
 
   return Pool.alloc(NodeKind::RetStmt, Span{Start.Start, End.End}, {RetExpr});
 }
@@ -130,7 +155,7 @@ NodeIndex Parser::parseIfExpr() {
 
   using Kind = lexer::Token::Kind;
 
-  const Span Start = expect(Kind::kw_if, DiagID::ExpectedIfKeyword).TokenSpan;
+  const Span Start = expect(Kind::kw_if, DiagID::ExpectedKeyword).TokenSpan;
 
   llvm::SmallVector<NodeIndex, 3> Children;
   {
@@ -160,8 +185,7 @@ NodeIndex Parser::parseWhileStmt() {
 
   using Kind = lexer::Token::Kind;
 
-  const Span Start =
-      expect(Kind::kw_while, DiagID::ExpectedWhileKeyword).TokenSpan;
+  const Span Start = expect(Kind::kw_while, DiagID::ExpectedKeyword).TokenSpan;
 
   llvm::SmallVector<NodeIndex, 2> Children;
   {
@@ -179,7 +203,67 @@ NodeIndex Parser::parseWhileStmt() {
 
 NodeIndex Parser::parseForStmt() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseForStmt\n");
-  llvm::report_fatal_error("TODO: implement Parser::parseForStmt");
+  using Kind = lexer::Token::Kind;
+
+  const Span Start = expect(Kind::kw_for, DiagID::ExpectedKeyword).TokenSpan;
+
+  const Regime LoopRegime = parseRegime();
+
+  const InternedStr Name = expectName(Kind::identifier, "loop variable");
+
+  expect(Kind::kw_in_, DiagID::ExpectedKeyword);
+
+  NodeIndex Iterable;
+  {
+    const llvm::SaveAndRestore<bool> NoStructLit(StructLitAllowed, false);
+    Iterable = parseExpr();
+  }
+
+  const NodeIndex Body = parseBlockExpr();
+
+  return Pool.alloc(NodeKind::ForStmt, Span{Start.Start, Pool.spanOf(Body).End},
+                    {Iterable, Body}, NodePool::makePayload(Name, LoopRegime));
+}
+
+NodeIndex Parser::parseBreakStmt() {
+  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseBreakStmt\n");
+  using Kind = lexer::Token::Kind;
+
+  const lexer::Token Tok = advance(); // consume 'break'
+  expect(Kind::semi, DiagID::ExpectedBreakOrContinueSemi);
+  return Pool.allocLeaf(NodeKind::BreakStmt, Tok.TokenSpan);
+}
+
+NodeIndex Parser::parseContinueStmt() {
+  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseContinueStmt\n");
+  using Kind = lexer::Token::Kind;
+
+  const lexer::Token Tok = advance(); // consume 'continue'
+  expect(Kind::semi, DiagID::ExpectedBreakOrContinueSemi);
+  return Pool.allocLeaf(NodeKind::ContinueStmt, Tok.TokenSpan);
+}
+
+NodeIndex Parser::parseUnsafeBlock() {
+  ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseUnsafeBlock\n");
+  using Kind = lexer::Token::Kind;
+
+  const Span Start = expect(Kind::kw_unsafe, DiagID::ExpectedKeyword).TokenSpan;
+
+  llvm::SmallVector<NodeIndex, 8> Children;
+  if (!consume(Kind::l_brace))
+    diag(peekToken().TokenSpan, DiagID::ExpectedOpen)
+        .arg("tok", "{")
+        .arg("context", "to start unsafe block body");
+
+  while (!check(Kind::r_brace) && !atEof()) {
+    Children.push_back(parseStmt());
+  }
+
+  const Span End =
+      expect(Kind::r_brace, DiagID::ExpectedClose, "to close unsafe block")
+          .TokenSpan;
+  return Pool.alloc(NodeKind::UnsafeBlock, Span{Start.Start, End.End},
+                    Children);
 }
 
 NodeIndex Parser::parseMatchExpr() {
@@ -187,8 +271,7 @@ NodeIndex Parser::parseMatchExpr() {
 
   using Kind = lexer::Token::Kind;
 
-  const Span Start =
-      expect(Kind::kw_match, DiagID::ExpectedMatchKeyword).TokenSpan;
+  const Span Start = expect(Kind::kw_match, DiagID::ExpectedKeyword).TokenSpan;
 
   NodeIndex Scrutinee;
   {
@@ -197,14 +280,16 @@ NodeIndex Parser::parseMatchExpr() {
     Scrutinee = parseExpr();
   }
 
-  expect(Kind::l_brace, DiagID::ExpectedBlockOpen);
+  expect(Kind::l_brace, DiagID::ExpectedOpen, "to start match body");
 
   llvm::SmallVector<NodeIndex, 8> Arms;
   while (!check(Kind::r_brace) && !atEof()) {
     Arms.push_back(parseMatchArm());
   }
 
-  const Span End = expect(Kind::r_brace, DiagID::ExpectedBlockClose).TokenSpan;
+  const Span End =
+      expect(Kind::r_brace, DiagID::ExpectedClose, "to close match body")
+          .TokenSpan;
 
   llvm::SmallVector<NodeIndex, 8> Children;
   Children.push_back(Scrutinee);
@@ -235,7 +320,8 @@ NodeIndex Parser::parseBlockExpr() {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] parseBlockExpr\n");
   using Kind = lexer::Token::Kind;
 
-  const Span Start = expect(Kind::l_brace, DiagID::ExpectedBlockOpen).TokenSpan;
+  const Span Start =
+      expect(Kind::l_brace, DiagID::ExpectedOpen, "to start block").TokenSpan;
 
   llvm::SmallVector<NodeIndex, 8> Children;
 
@@ -243,7 +329,8 @@ NodeIndex Parser::parseBlockExpr() {
     Children.push_back(parseStmt());
   }
 
-  const Span End = expect(Kind::r_brace, DiagID::ExpectedBlockClose).TokenSpan;
+  const Span End =
+      expect(Kind::r_brace, DiagID::ExpectedClose, "to close block").TokenSpan;
   return Pool.alloc(NodeKind::BlockExpr, Span{Start.Start, End.End}, Children);
 }
 

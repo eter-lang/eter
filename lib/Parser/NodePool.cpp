@@ -29,13 +29,13 @@ const char *nodeKindName(NodeKind K) {
 NodePool::NodePool() {
   // Index 0 is reserved as a sentinel; push a dummy record so that any
   // accidental use of index 0 is immediately visible in debug output.
-  Nodes.push_back(NodeData{NodeKind::Error, 0, 0, 0});
+  Nodes.push_back(NodeData{NodeKind::Error, 0, 0, 0, 0});
   Spans.push_back(Span{0, 0});
 }
 
 NodeIndex NodePool::alloc(NodeKind Kind, Span S,
                           llvm::ArrayRef<NodeIndex> ChildNodes,
-                          uint32_t Payload) {
+                          uint32_t Payload, uint32_t Flags) {
   ETER_DEBUG(llvm::dbgs() << "[" DEBUG_TYPE "] alloc " << nodeKindName(Kind)
                           << " children=" << ChildNodes.size() << "\n");
 
@@ -44,7 +44,7 @@ NodeIndex NodePool::alloc(NodeKind Kind, Span S,
 
   NodeIndex Idx{static_cast<uint32_t>(Nodes.size())};
   Nodes.push_back(NodeData{Kind, static_cast<uint16_t>(ChildNodes.size()),
-                           ChildrenBegin, Payload});
+                           ChildrenBegin, Payload, Flags});
   Spans.push_back(S);
   return Idx;
 }
@@ -65,6 +65,8 @@ void NodePool::reserve(size_t NodeHint) {
 }
 
 NodeKind NodePool::kindOf(NodeIndex I) const { return (*this)[I].Kind; }
+
+uint32_t NodePool::flagsOf(NodeIndex I) const { return (*this)[I].Flags; }
 
 Span NodePool::spanOf(NodeIndex I) const {
   assert(I.Value < Spans.size() && "NodeIndex out of bounds");

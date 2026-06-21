@@ -148,21 +148,21 @@ TEST(ParserTestEnumDecl, EnumDeclMissingName) {
   parseSource("enum { A }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedEnumName);
+  expectDiag(DiagID::ExpectedName);
 }
 
 TEST(ParserTestEnumDecl, EnumDeclMissingCloseBrace) {
   parseSource("enum E { A, B");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedEnumClose);
+  expectDiag(DiagID::ExpectedClose);
 }
 
 TEST(ParserTestEnumDecl, EnumDeclMissingVariantName) {
   parseSource("enum E { 42 }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedEnumVariantName);
+  expectDiag(DiagID::ExpectedName);
 }
 
 TEST(ParserTestEnumDecl, EnumDeclBadVariantRecoversToNext) {
@@ -171,7 +171,7 @@ TEST(ParserTestEnumDecl, EnumDeclBadVariantRecoversToNext) {
   parseSource("enum E { 42, B }\nfn main() {}");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedEnumVariantName);
+  expectDiag(DiagID::ExpectedName);
   EXPECT_EQ(PR.Errors.size(), 1u);
 
   const NodeIndex E = PR.Pool.childrenOf(PR.Root)[0];
@@ -184,12 +184,19 @@ TEST(ParserTestEnumDecl, EnumDeclTupleVariantMissingClose) {
   parseSource("enum E { Dog(str, i32 }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedVariantTupleClose);
+  expectDiag(DiagID::ExpectedClose);
 }
 
 TEST(ParserTestEnumDecl, EnumDeclNonLiteralDiscriminant) {
   parseSource("enum E { A = foo }");
 
-  EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedConstLiteral);
+  EXPECT_TRUE(PR.ok());
+  // Non-literal discriminants (identifiers) are valid syntax; semantic
+  // validation is deferred to the type checker.
+  const NodeIndex Var = PR.Pool.childrenOf(PR.Pool.childrenOf(PR.Root)[0])[0];
+  const auto VarChildren = PR.Pool.childrenOf(Var);
+  // EnumVariantUnit: [ConstExpr?]
+  // foo is parsed as IdentExpr
+  ASSERT_GT(VarChildren.size(), 0u);
+  EXPECT_EQ(PR.Pool.kindOf(VarChildren[0]), NodeKind::IdentExpr);
 }

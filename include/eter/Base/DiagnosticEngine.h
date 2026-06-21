@@ -86,6 +86,7 @@ struct Diagnostic {
 
   llvm::SmallVector<DiagnosticLabel, 2> Labels;
   llvm::SmallVector<std::string, 2> Notes;
+  llvm::SmallVector<std::string, 2> Helps;
 };
 
 template <typename DiagnosticEngineType> class DiagnosticBuilder;
@@ -198,6 +199,12 @@ public:
   /// Add a note to the diagnostic.
   DiagnosticBuilder<DiagnosticEngineType> &note(const llvm::Twine &Msg) {
     Diag.Notes.push_back(Msg.str());
+    return *this;
+  }
+
+  /// Add a help suggestion to the diagnostic.
+  DiagnosticBuilder<DiagnosticEngineType> &help(const llvm::Twine &Msg) {
+    Diag.Helps.push_back(Msg.str());
     return *this;
   }
 

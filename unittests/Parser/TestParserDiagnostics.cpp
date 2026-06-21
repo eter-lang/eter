@@ -15,34 +15,37 @@
 
 using namespace ParserTestHelper;
 
-TEST(ParserDiagnosticsTest, ExpectedFnName) {
+TEST(ParserDiagnosticsTest, MissingFnName) {
   parseSource("fn ");
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedFnName);
+  expectDiag(DiagID::ExpectedName);
 }
 
-TEST(ParserDiagnosticsTest, ExpectedConstSemi) {
+TEST(ParserDiagnosticsTest, MissingConstSemi) {
   parseSource("const C: T = 1");
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedConstSemi);
+  expectDiag(DiagID::ExpectedSemi);
 }
 
-TEST(ParserDiagnosticsTest, ExpectedConstName) {
+TEST(ParserDiagnosticsTest, MissingConstName) {
   parseSource("const : T = 1;");
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedConstName);
+  expectDiag(DiagID::ExpectedName);
 }
 
-TEST(ParserDiagnosticsTest, ExpectedConstEquals) {
+TEST(ParserDiagnosticsTest, ExpectedEq) {
   parseSource("const C: T 1;");
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedConstEquals);
+  expectDiag(DiagID::ExpectedEq);
 }
 
-TEST(ParserDiagnosticsTest, ExpectedConstLiteral) {
+// ExpectedConstLiteral was removed in P1f (Const Expression Generalization):
+// const-expr now delegates to parseExpr, so a missing/invalid expression
+// produces ExpectedExpr instead.
+TEST(ParserDiagnosticsTest, ExpectedConstSemiAfterExpr) {
   parseSource("const C: T = ;");
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedConstLiteral);
+  expectDiag(DiagID::ExpectedExpr);
 }
 
 TEST(ParserDiagnosticsTest, ExpectedTopLevelDecl) {
@@ -79,4 +82,32 @@ TEST(RenderMessageTest, LeavesUnmatchedPlaceholderVerbatim) {
 TEST(RenderMessageTest, HandlesNoPlaceholders) {
   using namespace eter;
   EXPECT_EQ(diag::renderMessage("plain text", {}), "plain text");
+}
+
+//===----------------------------------------------------------------------===//
+// Tests for diagnostic notes and help messages
+//===----------------------------------------------------------------------===//
+
+TEST(ParserDiagnosticsTest, ExpressionStmtMissingSemiHasNote) {
+  parseSource("fn main() { 42 }");
+  EXPECT_FALSE(PR.ok());
+  expectDiagWithNote(DiagID::ExpectedSemi, "expression statements");
+}
+
+TEST(ParserDiagnosticsTest, ExpressionStmtMissingSemiHasHelp) {
+  parseSource("fn main() { 42 }");
+  EXPECT_FALSE(PR.ok());
+  expectDiagWithHelp(DiagID::ExpectedSemi, "add `;`");
+}
+
+TEST(ParserDiagnosticsTest, LetStmtMissingSemiHasNote) {
+  parseSource("fn main() { let x = 5 }");
+  EXPECT_FALSE(PR.ok());
+  expectDiagWithNote(DiagID::ExpectedSemi, "must end with `;`");
+}
+
+TEST(ParserDiagnosticsTest, LetStmtMissingSemiHasHelp) {
+  parseSource("fn main() { let x = 5 }");
+  EXPECT_FALSE(PR.ok());
+  expectDiagWithHelp(DiagID::ExpectedSemi, "add `;`");
 }

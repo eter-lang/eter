@@ -135,6 +135,7 @@ ETER_KEYWORD(else, "else")
 ETER_KEYWORD(enum, "enum")
 ETER_KEYWORD(false, "false")
 ETER_KEYWORD(imm, "imm")
+ETER_KEYWORD(in_, "in")
 ETER_KEYWORD(fn, "fn")
 ETER_KEYWORD(for, "for")
 ETER_KEYWORD(if, "if")
@@ -147,8 +148,12 @@ ETER_KEYWORD(pub, "pub")
 ETER_KEYWORD(ret, "ret")
 ETER_KEYWORD(struct, "struct")
 ETER_KEYWORD(tensor, "tensor")
+ETER_KEYWORD(trait, "trait")
 ETER_KEYWORD(true, "true")
 ETER_KEYWORD(union, "union")
+ETER_KEYWORD(unsafe, "unsafe")
+ETER_KEYWORD(impl, "impl")
+ETER_KEYWORD(Self, "Self")
 ETER_KEYWORD(use, "use")
 ETER_KEYWORD(while, "while")
 
@@ -165,9 +170,9 @@ ETER_RESERVED_KEYWORD(type, "type")
 ETER_RESERVED_KEYWORD(where, "where")
 
 //===----------------------------------------------------------------------===//
-// Reserved Symbols (produce lexer errors when encountered)
+// Symbols (not yet used in the parser but valid)
 //===----------------------------------------------------------------------===//
-ETER_RESERVED_SYMBOL(arrow, "->")
+ETER_SYMBOL(arrow, "->")
 
 // Clean up macros at the end of the file
 #undef ETER_KEYWORD

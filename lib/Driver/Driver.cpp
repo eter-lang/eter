@@ -179,6 +179,8 @@ int Driver::parseFile(const std::string &Path, PackSession &Session,
       B.label(L.DiagSpan, L.Message);
     for (const auto &N : PErr.Notes)
       B.note(N);
+    for (const auto &H : PErr.Helps)
+      B.help(H);
     B.emit();
   }
   DE.printAll();

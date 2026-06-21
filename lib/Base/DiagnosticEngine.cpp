@@ -91,7 +91,10 @@ static void writeRepeated(llvm::raw_ostream &OS, unsigned Count, char C) {
 // the spanned columns, and an optional caption next to the carets.
 static void printSnippet(llvm::raw_ostream &OS, const SourceManager &SM, Span S,
                          llvm::StringRef Caption,
-                         llvm::raw_ostream::Colors Color) {
+                         llvm::raw_ostream::Colors Color,
+                         bool ShowTopBorder = true,
+                         bool ShowContextBefore = true, bool UseCaret = true,
+                         uint32_t SkipLine = 0) {
   const llvm::StringRef Buf = SM.getBuffer();
   if (Buf.empty())
     return;
@@ -109,7 +112,9 @@ static void printSnippet(llvm::raw_ostream &OS, const SourceManager &SM, Span S,
   const uint32_t EndCol = EndLoc.Column;
 
   const uint32_t TotalLines = countLines(Buf);
-  const uint32_t CtxStartLine = SpanStartLine > 1 ? SpanStartLine - 1 : 1;
+  const uint32_t CtxStartLine = (ShowContextBefore && SpanStartLine > 1)
+                                    ? SpanStartLine - 1
+                                    : SpanStartLine;
   const uint32_t CtxEndLine = std::min(TotalLines, SpanEndLine + 1);
   const unsigned GutterW = digitWidth(CtxEndLine);
 
@@ -121,11 +126,13 @@ static void printSnippet(llvm::raw_ostream &OS, const SourceManager &SM, Span S,
   }
 
   // Top border: "    |"
-  OS << " ";
-  OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
-  writeRepeated(OS, GutterW, ' ');
-  OS << " |\n";
-  OS.resetColor();
+  if (ShowTopBorder) {
+    OS << " ";
+    OS.changeColor(llvm::raw_ostream::BLUE, /*Bold=*/true);
+    writeRepeated(OS, GutterW, ' ');
+    OS << " |\n";
+    OS.resetColor();
+  }
 
   uint32_t CurLine = CtxStartLine;
   while (CurLine <= CtxEndLine) {
@@ -133,12 +140,16 @@ static void printSnippet(llvm::raw_ostream &OS, const SourceManager &SM, Span S,
     const llvm::StringRef LineText = Buf.slice(LineOff, LineEndOff);
     const bool InSpan = (CurLine >= SpanStartLine && CurLine <= SpanEndLine);
 
-    OS << " ";
-    OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
-    writeRepeated(OS, GutterW - digitWidth(CurLine), ' ');
-    OS << CurLine << " | ";
-    OS.resetColor();
-    OS << LineText << "\n";
+    const bool IsSkippedLine = (SkipLine != 0 && CurLine == SkipLine);
+
+    if (!IsSkippedLine) {
+      OS << " ";
+      OS.changeColor(llvm::raw_ostream::BLUE, /*Bold=*/true);
+      writeRepeated(OS, GutterW - digitWidth(CurLine), ' ');
+      OS << CurLine << " | ";
+      OS.resetColor();
+      OS << LineText << "\n";
+    }
 
     if (InSpan) {
       const uint32_t LineLen = static_cast<uint32_t>(LineEndOff - LineOff);
@@ -149,13 +160,14 @@ static void printSnippet(llvm::raw_ostream &OS, const SourceManager &SM, Span S,
       const uint32_t Width = ToCol - FromCol;
 
       OS << " ";
-      OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
+      OS.changeColor(llvm::raw_ostream::BLUE, /*Bold=*/true);
       writeRepeated(OS, GutterW, ' ');
       OS << " | ";
       OS.resetColor();
       writeRepeated(OS, FromCol - 1, ' ');
       OS.changeColor(Color, /*Bold=*/true);
-      writeRepeated(OS, Width, '^');
+      const char Mark = UseCaret ? '^' : '-';
+      writeRepeated(OS, Width, Mark);
       if (!Caption.empty() && CurLine == SpanEndLine)
         OS << ' ' << Caption;
       OS.resetColor();
@@ -256,7 +268,7 @@ void DiagnosticEngine::print(const Diagnostic &Diag) const {
   case DiagnosticLocation::Kind::None:
     break;
   case DiagnosticLocation::Kind::File:
-    OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
+    OS.changeColor(llvm::raw_ostream::BLUE, /*Bold=*/true);
     OS << " --> ";
     OS.resetColor();
     OS << Diag.Location.filename() << "\n";
@@ -264,24 +276,50 @@ void DiagnosticEngine::print(const Diagnostic &Diag) const {
   case DiagnosticLocation::Kind::Span: {
     const Span Sp = Diag.Location.span();
     const SourceLocation Start = SM.getLocation(Sp.Start);
-    OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
+    OS.changeColor(llvm::raw_ostream::BLUE, /*Bold=*/true);
     OS << " --> ";
     OS.resetColor();
     OS << SM.getFilename() << ":" << Start.Line << ":" << Start.Column << "\n";
-    printSnippet(OS, SM, Sp, /*Caption=*/"", Color);
+    llvm::StringRef MainCaption;
+    if (!Diag.Helps.empty())
+      MainCaption = llvm::StringRef(Diag.Helps.front());
+    printSnippet(OS, SM, Sp, MainCaption, Color);
+
+    const SourceLocation SpEnd = SM.getLocation(Sp.End);
+    const uint32_t MainCtxEndLine = std::min(
+        static_cast<uint32_t>(countLines(SM.getBuffer())), SpEnd.Line + 1);
+
+    for (const auto &Label : Diag.Labels)
+      printSnippet(OS, SM, Label.DiagSpan, Label.getMessage(),
+                   llvm::raw_ostream::BLUE, /*ShowTopBorder=*/false,
+                   /*ShowContextBefore=*/false,
+                   /*UseCaret=*/false, /*SkipLine=*/MainCtxEndLine);
     break;
   }
   }
 
-  for (const auto &Label : Diag.Labels)
-    printSnippet(OS, SM, Label.DiagSpan, Label.getMessage(),
-                 llvm::raw_ostream::BLUE);
+  if (Diag.Location.kind() != DiagnosticLocation::Kind::Span) {
+    for (const auto &Label : Diag.Labels)
+      printSnippet(OS, SM, Label.DiagSpan, Label.getMessage(),
+                   llvm::raw_ostream::BLUE, /*ShowTopBorder=*/true,
+                   /*ShowContextBefore=*/true,
+                   /*UseCaret=*/false);
+  }
 
   for (const auto &Note : Diag.Notes) {
     OS.changeColor(llvm::raw_ostream::CYAN, /*Bold=*/true);
-    OS << " = note: ";
+    OS << "note: ";
     OS.resetColor();
     OS << Note << "\n";
+  }
+
+  for (size_t I = 0; I < Diag.Helps.size(); ++I) {
+    if (I > 0) {
+      OS.changeColor(llvm::raw_ostream::GREEN, /*Bold=*/true);
+      OS << " = help: ";
+      OS.resetColor();
+      OS << Diag.Helps[I] << "\n";
+    }
   }
 
   if (Diag.Kind == DiagnosticKind::InternalCompilerError) {

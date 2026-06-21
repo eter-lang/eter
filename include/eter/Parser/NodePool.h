@@ -54,7 +54,7 @@ static_assert(sizeof(NodeIndex) == 4, "NodeIndex must remain 4 bytes");
 inline constexpr NodeIndex NullNode{};
 
 //===----------------------------------------------------------------------===//
-// NodeData — 20-byte flat node record
+// NodeData — 24-byte flat node record (with parallel Span)
 //===----------------------------------------------------------------------===//
 
 /// Raw record for a single AST node stored inside `NodePool`.
@@ -69,8 +69,8 @@ inline constexpr NodeIndex NullNode{};
 ///     bits [29: 0] = InternedStr (name, max ~1 billion unique strings)
 ///
 /// Nodes that carry only a name (StructDecl, EnumDecl, UnionDecl, ModDecl,
-/// ConstDecl, UseDecl, IdentExpr, PathExpr, LitExpr, FieldExpr,
-/// TupleIndexExpr, StructLitExpr, FieldInit, Attribute, NamedType, AttrType,
+/// ConstDecl, UseDecl, TraitDecl, IdentExpr, PathExpr, LitExpr, FieldExpr,
+/// TupleIndexExpr, StructLitExpr, FieldInit, NamedType, AttrType,
 /// LiteralPat, StructPat, TuplePat, FieldPat):
 ///     bits [31: 0] = InternedStr (name or literal text)
 ///
@@ -84,19 +84,27 @@ inline constexpr NodeIndex NullNode{};
 /// `NodePool::payloadRegime` instead of accessing `Payload` directly. This
 /// enforces the encoding contract and makes the calling code self-documenting.
 ///
-/// Source locations are intentionally absent: `Span`s live in the parallel
-/// `NodePool::Spans` vector, keeping this struct at 12 bytes (5 records per
-/// 64-byte cache line) for better locality during semantic passes that do not
-/// need source positions.
+/// ## Flags encoding
+///
+/// `Flags` stores per-node boolean properties that don't fit in `Payload`:
+///
+///     bit  0 : PubFlag     — visibility: 0=private, 1=pub
+///     bit  1 : UnsafeFlag  — 0=safe, 1=unsafe (fn, trait, block)
+///     bits 2+ : reserved for future use (generics, const_eval, etc.)
+///
+/// ## Memory layout
+/// NodeData + parallel Span (8 bytes) = 24 bytes per node.
+/// → ~2.66 nodes per 64-byte cache line.
 struct NodeData {
   NodeKind Kind;          ///< 2 bytes: syntactic role
   uint16_t ChildCount;    ///< 2 bytes: number of children
   uint32_t ChildrenBegin; ///< 4 bytes: start index into NodePool::Children
   uint32_t Payload;       ///< 4 bytes: see encoding above
-                          //  12 bytes total: 5 nodes per 64-byte cache line
+  uint32_t Flags;         ///< 4 bytes: per-node boolean flags (see above)
+                          //  16 bytes total + 8 bytes Span = 24 bytes per node
 };
 
-static_assert(sizeof(NodeData) == 12, "NodeData layout changed unexpectedly");
+static_assert(sizeof(NodeData) == 16, "NodeData layout changed unexpectedly");
 
 /// Owns all AST nodes and their child relationships for a single parse result.
 ///
@@ -123,11 +131,15 @@ class NodePool {
 public:
   NodePool();
 
-  /// Allocate a new node with the given kind, source span, children, and
-  /// payload. Returns the index of the newly created node.
+  /// Flag bits for NodeData::Flags.
+  static constexpr uint32_t PubFlag = 1 << 0;    ///< `pub` visibility
+  static constexpr uint32_t UnsafeFlag = 1 << 1; ///< `unsafe` function/block
+
+  /// Allocate a new node with the given kind, source span, children, payload,
+  /// and flags. Returns the index of the newly created node.
   [[nodiscard]] NodeIndex alloc(NodeKind Kind, Span Span,
                                 llvm::ArrayRef<NodeIndex> ChildNodes,
-                                uint32_t Payload = 0);
+                                uint32_t Payload = 0, uint32_t Flags = 0);
 
   /// Convenience: allocate a leaf node (no children).
   [[nodiscard]] NodeIndex allocLeaf(NodeKind Kind, Span Span,
@@ -143,6 +155,9 @@ public:
   /// Return the `N`-th child of node `I`.
   /// Asserts in debug builds if `N` is out of bounds.
   [[nodiscard]] NodeIndex childAt(NodeIndex I, uint16_t N) const;
+
+  /// Return the flags of node `I`.
+  [[nodiscard]] uint32_t flagsOf(NodeIndex I) const;
 
   /// Return the number of nodes currently allocated in the pool.
   [[nodiscard]] uint32_t size() const { return Nodes.size(); }

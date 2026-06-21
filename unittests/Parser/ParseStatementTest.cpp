@@ -121,7 +121,7 @@ TEST(ParserTestStmt, WhileStmt) {
 //===----------------------------------------------------------------------===//
 
 TEST(ParserTestStmt, MatchExprWildcard) {
-  parseSource("fn main() { let imm x: i32 = 5; match x { _ => 42 } }");
+  parseSource("fn main() { let imm x: i32 = 5; match x { _ => 42 }; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -140,7 +140,7 @@ TEST(ParserTestStmt, MatchExprWildcard) {
 }
 
 TEST(ParserTestStmt, MatchExprLiteralPat) {
-  parseSource("fn main() {let imm x: i32 = 5; match x { 42 => true } }");
+  parseSource("fn main() {let imm x: i32 = 5; match x { 42 => true }; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -169,7 +169,7 @@ TEST(ParserTestStmt, MatchExprLiteralPat) {
 
 TEST(ParserTestStmt, MatchExprIdentPat) {
   parseSource("fn main() {let imm x: i32 = 5; let imm y: i32 = 5; match x { y "
-              "=> y; } }");
+              "=> y }; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -196,7 +196,7 @@ TEST(ParserTestStmt, MatchExprIdentPat) {
 
 TEST(ParserTestStmt, MatchExprMultipleArms) {
   parseSource(
-      "fn main() { let imm x: i32 = 5; match x { 1 => true, 2 => false } }");
+      "fn main() { let imm x: i32 = 5; match x { 1 => true, 2 => false }; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -271,7 +271,7 @@ TEST(ParserTestStmt, ErrorMissingExprInLetNoCascade) {
   EXPECT_FALSE(PR.ok());
   EXPECT_TRUE(hasDiag(DiagID::ExpectedExpr));
   EXPECT_FALSE(hasDiag(DiagID::ExpectedStmt));
-  EXPECT_FALSE(hasDiag(DiagID::ExpectedBlockClose));
+  EXPECT_FALSE(hasDiag(DiagID::ExpectedClose));
 }
 
 TEST(ParserTestStmt, ErrorRecoveryThroughStatementKeyword) {
@@ -297,8 +297,9 @@ TEST(ParserTestStmt, ErrorRecoveryThroughStatementKeyword) {
 //===----------------------------------------------------------------------===//
 
 TEST(ParserTestStmt, MatchPathUnitVariantPat) {
-  parseSource("fn main(b: Balls){ match b { Balls::Tennis => 1, _ => 0 } } "
-              "enum Balls { Tennis, Golf }");
+  parseSource(
+      "fn main(imm b: Balls){ match b { Balls::Tennis => 1, _ => 0 }; } "
+      "enum Balls { Tennis, Golf }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -314,9 +315,10 @@ TEST(ParserTestStmt, MatchPathUnitVariantPat) {
 }
 
 TEST(ParserTestStmt, MatchTupleVariantPat) {
-  parseSource("fn main(a: Animals){ match a { Animals::Dog(name, age) => age, "
-              "_ => 0 } } "
-              "enum Animals { Dog(str, i32), Cat }");
+  parseSource(
+      "fn main(imm a: Animals){ match a { Animals::Dog(name, age) => age, "
+      "_ => 0 }; } "
+      "enum Animals { Dog(str, i32), Cat }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -331,9 +333,10 @@ TEST(ParserTestStmt, MatchTupleVariantPat) {
 }
 
 TEST(ParserTestStmt, MatchStructVariantPat) {
-  parseSource("fn main(a: Animals){ match a { Animals::Cat{ name, age: x } => "
-              "x, _ => 0 } } "
-              "enum Animals { Cat { name: str, age: i32 } }");
+  parseSource(
+      "fn main(imm a: Animals){ match a { Animals::Cat{ name, age: x } => "
+      "x, _ => 0 }; } "
+      "enum Animals { Cat { imm name: str, imm age: i32 } }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -356,8 +359,8 @@ TEST(ParserTestStmt, MatchStructVariantPat) {
 }
 
 TEST(ParserTestStmt, MatchAnonymousTuplePat) {
-  parseSource(
-      "fn main(t: (i32, (i32, i32))){ match t { (a, (b, c)) => a, _ => 0 } }");
+  parseSource("fn main(imm t: (i32, (i32, i32))){ match t { (a, (b, c)) => a, "
+              "_ => 0 }; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -374,7 +377,7 @@ TEST(ParserTestStmt, MatchAnonymousTuplePat) {
 }
 
 TEST(ParserTestStmt, MatchTuplePatWithLiteralsAndWildcard) {
-  parseSource("fn main(t: Shape){ match t { Point(0, _) => 1, _ => 0 } } "
+  parseSource("fn main(imm t: Shape){ match t { Point(0, _) => 1, _ => 0 }; } "
               "enum Shape { Point(i32, i32) }");
 
   EXPECT_TRUE(PR.ok());
@@ -389,8 +392,8 @@ TEST(ParserTestStmt, MatchTuplePatWithLiteralsAndWildcard) {
 
 TEST(ParserTestStmt, MatchStructPatBadFieldSingleError) {
   parseSource(
-      "fn main(a: Animals){ match a { Animals::Cat{ 42 } => 1, _ => 0 } } "
-      "enum Animals { Cat { x: i32 } }");
+      "fn main(imm a: Animals){ match a { Animals::Cat{ 42 } => 1, _ => 0 }; } "
+      "enum Animals { Cat { imm x: i32 } }");
 
   EXPECT_FALSE(PR.ok());
   EXPECT_TRUE(hasDiag(DiagID::ExpectedFieldPatName));
@@ -398,7 +401,7 @@ TEST(ParserTestStmt, MatchStructPatBadFieldSingleError) {
 }
 
 TEST(ParserTestStmt, MatchTuplePatMissingClose) {
-  parseSource("fn main(a: Pets){ match a { Dog(x, y => 1, _ => 0 } } "
+  parseSource("fn main(imm a: Pets){ match a { Dog(x, y => 1, _ => 0 } } "
               "enum Pets { Dog(i32, i32) }");
 
   EXPECT_FALSE(PR.ok());

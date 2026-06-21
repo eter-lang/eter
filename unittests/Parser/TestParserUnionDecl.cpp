@@ -74,28 +74,28 @@ TEST(ParserTestUnionDecl, UnionDeclMissingName) {
   parseSource("union { imm f1: u32 }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedUnionName);
+  expectDiag(DiagID::ExpectedName);
 }
 
 TEST(ParserTestUnionDecl, UnionDeclMissingOpenBrace) {
   parseSource("union U imm f1: u32 }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedUnionOpen);
+  expectDiag(DiagID::ExpectedOpen);
 }
 
 TEST(ParserTestUnionDecl, UnionDeclMissingCloseBrace) {
   parseSource("union U { imm f1: u32");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedUnionClose);
+  expectDiag(DiagID::ExpectedClose);
 }
 
 TEST(ParserTestUnionDecl, UnionDeclMissingFieldColon) {
   parseSource("union U { imm f1 u32 }");
 
   EXPECT_FALSE(PR.ok());
-  expectDiag(DiagID::ExpectedStructFieldColon);
+  expectDiag(DiagID::ExpectedColon);
 }
 
 TEST(ParserTestUnionDecl, UnionDeclFieldRegimeOptional) {

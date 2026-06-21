@@ -13,6 +13,7 @@
 #include "eter/Parser/Parser.h"
 #include "eter/Parser/Regime.h"
 
+#include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/SaveAndRestore.h>
@@ -132,6 +133,8 @@ NodeIndex Parser::parsePrefixExpr() {
     return parseWhileStmt();
   case Kind::kw_match:
     return parseMatchExpr();
+  case Kind::kw_unsafe:
+    return parseUnsafeBlock();
   case Kind::l_brace:
     return parseBlockExpr();
   case Kind::kw_tensor:
@@ -147,8 +150,22 @@ NodeIndex Parser::parsePrefixExpr() {
         Span{Tok.TokenSpan.Start, Pool.spanOf(Operand).End}, {Operand},
         NodePool::makeOpPayload(static_cast<uint16_t>(Tok.TokenKind)));
   }
-  // NOTE: Add case Kind::l_brace: return parseBlockExpr(); to allow blocks
-  // in expression position (e.g. let x = { 42 }).
+  case Kind::star: {
+    const int RhsBP = prefixBindingPower(Tok.TokenKind);
+    advance();
+    const NodeIndex Operand = parseExpr(RhsBP);
+    // `*lhs = rhs` is a projection assignment.
+    if (consume(Kind::eq)) {
+      const NodeIndex Rhs = parseExpr(0);
+      return Pool.alloc(NodeKind::ProjAssignExpr,
+                        Span{Tok.TokenSpan.Start, Pool.spanOf(Rhs).End},
+                        {Operand, Rhs});
+    }
+    return Pool.alloc(
+        NodeKind::UnaryExpr,
+        Span{Tok.TokenSpan.Start, Pool.spanOf(Operand).End}, {Operand},
+        NodePool::makeOpPayload(static_cast<uint16_t>(Tok.TokenKind)));
+  }
   default: {
     // Don't consume structural boundaries (sync tokens): leaving them in the
     // stream lets the enclosing block / statement list recover to the next `;`
@@ -181,15 +198,40 @@ NodeIndex Parser::parsePostfixOrCallExpr(NodeIndex Lhs) {
     }
     case Kind::dot: {
       advance();
-      // Tuple index access: Expr . IntegerLiteral (e.g. point.0).
-      // FIXME: `t.0.1` lexes `0.1` as a float literal and is not supported
-      //        yet; write `(t.0).1` instead.
       if (check(Kind::integer_literal)) {
         const lexer::Token IdxTok = advance();
         Lhs = Pool.alloc(NodeKind::TupleIndexExpr,
                          Span{Pool.spanOf(Lhs).Start, IdxTok.TokenSpan.End},
                          {Lhs}, Interner.intern(textOf(IdxTok.TokenSpan)));
         continue;
+      }
+      // Chained tuple indexing: `t.0.1` lexes `.` `0.1` (float_literal).
+      // Extract each integer part as a separate tuple index.
+      if (check(Kind::float_literal)) {
+        const lexer::Token FloatTok = peekToken();
+        const llvm::StringRef Text = textOf(FloatTok.TokenSpan);
+        const size_t DotPos = Text.find('.');
+        if (DotPos != llvm::StringRef::npos && DotPos + 1 < Text.size()) {
+          const llvm::StringRef IntPart = Text.substr(0, DotPos);
+          llvm::StringRef FracPart = Text.substr(DotPos + 1);
+          // Strip optional 'f' suffix from the fractional part.
+          if (!FracPart.empty() && FracPart.back() == 'f')
+            FracPart = FracPart.drop_back();
+          advance(); // consume float_literal
+          Lhs = Pool.alloc(NodeKind::TupleIndexExpr,
+                           Span{Pool.spanOf(Lhs).Start, FloatTok.TokenSpan.End},
+                           {Lhs}, Interner.intern(IntPart));
+          // If the fractional part is pure digits, chain another index.
+          if (!FracPart.empty() && llvm::all_of(FracPart, [](char C) {
+                return C >= '0' && C <= '9';
+              })) {
+            Lhs =
+                Pool.alloc(NodeKind::TupleIndexExpr,
+                           Span{Pool.spanOf(Lhs).Start, FloatTok.TokenSpan.End},
+                           {Lhs}, Interner.intern(FracPart));
+          }
+          continue;
+        }
       }
       const InternedStr Field =
           expectAndIntern(Kind::identifier, DiagID::ExpectedFieldName);
@@ -209,6 +251,14 @@ NodeIndex Parser::parsePostfixOrCallExpr(NodeIndex Lhs) {
           Span{Pool.spanOf(Lhs).Start, Stream.previous().TokenSpan.End}, {Lhs});
       continue;
     }
+    case Kind::kw_as: {
+      advance();
+      const NodeIndex Ty = parseType();
+      Lhs = Pool.alloc(NodeKind::CastExpr,
+                       Span{Pool.spanOf(Lhs).Start, Pool.spanOf(Ty).End},
+                       {Lhs, Ty});
+      continue;
+    }
     default:
       return Lhs;
     }
@@ -221,7 +271,8 @@ NodeIndex Parser::parseArgList() {
   using Kind = lexer::Token::Kind;
 
   const Span Start =
-      expect(Kind::l_paren, DiagID::ExpectedArgListOpen).TokenSpan;
+      expect(Kind::l_paren, DiagID::ExpectedOpen, "to start argument list")
+          .TokenSpan;
 
   // Parentheses disambiguate (cf. the parenthesised-expression case).
   const llvm::SaveAndRestore<bool> AllowStructLit(StructLitAllowed, true);
@@ -394,7 +445,7 @@ NodeIndex Parser::parseTensorLitExpr() {
     }
   }
   const auto NumValues = static_cast<uint16_t>(Children.size());
-  expect(Kind::semi, DiagID::ExpectedTensorLitSemi);
+  expect(Kind::semi, DiagID::ExpectedSemi, "in tensor literal");
   // Parse dims (comma-separated const exprs)
   parseCommaSeparated(Children, Kind::r_square,
                       [this] { return parseConstExpr(); });
@@ -447,6 +498,7 @@ int Parser::prefixBindingPower(lexer::Token::Kind K) {
   case Kind::bang:
   case Kind::minus:
   case Kind::amp:
+  case Kind::star:
     return 110;
   default:
     return -1;

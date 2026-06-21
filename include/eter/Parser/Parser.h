@@ -110,10 +110,6 @@ private:
   //===----------------------------------------------------------------------===//
   NodeIndex parseSourceFile();
 
-  // Attributes: @name [(ArgList)]
-  llvm::SmallVector<NodeIndex, 4> parseAttributes();
-  NodeIndex parseAttribute();
-
   // Doc comments: `///` outer (attached to following decl) and `//!` inner
   // (attached to enclosing scope). Both reach the parser as plain tokens —
   // regular `//` comments are stripped earlier by `TokenStream`.
@@ -125,21 +121,19 @@ private:
   //===----------------------------------------------------------------------===//
 
   // Each function is responsible for a single grammar production. Functions
-  // that accept `Docs` / `Attrs` receive already-parsed DocComment and
-  // @-attribute nodes so that they are not re-parsed.
-  NodeIndex parseTopLevelDecl(llvm::ArrayRef<NodeIndex> Attrs);
-  NodeIndex parseFnDecl(llvm::ArrayRef<NodeIndex> Docs,
-                        llvm::ArrayRef<NodeIndex> Attrs);
-  NodeIndex parseStructDecl(llvm::ArrayRef<NodeIndex> Docs,
-                            llvm::ArrayRef<NodeIndex> Attrs);
-  NodeIndex parseEnumDecl(llvm::ArrayRef<NodeIndex> Docs,
-                          llvm::ArrayRef<NodeIndex> Attrs);
-  NodeIndex parseUnionDecl(llvm::ArrayRef<NodeIndex> Docs,
-                           llvm::ArrayRef<NodeIndex> Attrs);
-  NodeIndex parseModDecl(llvm::ArrayRef<NodeIndex> Docs,
-                         llvm::ArrayRef<NodeIndex> Attrs);
-  NodeIndex parseUseDecl(llvm::ArrayRef<NodeIndex> Docs,
-                         llvm::ArrayRef<NodeIndex> Attrs);
+  // that accept `Docs` receive already-parsed DocComment nodes. `Flags`
+  // carries per-node boolean properties (pub, unsafe, etc.) encoded as
+  // `NodePool::PubFlag`, `NodePool::UnsafeFlag`.
+  NodeIndex parseTopLevelDecl();
+  NodeIndex parseFnDecl(llvm::ArrayRef<NodeIndex> Docs, uint32_t Flags = 0,
+                        bool ExpectBody = true);
+  NodeIndex parseStructDecl(llvm::ArrayRef<NodeIndex> Docs, uint32_t Flags = 0);
+  NodeIndex parseEnumDecl(llvm::ArrayRef<NodeIndex> Docs, uint32_t Flags = 0);
+  NodeIndex parseUnionDecl(llvm::ArrayRef<NodeIndex> Docs, uint32_t Flags = 0);
+  NodeIndex parseModDecl(llvm::ArrayRef<NodeIndex> Docs, uint32_t Flags = 0);
+  NodeIndex parseUseDecl(llvm::ArrayRef<NodeIndex> Docs, uint32_t Flags = 0);
+  NodeIndex parseTraitDecl(llvm::ArrayRef<NodeIndex> Docs, uint32_t Flags = 0);
+  NodeIndex parseImplDecl(llvm::ArrayRef<NodeIndex> Docs, uint32_t Flags = 0);
   NodeIndex parseParamList();
   NodeIndex parseParam();
   NodeIndex parseStructField();
@@ -165,8 +159,7 @@ private:
   /// variant patterns.
   bool parsePathSegments(Span &PathSpan);
   // Const Declarations (cf. ParseConst.cpp)
-  NodeIndex parseConstDecl(llvm::ArrayRef<NodeIndex> Docs,
-                           llvm::ArrayRef<NodeIndex> Attrs);
+  NodeIndex parseConstDecl(llvm::ArrayRef<NodeIndex> Docs, uint32_t Flags = 0);
 
   // Statements (cf. ParseStmt.cpp)
   NodeIndex parseStmt();
@@ -177,6 +170,9 @@ private:
   NodeIndex parseIfExpr();
   NodeIndex parseForStmt();
   NodeIndex parseWhileStmt();
+  NodeIndex parseBreakStmt();
+  NodeIndex parseContinueStmt();
+  NodeIndex parseUnsafeBlock();
   /// Parses a `match` expression (used in both expression and statement
   /// position).
   NodeIndex parseMatchExpr();
@@ -192,8 +188,7 @@ private:
   ///              which the current call will stop consuming operators.
   ///
   /// FIXME(bruzzone): At this state of the implementation, `parseConstExpr`
-  /// will accept
-  ///                  only literals.
+  /// will accept only literals.
   NodeIndex parseConstExpr(int MinBP = 0);
 
   //===----------------------------------------------------------------------===//
@@ -269,6 +264,21 @@ private:
   NodeIndex parseTensorType();
 
   //===----------------------------------------------------------------------===//
+  // Generics (cf. ParseGenerics.cpp)
+  //===----------------------------------------------------------------------===//
+
+  /// Parse generic parameters: < T, U: Bound, V > (or empty for non-generic)
+  /// Returns NullNode if no `<` found; returns GenericParamList if present.
+  NodeIndex parseGenericParams();
+
+  /// Parse a single generic parameter: T or T: Bound
+  NodeIndex parseGenericParam();
+
+  /// Parse generic arguments in type position: < Type, Type, ... >
+  /// Assumes current token is `<`; consumes up to and including `>`.
+  NodeIndex parseGenericArgs();
+
+  //===----------------------------------------------------------------------===//
   // Patterns (cf. ParsePat.cpp)
   //===----------------------------------------------------------------------===//
 
@@ -306,7 +316,12 @@ private:
   /// Consume a token of kind `K`. If the current token does not match, record
   /// a parse error with diagnostic `D` and return a synthetic token with
   /// `Kind::unknown`.
-  lexer::Token expect(lexer::Token::Kind K, DiagID D);
+  ///
+  /// The `{tok}` and `{keyword}` placeholders are automatically set to the
+  /// human-readable name of `K` (e.g. "fn", ";", "{"). If `Context` is
+  /// non-empty, the `{context}` placeholder is also set.
+  lexer::Token expect(lexer::Token::Kind K, DiagID D,
+                      llvm::StringRef Context = "");
 
   /// Consume a token of kind `K`, intern its source text, and return the
   /// resulting `InternedStr`.
@@ -326,11 +341,75 @@ private:
   /// caller needs its `Span` (e.g., to widen a node's span).
   InternedStr expectAndIntern(lexer::Token::Kind K, DiagID D);
 
+  /// Consume an identifier, intern it, and return the `InternedStr`.
+  /// On failure, emit `ExpectedName` with `{construct}` set to `Construct`.
+  /// Convenience wrapper around `expectAndIntern` for the common
+  /// "expected {construct} name" pattern.
+  InternedStr expectName(lexer::Token::Kind K, llvm::StringRef Construct);
+
   //===----------------------------------------------------------------------===//
-  // Error recovery
+  // Diagnostics
   //===----------------------------------------------------------------------===//
 
-  /// Record a parse error at span `S` with diagnostic `D`.
+  /// Fluent builder for parser diagnostics. Supports adding labelled spans,
+  /// notes, and `{name}` replacement arguments before the diagnostic is
+  /// consumed by the caller (typically through `expect`, `addError`, or via
+  /// the `Errors` vector stored in `ParseResult`).
+  class DiagBuilder {
+  public:
+    /// Append a `{name}` → `Value` mapping for the message template.
+    DiagBuilder &arg(llvm::StringRef Name, std::string Value) & {
+      PD.Args.emplace_back(Name, std::move(Value));
+      return *this;
+    }
+    DiagBuilder &&arg(llvm::StringRef Name, std::string Value) && {
+      return std::move(this->arg(Name, std::move(Value)));
+    }
+
+    /// Add a labelled sub-span to the diagnostic.
+    DiagBuilder &label(Span S, llvm::StringRef Msg) & {
+      PD.Labels.push_back({S, Msg.str()});
+      return *this;
+    }
+    DiagBuilder &&label(Span S, llvm::StringRef Msg) && {
+      return std::move(this->label(S, Msg));
+    }
+
+    /// Add a note to the diagnostic.
+    DiagBuilder &note(llvm::StringRef Msg) & {
+      PD.Notes.push_back(Msg.str());
+      return *this;
+    }
+    DiagBuilder &&note(llvm::StringRef Msg) && {
+      return std::move(this->note(Msg));
+    }
+
+    /// Add a help suggestion to the diagnostic.
+    DiagBuilder &help(llvm::StringRef Msg) & {
+      PD.Helps.push_back(Msg.str());
+      return *this;
+    }
+    DiagBuilder &&help(llvm::StringRef Msg) && {
+      return std::move(this->help(Msg));
+    }
+
+  private:
+    friend class Parser;
+    explicit DiagBuilder(diag::PhaseDiagnostic &PD) : PD(PD) {}
+    diag::PhaseDiagnostic &PD;
+  };
+
+  /// Create a new parse diagnostic at span `S` with id `D`.
+  /// Returns a `DiagBuilder` for adding arguments, labels, or notes.
+  ///
+  /// Usage:
+  ///   diag(SomeSpan, DiagID::ExpectedToken)
+  ///     .arg("tok", "fn")
+  ///     .label(SomeSpan, "while parsing this")
+  ///     .note("try adding ';' here");
+  DiagBuilder diag(Span S, DiagID D);
+
+  /// Record a parse error at span `S` with diagnostic `D` (no extra args).
   void addError(Span S, DiagID D);
 
   /// Allocate a `NodeKind::Error` node covering span `S`.
@@ -340,8 +419,9 @@ private:
   ///   - A `;` (end of the current statement), or
   ///   - A `}` (end of the current block), or
   ///   - A top-level declaration keyword: fn, struct, enum, union, mod, use,
-  ///     const, or
-  ///   - A statement-introducing keyword: let, if, while, for, match, ret.
+  ///     const, trait, impl, unsafe, or
+  ///   - A statement-introducing keyword: let, if, while, for, match, ret,
+  ///     break, continue.
   ///
   /// The broader keyword set is a strict superset of the top-level set, so the
   /// same routine is correct for both top-level and block-internal recovery.

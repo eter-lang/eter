@@ -13,6 +13,7 @@ add_library(EterParser
     ParseStmt.cpp
     ParseExpr.cpp
     ParseType.cpp
+    ParseGenerics.cpp
     ParsePat.cpp
     NodePool.cpp
     TokenStream.cpp

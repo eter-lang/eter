@@ -551,7 +551,7 @@ TEST(ParserTestExpr, LetWithoutInit) {
 }
 
 TEST(ParserTestExpr, LetWithCallExpr) {
-  parseSource("fn foo(x: i32, y: i32): i32 {ret x+y;} "
+  parseSource("fn foo(imm x: i32, imm y: i32): i32 {ret x+y;} "
               "fn main(){ let imm x: i32 = foo(1, 2); }");
 
   EXPECT_TRUE(PR.ok());
@@ -593,7 +593,7 @@ TEST(ParserTestExpr, LetWithoutTypeAnnotation) {
 //===----------------------------------------------------------------------===//
 
 TEST(ParserTestExpr, StructLitSingleField) {
-  parseSource("fn main(){ let imm p = X { x: 42 }; } struct X { x: i32 }");
+  parseSource("fn main(){ let imm p = X { x: 42 }; } struct X { imm x: i32 }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -623,8 +623,9 @@ TEST(ParserTestExpr, StructLitEmpty) {
 }
 
 TEST(ParserTestExpr, StructLitTrailingComma) {
-  parseSource("fn main(){ let imm p = X { x: 1, y: 2, }; } struct X { x: i32, "
-              "y: i32 }");
+  parseSource(
+      "fn main(){ let imm p = X { x: 1, y: 2, }; } struct X { imm x: i32, "
+      "imm y: i32 }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -638,7 +639,8 @@ TEST(ParserTestExpr, StructLitTrailingComma) {
 TEST(ParserTestExpr, StructLitShorthand) {
   // `X { x }` is shorthand for `X { x: x }`: the parser synthesises the
   // IdentExpr child. `x` is a parameter in scope.
-  parseSource("fn main(x: i32){ let imm p = X { x }; } struct X { x: i32 }");
+  parseSource(
+      "fn main(imm x: i32){ let imm p = X { x }; } struct X { imm x: i32 }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -652,8 +654,9 @@ TEST(ParserTestExpr, StructLitShorthand) {
 }
 
 TEST(ParserTestExpr, StructLitNested) {
-  parseSource("fn main(){ let imm p = X { y: Y { q: 1 } }; } struct Y { q: i32 "
-              "} struct X { y: Y }");
+  parseSource(
+      "fn main(){ let imm p = X { y: Y { q: 1 } }; } struct Y { imm q: i32 "
+      "} struct X { imm y: Y }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -669,7 +672,7 @@ TEST(ParserTestExpr, StructLitNested) {
 }
 
 TEST(ParserTestExpr, StructLitFieldAccess) {
-  parseSource("fn main(){ let imm v = X { x: 1 }.x; } struct X { x: i32 }");
+  parseSource("fn main(){ let imm v = X { x: 1 }.x; } struct X { imm x: i32 }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -680,7 +683,8 @@ TEST(ParserTestExpr, StructLitFieldAccess) {
 
 TEST(ParserTestExpr, IfAsExpr) {
   // if/else used as the RHS of a let binding.
-  parseSource("fn main(x: bool){ let imm v: i32 = if x { 1; } else { 2; }; }");
+  parseSource(
+      "fn main(imm x: bool){ let imm v: i32 = if x { 1; } else { 2; }; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -692,7 +696,7 @@ TEST(ParserTestExpr, IfAsExpr) {
 
 TEST(ParserTestExpr, MatchAsExpr) {
   // match used as the RHS of a let binding.
-  parseSource("fn main(b: Balls){ let imm v: i32 = match b { "
+  parseSource("fn main(imm b: Balls){ let imm v: i32 = match b { "
               "Balls::Tennis => 0, _ => 1 }; } "
               "enum Balls { Tennis, Golf }");
 
@@ -707,7 +711,7 @@ TEST(ParserTestExpr, MatchAsExpr) {
 
 TEST(ParserTestExpr, WhileAsExpr) {
   // while used as the RHS of a let binding (evaluates to unit).
-  parseSource("fn main(x: bool){ let imm v: () = while x { }; }");
+  parseSource("fn main(imm x: bool){ let imm v: () = while x { }; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -729,7 +733,7 @@ TEST(ParserTestExpr, BlockAsExpr) {
 
 TEST(ParserTestExpr, IfCondIsNotStructLit) {
   // In an `if` header the `{` opens the then-block, not a struct literal.
-  parseSource("fn main(x: bool){ if x { } }");
+  parseSource("fn main(imm x: bool){ if x { } }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -739,7 +743,7 @@ TEST(ParserTestExpr, IfCondIsNotStructLit) {
 }
 
 TEST(ParserTestExpr, WhileCondIsNotStructLit) {
-  parseSource("fn main(x: bool){ while x { } }");
+  parseSource("fn main(imm x: bool){ while x { } }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -752,8 +756,8 @@ TEST(ParserTestExpr, WhileCondIsNotStructLit) {
 TEST(ParserTestExpr, ParenLiftsStructLitRestriction) {
   // Parentheses disambiguate, so a struct literal is legal again inside an
   // `if` header. X.flag has type bool so the condition is well-typed.
-  parseSource(
-      "fn main(){ if (X { flag: true }).flag { } } struct X { flag: bool }");
+  parseSource("fn main(){ if (X { flag: true }).flag { } } struct X { imm "
+              "flag: bool }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -762,8 +766,8 @@ TEST(ParserTestExpr, ParenLiftsStructLitRestriction) {
 }
 
 TEST(ParserTestExpr, StructLitAsCallArg) {
-  parseSource(
-      "fn main(){ foo(X { x: 1 }); } struct X { x: i32 } fn foo(p: X){}");
+  parseSource("fn main(){ foo(X { x: 1 }); } struct X { imm x: i32 } fn "
+              "foo(imm p: X){}");
 
   EXPECT_TRUE(PR.ok());
 
@@ -863,7 +867,7 @@ TEST(ParserTestExpr, TupleExprTrailingComma) {
 }
 
 TEST(ParserTestExpr, TupleIndexAccess) {
-  parseSource("fn main(point: (i32, i32)){ let imm x = point.0; }");
+  parseSource("fn main(imm point: (i32, i32)){ let imm x = point.0; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -876,7 +880,8 @@ TEST(ParserTestExpr, TupleIndexAccess) {
 }
 
 TEST(ParserTestExpr, FieldAccessOnTupleIndex) {
-  parseSource("fn main(t: (S, i32)){ let imm x = t.0.x; } struct S { x: i32 }");
+  parseSource(
+      "fn main(imm t: (S, i32)){ let imm x = t.0.x; } struct S { imm x: i32 }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -887,8 +892,25 @@ TEST(ParserTestExpr, FieldAccessOnTupleIndex) {
   EXPECT_TRUE(checkChildrenKinds(Field, NodeKind::TupleIndexExpr));
 }
 
+TEST(ParserTestExpr, ChainedTupleIndexAccess) {
+  parseSource("fn main(imm t: ((i32, i32), i32)){ let imm x = t.0.1; }");
+
+  EXPECT_TRUE(PR.ok());
+
+  // t.0.1 parses as (t.0).1 — two nested TupleIndexExpr nodes.
+  const NodeIndex Outer = PR.Pool.childrenOf(firstLet())[0];
+  EXPECT_EQ(PR.Pool.kindOf(Outer), NodeKind::TupleIndexExpr);
+  checkInternedString(Outer, "1");
+  EXPECT_TRUE(checkChildrenKinds(Outer, NodeKind::TupleIndexExpr));
+
+  const NodeIndex Inner = PR.Pool.childrenOf(Outer)[0];
+  checkInternedString(Inner, "0");
+  EXPECT_TRUE(checkChildrenKinds(Inner, NodeKind::IdentExpr));
+  checkInternedString(PR.Pool.childrenOf(Inner)[0], "t");
+}
+
 TEST(ParserTestExpr, TupleTypeInParam) {
-  parseSource("fn dist(p: (i32, i32)): i32 {}");
+  parseSource("fn dist(imm p: (i32, i32)): i32 {}");
 
   EXPECT_TRUE(PR.ok());
 
@@ -939,7 +961,7 @@ TEST(ParserTestExpr, PathExprMultiSegment) {
 }
 
 TEST(ParserTestExpr, PathCallExpr) {
-  parseSource("fn main(){ self::helper(1); } fn helper(x: i32){}");
+  parseSource("fn main(){ self::helper(1); } fn helper(imm x: i32){}");
 
   EXPECT_TRUE(PR.ok());
 
@@ -948,11 +970,34 @@ TEST(ParserTestExpr, PathCallExpr) {
   checkInternedString(PR.Pool.childrenOf(Call)[0], "self::helper");
 }
 
+TEST(ParserTestExpr, MethodCall) {
+  parseSource("fn main(imm a: Foo){ a.run(42); } struct Foo {} "
+              "impl Foo { fn run(imm self: Self, imm x: i32) {} }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Call = PR.Pool.childrenOf(fnBody())[0];
+  EXPECT_EQ(PR.Pool.kindOf(Call), NodeKind::CallExpr);
+  EXPECT_TRUE(checkChildrenKinds(Call, NodeKind::FieldExpr, NodeKind::ArgList));
+  checkInternedString(PR.Pool.childrenOf(Call)[0], "run");
+}
+
+TEST(ParserTestExpr, StaticCall) {
+  parseSource("fn main(){ Foo::new(1); } "
+              "struct Foo {} impl Foo { fn new(imm x: i32): Foo {} }");
+
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Call = PR.Pool.childrenOf(fnBody())[0];
+  EXPECT_TRUE(checkChildrenKinds(Call, NodeKind::PathExpr, NodeKind::ArgList));
+  checkInternedString(PR.Pool.childrenOf(Call)[0], "Foo::new");
+}
+
 TEST(ParserTestExpr, PathStructLit) {
   // The enum-variant construction syntax from the specification.
   parseSource(
       "fn main(){ let imm a = Animal::Spider{ eyes: 8, poisonous: false }; } "
-      "enum Animal { Reptile, Spider { eyes: i32, poisonous: bool } }");
+      "enum Animal { Reptile, Spider { imm eyes: i32, imm poisonous: bool } }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -966,8 +1011,9 @@ TEST(ParserTestExpr, PathStructLit) {
 }
 
 TEST(ParserTestExpr, PathUnitVariant) {
-  parseSource("fn main(){ let imm b = Animal::Reptile; } "
-              "enum Animal { Reptile, Spider { eyes: i32, poisonous: bool } }");
+  parseSource(
+      "fn main(){ let imm b = Animal::Reptile; } "
+      "enum Animal { Reptile, Spider { imm eyes: i32, imm poisonous: bool } }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1061,7 +1107,8 @@ TEST(ParserTestExpr, TensorTypeAndNestedLit) {
 }
 
 TEST(ParserTestExpr, TensorTypeSingleDim) {
-  parseSource("fn main(x: tensor[i32; 10]){ let imm v: tensor[i32; 10] = x; }");
+  parseSource(
+      "fn main(imm x: tensor[i32; 10]){ let imm v: tensor[i32; 10] = x; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1075,7 +1122,7 @@ TEST(ParserTestExpr, TensorTypeSingleDim) {
 
 TEST(ParserTestExpr, TensorIndexAccess) {
   // Multi-index access t[i, j] produces a TensorIndexExpr.
-  parseSource("fn main(t: tensor[i32; 2, 3]){ let imm e: i32 = t[0, 1]; }");
+  parseSource("fn main(imm t: tensor[i32; 2, 3]){ let imm e: i32 = t[0, 1]; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1092,7 +1139,7 @@ TEST(ParserTestExpr, TensorIndexAccess) {
 
 TEST(ParserTestExpr, ArrayIndexAccess) {
   // Single-bracket access on a 1D array produces an IndexExpr.
-  parseSource("fn main(a: [i32; 5]){ let imm e: i32 = a[2]; }");
+  parseSource("fn main(imm a: [i32; 5]){ let imm e: i32 = a[2]; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1142,7 +1189,7 @@ TEST(ParserTestExpr, TensorLitFlat) {
 }
 
 TEST(ParserTestExpr, QualifiedNamedType) {
-  parseSource("fn main(v: math::Vec){ let imm r: math::Vec = v; }");
+  parseSource("fn main(imm v: math::Vec){ let imm r: math::Vec = v; }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1155,14 +1202,14 @@ TEST(ParserTestExpr, ArrayTypeMissingSize) {
   parseSource("fn main(){ let imm a: [i32; ] = x; }");
 
   EXPECT_FALSE(PR.ok());
-  EXPECT_TRUE(hasDiag(DiagID::ExpectedConstLiteral));
+  EXPECT_TRUE(hasDiag(DiagID::ExpectedExpr));
 }
 
 TEST(ParserTestExpr, TensorTypeMissingSize) {
   parseSource("fn main(){ let imm a: tensor[i32; ] = x; }");
 
   EXPECT_FALSE(PR.ok());
-  EXPECT_TRUE(hasDiag(DiagID::ExpectedTensorSize));
+  EXPECT_TRUE(hasDiag(DiagID::ExpectedTensorLitDim));
 }
 
 TEST(ParserTestExpr, ArrayLitMissingClose) {
@@ -1177,8 +1224,8 @@ TEST(ParserTestExpr, ArrayLitMissingClose) {
 //===----------------------------------------------------------------------===//
 
 TEST(ParserTestExpr, LetWithFieldAccess) {
-  parseSource("fn main(point: Point){ let imm x: i32 = point.x; } "
-              "struct Point { x: i32 }");
+  parseSource("fn main(imm point: Point){ let imm x: i32 = point.x; } "
+              "struct Point { imm x: i32 }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1194,8 +1241,8 @@ TEST(ParserTestExpr, LetWithFieldAccess) {
 }
 
 TEST(ParserTestExpr, LetWithNestedFieldAccess) {
-  parseSource("fn main(s: S){ let imm x: i32 = s.inner.value; } "
-              "struct Inner { value: i32 } struct S { inner: Inner }");
+  parseSource("fn main(imm s: S){ let imm x: i32 = s.inner.value; } "
+              "struct Inner { imm value: i32 } struct S { imm inner: Inner }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1218,7 +1265,7 @@ TEST(ParserTestExpr, LetWithNestedFieldAccess) {
 
 TEST(ParserTestExpr, FieldAccessOnCallResult) {
   parseSource("fn main(){ let imm x: i32 = make().x; } "
-              "fn make(): Point {} struct Point { x: i32 }");
+              "fn make(): Point {} struct Point { imm x: i32 }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1232,7 +1279,7 @@ TEST(ParserTestExpr, FieldAccessOnCallResult) {
 }
 
 TEST(ParserTestExpr, CallOnFieldAccess) {
-  parseSource("fn main(s: S){ let imm x: i32 = s.callback(1); }");
+  parseSource("fn main(imm s: S){ let imm x: i32 = s.callback(1); }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1250,8 +1297,8 @@ TEST(ParserTestExpr, CallOnFieldAccess) {
 }
 
 TEST(ParserTestExpr, FieldAccessOnIndexExpr) {
-  parseSource("fn main(items: [Item; 10]){ let imm x: i32 = items[0].x; } "
-              "struct Item { x: i32 }");
+  parseSource("fn main(imm items: [Item; 10]){ let imm x: i32 = items[0].x; } "
+              "struct Item { imm x: i32 }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1265,8 +1312,8 @@ TEST(ParserTestExpr, FieldAccessOnIndexExpr) {
 }
 
 TEST(ParserTestExpr, FieldAccessBindsTighterThanBinary) {
-  parseSource("fn main(p: Point){ let imm x: i32 = p.x + p.y; } "
-              "struct Point { x: i32, y: i32 }");
+  parseSource("fn main(imm p: Point){ let imm x: i32 = p.x + p.y; } "
+              "struct Point { imm x: i32, imm y: i32 }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1282,7 +1329,7 @@ TEST(ParserTestExpr, FieldAccessBindsTighterThanBinary) {
 }
 
 TEST(ParserTestExpr, AssignToField) {
-  parseSource("fn main(mut p: Point){ p.x = 3; } struct Point { x: i32 }");
+  parseSource("fn main(mut p: Point){ p.x = 3; } struct Point { imm x: i32 }");
 
   EXPECT_TRUE(PR.ok());
 
@@ -1367,10 +1414,21 @@ TEST(ParserTestExpr, ArithPlusNotPrefix) {
   EXPECT_TRUE(hasDiag(DiagID::ExpectedExpr));
 }
 
-TEST(ParserTestExpr, ArithStarNotPrefix) {
+TEST(ParserTestExpr, StarPrefixDeref) {
   parseSource("fn main() { let imm x: i32 = * 1; }");
-  EXPECT_FALSE(PR.ok());
-  EXPECT_TRUE(hasDiag(DiagID::ExpectedExpr));
+  EXPECT_TRUE(PR.ok());
+
+  const NodeIndex Let = firstLet();
+  EXPECT_TRUE(
+      checkChildrenKinds(Let, NodeKind::NamedType, NodeKind::UnaryExpr));
+  checkInternedString(Let, "x");
+  checkRegime(Let, Regime::Imm);
+
+  const NodeIndex Rhs = PR.Pool.childrenOf(Let)[1];
+  EXPECT_EQ(NodePool::payloadOp(PR.Pool[Rhs].Payload),
+            static_cast<uint16_t>(EToken::Kind::star));
+  EXPECT_TRUE(checkChildrenKinds(Rhs, NodeKind::LitExpr));
+  checkInternedString(PR.Pool.childrenOf(Rhs)[0], "1");
 }
 
 TEST(ParserTestExpr, ArithMissingCloseParen) {

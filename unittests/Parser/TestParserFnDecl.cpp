@@ -39,7 +39,7 @@ TEST(ParserTestDecl, FnDeclEmptyMain) {
 }
 
 TEST(ParserTestDecl, FnDeclWithParamsAndReturnType) {
-  parseSource("fn add(x: i32, y: i32): i32 {}");
+  parseSource("fn add(imm x: i32, imm y: i32): i32 {}");
 
   EXPECT_TRUE(PR.ok());
   EXPECT_TRUE(checkChildrenKinds(PR.Root, NodeKind::FnDecl));
@@ -55,13 +55,13 @@ TEST(ParserTestDecl, FnDeclWithParamsAndReturnType) {
 
   const NodeIndex P0 = PR.Pool.childrenOf(Params)[0];
   checkInternedString(P0, "x");
-  checkRegime(P0, Regime::None);
+  checkRegime(P0, Regime::Imm);
   EXPECT_TRUE(checkChildrenKinds(P0, NodeKind::NamedType));
   checkInternedString(PR.Pool.childrenOf(P0)[0], "i32");
 
   const NodeIndex P1 = PR.Pool.childrenOf(Params)[1];
   checkInternedString(P1, "y");
-  checkRegime(P1, Regime::None);
+  checkRegime(P1, Regime::Imm);
   EXPECT_TRUE(checkChildrenKinds(P1, NodeKind::NamedType));
   checkInternedString(PR.Pool.childrenOf(P1)[0], "i32");
 

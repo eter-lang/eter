@@ -149,3 +149,131 @@ target_include_directories(ParserTestStmt SYSTEM PRIVATE
   ${LLVM_INCLUDE_DIRS}
   ${MLIR_INCLUDE_DIRS}
 )
+
+add_unittest(EterUnitTests ParserTestUseDecl TestParserUseDecl.cpp)
+
+target_link_libraries(ParserTestUseDecl PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestUseDecl PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestUseDecl SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)
+
+add_unittest(EterUnitTests ParserTestTraitDecl TestParserTraitDecl.cpp)
+
+target_link_libraries(ParserTestTraitDecl PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestTraitDecl PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestTraitDecl SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)
+
+add_unittest(EterUnitTests ParserTestImplDecl TestParserImplDecl.cpp)
+
+target_link_libraries(ParserTestImplDecl PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestImplDecl PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestImplDecl SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)
+
+add_unittest(EterUnitTests ParserTestForStmt TestParserForStmt.cpp)
+
+target_link_libraries(ParserTestForStmt PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestForStmt PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestForStmt SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)
+
+add_unittest(EterUnitTests ParserTestUnsafe TestParserUnsafe.cpp)
+
+target_link_libraries(ParserTestUnsafe PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestUnsafe PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestUnsafe SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)
+
+add_unittest(EterUnitTests ParserTestBreakContinue TestParserBreakContinue.cpp)
+
+target_link_libraries(ParserTestBreakContinue PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestBreakContinue PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestBreakContinue SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)
+
+add_unittest(EterUnitTests ParserTestCastExpr TestParserCastExpr.cpp)
+
+target_link_libraries(ParserTestCastExpr PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestCastExpr PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestCastExpr SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)
+
+add_unittest(EterUnitTests ParserTestProjAssign TestParserProjAssign.cpp)
+
+target_link_libraries(ParserTestProjAssign PRIVATE
+  EterBase
+  EterParser
+)
+
+target_include_directories(ParserTestProjAssign PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+)
+
+target_include_directories(ParserTestProjAssign SYSTEM PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+)
