@@ -100,6 +100,8 @@ config)
         -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH} \
         -DCMAKE_C_COMPILER=${LLVM_PREFIX_PATH}/bin/clang \
         -DCMAKE_CXX_COMPILER=${LLVM_PREFIX_PATH}/bin/clang++ \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DLLVM_ENABLE_ASSERTIONS=ON \
         -DLLVM_DIR=${LLVM_DIR} \
         -DMLIR_DIR=${MLIR_DIR}
