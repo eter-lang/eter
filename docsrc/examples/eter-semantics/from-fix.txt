@@ -1,0 +1,761 @@
+// ========================================================================
+// ========================================================================
+// SCALAR TYPES
+// ========================================================================
+// ========================================================================
+
+
+// ==========
+// Imm to Imm
+// ==========
+fn f(imm x: i32) {}
+fn main() {
+    let imm x: i32 = 1;
+    let imm y: i32 = x;
+    f(x);
+}
+
+// ==========
+// Imm to Mut
+// ==========
+fn f(mut x: i32) {}
+fn main() {
+    let imm x: i32 = 1;
+    // let mut y: i32 = x; // ERROR: Changing the regime from imm to mut is not allowed. Need to copy.
+    // f(x); // ERROR: Changing the regime from imm to mut is not allowed. Need to copy.
+}
+
+// ===========
+// Imm to Proj
+// ===========
+fn f(proj x: i32) {}
+fn main() {
+    let x: i32 = 1;
+    // let proj y: i32 = &x; // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+    // f(&x); // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+
+// ========================================================================
+// ========================================================================
+// ARRAY TYPES
+// ========================================================================
+// ========================================================================
+
+// ==========
+// Imm to Imm
+// ==========
+fn f(imm x: [i32; 3]) {}
+fn main() {
+    let imm x: [i32; 3] = [1, 2, 3];
+    let imm y: [i32; 3] = x; // O(1)
+    f(x); // O(1)
+}
+
+// ==========
+// Imm to Mut
+// ==========
+fn f(mut x: [i32; 3]) {}
+fn main() {
+    let imm x: [i32; 3] = [1, 2, 3];
+    // let mut y: [i32; 3] = x; // ERROR: Changing the regime from imm to mut is not allowed. Need to copy.
+    // f(x); // ERROR: Changing the regime from imm to mut is not allowed. Need to copy.
+}
+
+// ===========
+// Imm to Proj
+// ===========
+fn f(proj x: [i32; 3]) {}
+fn main() {
+    let imm x: [i32; 3] = [1, 2, 3];
+    // let proj y: [i32; 3] = &x; // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+    // f(&x); // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+
+// ========================================================================
+// ========================================================================
+// Structs with Imm
+// ========================================================================
+// ========================================================================
+
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+// ==========
+// Imm to Imm
+// ==========
+fn f(imm p: Point) {} // Drop(p)
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    let imm q = p;
+    f(p);
+} // Drop(q), Drop(p)
+
+// ==========
+// Imm to Mut
+// ==========
+fn f(mut p: Point) {} // Drop(p)
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    // let mut q = p; // ERROR: Changing the regime from imm to mut is not allowed. Need to copy.
+    // f(p); // ERROR: Changing the regime from imm to mut is not allowed. Need to copy.
+}
+
+// ===========
+// Imm to Proj
+// ===========
+fn f(proj p: Point) {} // (proj parameter, no Drop)
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    // let proj q = &p; // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+    // f(&p); // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+
+// ========================================================================
+// ========================================================================
+// Imm-Imm as return and formal parameter
+// ========================================================================
+// ========================================================================
+
+// ==========
+// Imm-Imm to Imm
+// ==========
+fn imm f(imm p: Point): Point { p }
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    let imm q = f(p);
+} // Drop(q), Drop(p)
+
+fn imm f2(imm p1: Point, imm p2: Point): Point { p1 } // Drop(p2)
+fn main() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    let imm q = f2(p1, p2);
+} // Drop(q), Drop(p1), Drop(p2)
+
+// ==========
+// Imm-Imm to Mut
+// ==========
+fn imm f(imm p: Point): Point { p } // p is returned, no Drop
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    // let mut q = f(p); // ERROR: Changing the regime from imm to mut is not allowed. Need to copy.
+}
+
+fn imm f2(imm p1: Point, imm p2: Point): Point { p1 } // Drop(p2)
+fn main() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    // let mut q = f2(p1, p2); // ERROR: Changing the regime from imm to mut is not allowed. Need to copy.
+}
+
+// ===========
+// Imm-Imm to Proj
+// ===========
+fn imm f(imm p: Point): Point { p } // p is returned, no Drop
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    // let proj q = &f(p); // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+
+fn imm f2(imm p1: Point, imm p2: Point): Point { p1 } // Drop(p2)
+fn main() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    // let proj q = &f2(p1, p2); // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+
+// ========================================================================
+// ========================================================================
+// Imm-Mut as return and formal parameter
+// ========================================================================
+// ========================================================================
+
+// ==========
+// Imm-Mut to Imm
+// ==========
+fn imm f(mut p: Point): Point { p } // p is moved to return, no Drop
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    let imm q = f(p);
+} // Drop(q) (p was moved, so no Drop for p)
+
+fn imm f2(mut p1: Point, mut p2: Point): Point { p1 } // p2 is dropped (p1 is returned)
+fn main() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let imm q = f2(p1, p2);
+} // Drop(q) (p1, p2 were moved)
+
+// ==========
+// Imm-Mut to Mut
+// ==========
+fn imm f(mut p: Point): Point { p } // p is moved to return, no Drop
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    // let mut q = f(p); // ERROR: Changing the regime from imm to mut is not allowed. Need to copy.
+}
+
+fn imm f2(mut p1: Point, mut p2: Point): Point { p1 } // Drop(p2)
+fn main() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    // let mut q = f2(p1, p2); // ERROR: Changing the regime from imm to mut is not allowed. Need to copy.
+}
+
+// ===========
+// Imm-Mut to Proj
+// ===========
+fn imm f(mut p: Point): Point { p } // p is moved to return, no Drop
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    // let proj q = &f(p); // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+
+fn imm f2(mut p1: Point, mut p2: Point): Point { p1 } // Drop(p2)
+fn main() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    // let proj q = &f2(p1, p2); // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+
+// ========================================================================
+// ========================================================================
+// Imm-Proj as return and formal parameter
+// ========================================================================
+// ========================================================================
+
+
+// ==========
+// Imm-Proj to Imm
+// ==========
+fn imm f(proj p: Point): Point {
+    // p // ERROR: Escaping the return of a proj to a imm is not allowed. Need to copy.
+}
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    let imm q = f(&p);
+}
+
+fn imm f2(proj p1: Point, proj p2: Point): Point {
+    // p1 // ERROR: Escaping the return of a proj to a imm is not allowed. Need to copy.
+}
+fn main() {
+    let proj p1 = &Point { x: 1, y: 2 }
+    let proj p2 = &Point { x: 3, y: 4 };
+    let imm q = f2(&p1, &p2);
+}
+
+// ==========
+// Imm-Proj to Mut
+// ==========
+fn imm f(proj p: Point): Point {
+    // p // ERROR: Escaping the return of a proj to a imm is not allowed. Need to copy.
+}
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    let imm q = f(&p);
+}
+
+fn imm f2(proj p1: Point, proj p2: Point): Point {
+    p1 // ERROR: Escaping the return of a proj to a imm is not allowed. Need to copy.
+}
+fn main() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let proj p2 = &Point { x: 3, y: 4 };
+    let imm q = f2(&p1, &p2);
+}
+
+// ===========
+// Imm-Proj to Proj
+// ===========
+fn imm f(proj p: Point): Point {
+    // p // ERROR: Escaping the return of a proj to a imm is not allowed. Need to copy.
+}
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    // let proj q = &f(&p); // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+
+fn imm f2(proj p1: Point, proj p2: Point): Point {
+    // p1 // ERROR: Escaping the return of a proj to a imm is not allowed. Need to copy.
+}
+fn main() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let proj p2 = &Point { x: 3, y: 4 };
+    // let proj q = &f2(&p1, &p2); // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+
+
+// ========================================================================
+// ========================================================================
+// Store Imm in Struct from Imm
+// ========================================================================
+// ========================================================================
+
+// ==========
+// SINGLE CASE
+// ==========
+
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn imm f(imm p: Point): Point {
+    let imm x = p.x;
+    let imm y = p.y;
+    Point { x, y }
+} // Drop(p)
+
+fn tmp1() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = f(p1);
+} // Drop(p2), Drop(p1)
+
+// OPTIMIZATION: to avoid copy and reference counting
+// fn tmp2() {
+//     let imm p2;
+//     let tmp = Point { x: 1, y: 2 };
+//     {
+//         let p1 = tmp;
+//         p2 = f(p1);
+//     }
+// }
+fn tmp2() {
+    let imm p2;
+    {
+        let imm p1 = Point { x: 1, y: 2 };
+        p2 = f(p1);
+    } // Drop(p1)
+} // Drop(p2)
+
+// ==========
+// Imm-Imm-Imm as return and formal parameters from Imm
+// =========
+
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn imm f(imm p: Point, imm u: Point): Point {
+    // u is not used
+    let imm x = p.x;
+    let imm y = p.y;
+    Point { x, y }
+} // Drop(p), Drop(u)
+
+fn tmp1() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    let imm p2 = f(p1, p2);
+} // Drop(p1), Drop(p2_shadowed), Drop(p2)
+
+// OPTIMIZATION: to avoid copy and reference counting
+// fn tmp2() {
+//     let p2;
+//     let p = Point { x: 1, y: 2 };
+//     let tmp = Point { x: 3, y: 4 };
+//     {
+//         let u = tmp;
+//         p2 = f(p, tmp);
+//     }
+// }
+fn tmp2() {
+    let imm p2;
+    let imm p = Point { x: 1, y: 2 };
+    {
+        let imm u = Point { x: 3, y: 4 };
+        p2 = f(p, u);
+    } // Drop(u)
+} // Drop(p2), Drop(p)
+
+
+
+// ==========
+// Imm-Imm-Mut as return and formal parameters from Imm
+// =========
+
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn imm f(imm p: Point, mut u: Point): Point {
+    // u is not used
+    let imm x = p.x;
+    let imm y = p.y;
+    Point { x, y }
+} // Drop(p), Drop(u)
+
+fn tmp1() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 1, y: 2 };
+    let imm p3 = f(p1, p2);
+    // - p2 is moved, so it is not used anymore
+    // - p1 can be used again
+} // Drop(p3), Drop(p1) (p2 moved into f)
+
+
+// OPTIMIZATION to avoid copy and reference counting
+// fn tmp2() {
+//     let p3;
+//     let p1 = Point { x: 1, y: 2 };
+//     let mut tmp = Point { x: 3, y: 4 };
+//     {
+//         let mut p2 = tmp;
+//         p3 = f(p1, p2);
+//     }
+// }
+fn tmp2() {
+    let imm p3;
+    let imm p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);
+        // - p2 is moved, so it is not used anymore
+        // - p1 can be used again
+    } // (p2 moved into f, no Drop at inner scope)
+} // Drop(p3), Drop(p1)
+
+// ==========
+// Imm-Imm-Proj as return and formal parameters from Imm
+// =========
+
+
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn imm f(imm p: Point, proj u: Point): Point {
+    // u is not used
+    let imm x = p.x;
+    let imm y = p.y;
+    *p.x = 10; // Re-initialize the projection.
+    *p.y = 20; // Re-initialize the projection.
+    Point { x, y }
+} // Drop(p) (u is proj, no Drop)
+
+fn tmp1() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 1, y: 2 };
+    let imm p3 = f(p1, &p2);
+    // - p2 is projected, so it is can be used again
+    // - p1 can be used again
+} // Drop(p3), Drop(p2), Drop(p1)
+
+
+// OPTIMIZATION to avoid copy and reference counting
+// fn tmp2() {
+//     let p3;
+//     let p1 = Point { x: 1, y: 2 };
+//     let mut tmp = Point { x: 3, y: 4 };
+//     {
+//         let mut p2 = tmp;
+//         p3 = f(p1, p2);
+//     }
+// }
+fn tmp2() {
+    let imm p3;
+    let imm p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, &p2);
+        // - p2 is projected, so it is can be used again
+        // - p1 can be used again
+    } // Drop(p2) (p2 was projected, not moved)
+} // Drop(p3), Drop(p1)
+
+// ========================================================================
+// ========================================================================
+// Store Mut in Struct from Imm
+// ========================================================================
+// ========================================================================
+
+// ==========
+// SINGLE CASE
+// ==========
+
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn imm f(imm p: Point): Point {
+    // let mut x = p.x; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    // let mut y = p.y; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    Point { x, y }
+} // Drop(p)
+
+fn tmp1() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = f(p1);
+} // Drop(p2), Drop(p1)
+
+fn tmp2() {
+    let imm p2;
+    {
+        let imm p1 = Point { x: 1, y: 2 };
+        p2 = f(p1);
+    } // Drop(p1)
+} // Drop(p2)
+
+// ==========
+// Imm-Imm-Imm as return and formal parameters from Imm
+// =========
+
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn imm f(imm p: Point, imm u: Point): Point {
+    // u is not used
+    // let mut x = p.x; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    // let mut y = p.y; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    Point { x, y }
+} // Drop(p), Drop(u)
+
+fn tmp1() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    let imm p2 = f(p1, p2);
+} // Drop(p1), Drop(p2_shadowed), Drop(p2)
+
+// OPTIMIZATION: to avoid copy and reference counting
+// fn tmp2() {
+//     let p2;
+//     let p = Point { x: 1, y: 2 };
+//     let tmp = Point { x: 3, y: 4 };
+//     {
+//         let u = tmp;
+//         p2 = f(p, tmp);
+//     }
+// }
+fn tmp2() {
+    let imm p2;
+    let imm p = Point { x: 1, y: 2 };
+    {
+        let imm u = Point { x: 3, y: 4 };
+        p2 = f(p, u);
+    } // Drop(u)
+} // Drop(p2), Drop(p)
+
+// ==========
+// Imm-Imm-Mut as return and formal parameters from Imm
+// =========
+
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn imm f(imm p: Point, mut u: Point): Point {
+    // u is not used
+    // let mut x = p.x; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    // let mut y = p.y; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    Point { x, y }
+} // Drop(p), Drop(u)
+
+fn tmp1() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 1, y: 2 };
+    let imm p3 = f(p1, p2);
+    // - p2 is moved, so it is not used anymore
+    // - p1 can be used again
+} // Drop(p3), Drop(p1) (p2 moved into f)
+
+fn tmp2() {
+    let imm p3;
+    let imm p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);
+        // - p2 is moved, so it is not used anymore
+        // - p1 can be used again
+    } // (p2 moved into f, no Drop at inner scope)
+} // Drop(p3), Drop(p1)
+
+// ==========
+// Imm-Imm-Proj as return and formal parameters from Imm
+// =========
+
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn imm f(imm p: Point, proj u: Point): Point {
+    // u is not used
+    // let mut x = p.x; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    // let mut y = p.y; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    Point { x, y }
+} // Drop(p) (u is proj, no Drop)
+
+fn tmp1() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 1, y: 2 };
+    let imm p3 = f(p1, &p2);
+    // - p2 is projected, so it is can be used again
+    // - p1 can be used again
+} // Drop(p3), Drop(p2), Drop(p1)
+
+fn tmp2() {
+    let imm p3;
+    let imm p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, &p2);
+        // - p2 is projected, so it is can be used again
+        // - p1 can be used again
+    } // Drop(p2) (p2 was projected, not moved)
+} // Drop(p3), Drop(p1)
+
+// ========================================================================
+// ========================================================================
+// Store Proj in Struct from Imm
+// ========================================================================
+// ========================================================================
+
+// ==========
+// SINGLE CASE
+// ==========
+
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn imm f(imm p: Point): Point {
+    // let proj x = &p.x; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    // let proj y = &p.y; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    Point { x, y }
+} // Drop(p)
+
+fn tmp1() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let proj p2 = f(&p1);
+} // (proj variables, no Drop)
+
+// OPTIMIZATION: to avoid copy and reference counting
+// fn tmp2() {
+//     let p2;
+//     let p = Point { x: 1, y: 2 };
+//     let tmp = Point { x: 3, y: 4 };
+//     {
+//         let u = tmp;
+//         p2 = f(p);
+//     }
+// }
+fn tmp2() {
+    let proj p2;
+    let proj p = Point { x: 1, y: 2 };
+    {
+        let proj u = Point { x: 3, y: 4 };
+        p2 = f(p);
+    } // (proj variables, no Drop)
+} // (proj variables, no Drop)
+
+// ==========
+// Imm-Imm-Imm as return and formal parameters from Imm
+// =========
+
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn imm f(imm p: Point, imm u: Point): Point {
+    // u is not used
+    // let proj x = p.x; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    // let proj y = p.y; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    Point { x, y }
+} // Drop(p), Drop(u)
+
+fn tmp1() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    let imm p2 = f(p1, p2);
+} // Drop(p1), Drop(p2_shadowed), Drop(p2)
+
+fn tmp2() {
+    let imm p2;
+    let imm p = Point { x: 1, y: 2 };
+    {
+        let imm u = Point { x: 3, y: 4 };
+        p2 = f(p, u);
+    } // Drop(u)
+} // Drop(p2), Drop(p)
+
+// ==========
+// Imm-Imm-Mut as return and formal parameters from Imm
+// =========
+
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn imm f(imm p: Point, mut u: Point): Point {
+    // u is not used
+    // let proj x = p.x; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    // let proj y = p.y; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    Point { x, y }
+} // Drop(p), Drop(u)
+
+fn tmp1() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 1, y: 2 };
+    let imm p3 = f(p1, p2);
+    // - p2 is moved, so it is not used anymore
+    // - p1 can be used again
+} // Drop(p3), Drop(p1) (p2 moved into f)
+
+fn tmp2() {
+    let imm p3;
+    let imm p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);
+        // - p2 is moved, so it is not used anymore
+        // - p1 can be used again
+    } // (p2 moved into f, no Drop at inner scope)
+} // Drop(p3), Drop(p1)
+
+// ==========
+// Imm-Imm-Proj as return and formal parameters from Imm
+// =========
+
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn imm f(imm p: Point, proj u: Point): Point {
+    // u is not used
+    // let proj x = p.x; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    // let proj y = p.y; // ERROR: p is under the regime imm, it propagates to the whole struct.
+    Point { x, y }
+} // Drop(p) (u is proj, no Drop)
+
+fn tmp1() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 1, y: 2 };
+    let imm p3 = f(p1, &p2);
+    // - p2 is projected, so it is can be used again
+    // - p1 can be used again
+} // Drop(p3), Drop(p2), Drop(p1)
+
+fn tmp2() {
+    let imm p3;
+    let imm p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, &p2);
+        // - p2 is projected, so it is can be used again
+        // - p1 can be used again
+    } // Drop(p2) (p2 was projected, not moved)
+} // Drop(p3), Drop(p1)

@@ -1,0 +1,37 @@
+struct Iter {
+    mut data: [i32; 3],
+    mut cursor: usize,
+}
+fn mut iter(mut x: [i32; 3]): Iter<i32, 3> { Iter { data: x, cursor: 0 } }
+fn mut collect(mut it: Iter<i32, 3>): [i32; 3] { it.data }
+fn proj get(proj it: Iter<i32, 3>, fix i: i32): i32 { it.data[i] }
+fn next(proj it: Iter<i32, 3>): i32 {
+    let i = it.cursor;
+    if i >= 3 { abort(); }
+    *it.cursor = i + 1;
+    ret it.data[i];
+}
+
+fn main() {
+    let mut x: [i32; 3] = [1, 2, 3];
+    let mut it: Iter<i32, 3> = iter(x); // `x` is moved into the iterator
+    it.data[0] = 100;
+
+    let proj tmp = get(&it, 0);
+    let proj tmp2 = next(&it); // ERROR: it is already projected you cannot project it again
+    // UB: tmp and tmp2 would point to the same memory location
+
+
+
+    // -------------------------------------------------------------------------------
+    *tmp2 += 10;
+    // `el` dead (it's not used anymore), so you can use `it` again.
+
+    while proj el2 = next(it) {
+        // `it` is projected, you can't mutate `data` through it.
+        *el2 += 10;
+    }
+
+    // `it` returns alive, so you can continue using it.
+    x = collect(it);
+}

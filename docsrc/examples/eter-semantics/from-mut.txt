@@ -1,0 +1,872 @@
+// ========================================================================
+// ========================================================================
+// SCALAR TYPES
+// ========================================================================
+// ========================================================================
+
+// ==========
+// Mut to Mut
+// ==========
+fn main() {
+    let mut x: i32 = 1;
+    let mut y: i32 = x;
+    // let mut z: i32 = x; // ERROR: Changing the regime from mut to mut is allowed only once. Need to copy.
+}
+
+fn f(mut x: i32) {}
+fn main() {
+    let mut x: i32 = 1;
+    f(x);
+    // let mut z: i32 = x; // ERROR: Changing the regime from mut to mut is allowed only once. Need to copy.
+}
+
+// ==========
+// Mut to Imm
+// ==========
+fn main() {
+    let mut x: i32 = 1;
+    let imm y: i32 = x;
+    let imm z: i32 = x;
+    // let mut z: i32 = x; // ERROR: `x` is has been moved, so it is not valid to use it again.
+}
+
+fn f(imm x: i32) {}
+fn main() {
+    let mut x: i32 = 1;
+    f(x);
+    let imm z: i32 = x;
+    // let mut z: i32 = x; // ERROR: `x` is has been moved, so it is not valid to use it again.
+}
+
+// ===========
+// Mut to Proj
+// ===========
+fn main() {
+    let mut x: i32 = 1;
+    let proj y: i32 = &x;
+    // let proj z: i32 = &x; // ERROR: Changing the regime from mut to proj is allowed only once. Need to copy.
+    *y = 2;
+    // NOTE: x can be eventually used again if y is not used anymore.
+}
+
+fn f(proj x: i32) {}
+fn main() {
+    let mut x: i32 = 1;
+    f(&x);
+    // let proj y: i32 = &x; // ERROR: Changing the regime from mut to proj is allowed only once. Need to copy.
+    &x = 2;
+    // NOTE: x can be eventually used again.
+}
+
+// ========================================================================
+// ========================================================================
+// ARRAY TYPES
+// ========================================================================
+// ========================================================================
+
+
+// ==========
+// Mut to Mut
+// ==========
+fn main() {
+    let mut x: [i32; 3] = [1, 2, 3];
+    let mut y: [i32; 3] = x;
+    // let mut z: [i32; 3] = x; // ERROR: Changing the regime from mut to mut is allowed only once. Need to copy.
+}
+
+fn f(mut x: [i32; 3]) {}
+fn main() {
+    let mut x: [i32; 3] = [1, 2, 3];
+    f(x);
+    // let mut z: [i32; 3] = x; // ERROR: Changing the regime from mut to mut is allowed only once. Need to copy.
+}
+
+// ==========
+// Mut to Imm
+// ==========
+fn main() {
+    let mut x: [i32; 3] = [1, 2, 3];
+    let imm y: [i32; 3] = x;
+    let imm z: [i32; 3] = x;
+}
+
+fn f(imm x: [i32; 3]) {}
+fn main() {
+    let mut x: [i32; 3] = [1, 2, 3];
+    f(x);
+    let imm z: [i32; 3] = x;
+}
+
+// ===========
+// Mut to Proj
+// ===========
+fn main() {
+    let mut x: [i32; 3] = [1, 2, 3];
+    let proj y: [i32; 3] = &x;
+    // let proj z: [i32; 3] = &x; // ERROR: Changing the regime from mut to proj is allowed only once. Need to copy.
+    *y = [3, 2, 1];
+    // NOTE: x can be eventually used again if y is not used anymore.
+}
+
+fn f(proj x: [i32; 3]) {}
+fn main() {
+    let mut x: [i32; 3] = [1, 2, 3];
+    f(&x);
+    // let proj y: [i32; 3] = &x; // ERROR: Changing the regime from mut to proj is allowed only once. Need to copy.
+    *y = [3, 2, 1];
+    // NOTE: x can be eventually used again if y is not used anymore.
+}
+
+// ========================================================================
+// ========================================================================
+// Structs with Imm
+// ========================================================================
+// ========================================================================
+
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+// ==========
+// Mut to Mut
+// ==========
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    let mut q = p;
+    // let mut r = p; // ERROR: Changing the regime from mut to mut is allowed only once. Need to copy.
+}
+
+fn f(mut p: Point) {}
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    f(p);
+    // let mut r = p; // ERROR: Changing the regime from mut to mut is allowed only once. Need to copy.
+}
+
+// ==========
+// Mut to Imm
+// ==========
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    let imm q = p;
+    let imm r = p;
+    // let mut z: i32 = x; // ERROR: `x` is has been moved, so it is not valid to use it again.
+}
+
+fn f(imm p: Point) {}
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    f(p);
+    let imm r = p;
+}
+
+// ===========
+// Mut to Proj
+// ===========
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    let proj q = &p;
+    // let proj r = &p; // ERROR: Changing the regime from mut to proj is allowed only once. Need to copy.
+    *q = Point { x: 3, y: 4 };
+    // NOTE: p can be eventually used again if q is not used anymore.
+}
+
+fn f(proj p: Point) {}
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    f(&p);
+    // let proj q = &p; // ERROR: Changing the regime from mut to proj is allowed only once. Need to copy.
+    // NOTE: p can be eventually used again.
+}
+
+// ========================================================================
+// ========================================================================
+// Mut-Mut as return and formal parameter
+// ========================================================================
+// ========================================================================
+
+// ==========
+// Mut-Mut to Mut
+// ==========
+fn mut f(mut p: Point): Point { p }
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    let mut q = f(p);
+}
+
+fn mut f2(mut p1: Point, mut p2: Point): Point { p1 }
+fn main() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let mut q = f2(p1, p2);
+    // - p2 is moved, so it is not used anymore
+    // - p1 is moved, so it is not used anymore
+}
+
+// ==========
+// Mut-Mut to Imm
+// ==========
+fn mut f(mut p: Point): Point { p }
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    let imm q = f(p);
+}
+
+fn mut f2(mut p1: Point, mut p2: Point): Point { p1 }
+fn main() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let imm q = f2(p1, p2);
+}
+
+// ===========
+// Mut-Mut to Proj
+// ===========
+fn mut f(mut p: Point): Point { p }
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    let proj q = &f(p);
+}
+
+fn mut f2(mut p1: Point, mut p2: Point): Point { p1 }
+fn main() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let proj q = &f2(p1, p2);
+}
+
+// ========================================================================
+// ========================================================================
+// Mut-Imm as return and formal parameter
+// ========================================================================
+// ========================================================================
+
+// ==========
+// Mut-Imm to Mut
+// ==========
+fn mut f(imm p: Point): Point {
+    // p // ERROR: Escaping the return of a imm to a mut is not allowed. Need to copy.
+}
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    let mut q = f(p);
+}
+
+fn mut f2(imm p1: Point, imm p2: Point): Point {
+    // p1 // ERROR: Escaping the return of a imm to a mut is not allowed. Need to copy.
+}
+fn main() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    let mut q = f2(p1, p2);
+}
+
+// ==========
+// Mut-Imm to Imm
+// ==========
+fn mut f(imm p: Point): Point {
+    // p // ERROR: Escaping the return of a imm to a mut is not allowed. Need to copy.
+}
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    let imm q = f(p);
+}
+
+fn mut f2(imm p1: Point, imm p2: Point): Point {
+    // p1  // ERROR: Escaping the return of a imm to a mut is not allowed. Need to copy.
+}
+fn main() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    let imm q = f2(p1, p2);
+}
+
+// ==========
+// Mut-Imm to Proj
+// ==========
+fn mut f(imm p: Point): Point {
+    // p // ERROR: Escaping the return of a imm to a mut is not allowed. Need to copy.
+}
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    let proj q = f(p);
+}
+
+fn mut f2(imm p1: Point, imm p2: Point): Point {
+    // p1  // ERROR: Escaping the return of a imm to a mut is not allowed. Need to copy.
+}
+fn main() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    let proj q = f2(p1, p2);
+}
+
+// ========================================================================
+// ========================================================================
+// Mut-Proj as return and formal parameter
+// ========================================================================
+// ========================================================================
+
+// NOTE: When calling fn mut f(proj p), p must be forwarded (not aliased).
+// If p is already a proj binding, f(p) is OK (forwarding, p is consumed).
+// f(&p) where p is already proj is ERROR (aliasing — two projs to same location).
+
+// ==========
+// Mut-Proj to Mut
+// ==========
+fn mut f(proj p: Point): Point {
+    let imm x = p.x;  // proj binding + imm field -> imm access
+    let imm y = p.y;
+    Point { x, y }    // OK: returning a new mut value
+    // p // ERROR: returning proj directly escapes the projection
+}
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    let mut q = f(p);   // OK: forwarding — p is consumed, q holds new mut value
+    // f(&p);           // ERROR: aliasing — &p creates a new proj while p is still alive
+}
+
+fn mut f2(proj p1: Point, proj p2: Point): Point {
+    let imm x = p1.x;
+    let imm y = p1.y;
+    Point { x, y }    // p2 unused but consumed as proj param
+    // p1 // ERROR: returning proj directly escapes the projection
+}
+fn main() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let proj p2 = &Point { x: 3, y: 4 };
+    let mut q = f2(p1, p2);   // OK: both forwarded
+    // f2(&p1, &p2);           // ERROR: aliasing — &p1, &p2 create new projs while originals alive
+}
+
+// ==========
+// Mut-Proj to Imm
+// ==========
+fn mut f(proj p: Point): Point {
+    let imm x = p.x;
+    let imm y = p.y;
+    Point { x, y }
+    // p // ERROR: returning proj directly escapes the projection
+}
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    let imm q = f(p);   // OK: forwarding, then mut -> imm at call site
+    // f(&p);           // ERROR: aliasing — &p creates a new proj while p is still alive
+}
+
+fn mut f2(proj p1: Point, proj p2: Point): Point {
+    let imm x = p1.x;
+    let imm y = p1.y;
+    Point { x, y }
+    // p1 // ERROR: returning proj directly escapes the projection
+}
+fn main() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let proj p2 = &Point { x: 3, y: 4 };
+    let imm q = f2(p1, p2);    // OK: both forwarded
+    // f2(&p1, &p2);            // ERROR: aliasing
+}
+
+// ==========
+// Mut-Proj to Proj
+// ==========
+fn mut f(proj p: Point): Point {
+    let imm x = p.x;
+    let imm y = p.y;
+    Point { x, y }
+    // p // ERROR: returning proj directly escapes the projection
+}
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    let proj q = &f(p);  // OK: forwarding p, then proj of the returned mut value
+    // f(&p);            // ERROR: aliasing — &p creates a new proj while p is still alive
+}
+
+fn mut f2(proj p1: Point, proj p2: Point): Point {
+    let imm x = p1.x;
+    let imm y = p1.y;
+    Point { x, y }
+    // p1 // ERROR: returning proj directly escapes the projection
+}
+fn main() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let proj p2 = &Point { x: 3, y: 4 };
+    let proj q = &f2(p1, p2);  // OK: both forwarded, then proj of returned mut value
+    // f2(&p1, &p2);            // ERROR: aliasing
+}
+
+
+// ========================================================================
+// ========================================================================
+// Store Mut in Struct from Mut
+// ========================================================================
+// ========================================================================
+
+// ==========
+// SINGLE CASE
+// ==========
+
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn mut f(mut p: Point): Point {
+    let mut x = p.x;
+    let mut y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = f(p1);
+    // - p1 is moved, so it is not used anymore
+}
+
+// OPTIMIZATION: to avoid copy and reference counting
+// fn tmp2() {
+//     let mut p2;
+//     let mut tmp = Point { x: 1, y: 2 };
+//     {
+//         let mut p1 = tmp;
+//         p2 = f(p1);
+//     }
+// }
+fn tmp2() {
+    let mut p2;
+    {
+        let mut p1 = Point { x: 1, y: 2 };
+        p2 = f(p1);
+    }
+}
+
+// ==========
+// Mut-Mut-Mut as return and formal parameters fromMut
+// =========
+
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn mut f(mut p: Point, mut : Point): Point {
+    // u is not used
+    let imm x = p.x;
+    let imm y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let mut p2 = f(p1, p2);
+}
+
+// OPTIMIZATION: to avoid copy and reference counting
+// fn tmp2() {
+//     let mut p2;
+//     let mut p = Point { x: 1, y: 2 };
+//     let mut tmp = Point { x: 3, y: 4 };
+//     {
+//         let mut u = tmp;
+//         p2 = f(p, tmp);
+//     }
+// }
+fn tmp2() {
+    let mut p2;
+    let mut p = Point { x: 1, y: 2 };
+    {
+        let mut u = Point { x: 3, y: 4 };
+        p2 = f(p, u);
+    }
+}
+
+
+// ==========
+// Mut-Mut-Imm as return and formal parameters fromMut
+// =========
+
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn mut f(mut p: Point, imm u: Point): Point {
+    // u is not used
+    let mut x = p.x;
+    let mut y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 1, y: 2 };
+    let mut p3 = f(p1, p2);
+    // - p1 is moved, so it is not used anymore
+    // - p2 can be used again
+}
+
+
+// OPTIMIZATION to avoid copy and reference counting
+// fn tmp2() {
+//     let mut p3;
+//     let mut p1 = Point { x: 1, y: 2 };
+//     let tmp = Point { x: 3, y: 4 };
+//     {
+//         let p2 = tmp;
+//         p3 = f(p1, p2);
+//     }
+// }
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let imm p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);
+        // - p1 is moved, so it is not used anymore
+        // - p2 can be used again
+    }
+}
+
+
+
+// ==========
+// Mut-Mut-Proj as return and formal parameters fromMut
+// =========
+
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn mut f(mut p: Point, proj u: Point): Point {
+    // u is not used
+    let mut x = p.x;
+    let mut y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 1, y: 2 };
+    let mut p3 = f(p1, &p2);
+    // - p2 is projected, so it is can be used again
+    // - p1 is moved, so it is not used anymore
+}
+
+
+// OPTIMIZATION to avoid copy and reference counting
+// fn tmp2() {
+//     let mut p3;
+//     let mut p1 = Point { x: 1, y: 2 };
+//     let mut tmp = Point { x: 3, y: 4 };
+//     {
+//         let mut p2 = tmp;
+//         p3 = f(p1, p2);
+//     }
+// }
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, &p2);
+        // - p2 is projected, so it is can be used again
+        // - p1 is moved, so it is not used anymore
+    }
+}
+
+// ========================================================================
+// ========================================================================
+// Store Proj in Struct from Mut
+// ========================================================================
+// ========================================================================
+
+// ==========
+// SINGLE CASE
+// ==========
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn mut f(mut p: Point): Point {
+    let mut x = p.x; // NOTE: Changing the regime from proj to mut forces a reinitialization of the projection.
+    let mut y = p.y; // NOTE: Changing the regime from proj to mut forces a reinitialization of the projection.
+    &p.x = 10;
+    &p.y = 20;
+    // Point { x, y } creates a new Point that OWNS x and y.
+    // The `proj` field marker describes the access mode (in-place mutable reference),
+    // not external storage — the struct owns its data.
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = f(p1);
+}
+
+// OPTIMIZATION: to avoid copy and reference counting
+// fn tmp2() {
+//     let mut p2;
+//     let mut tmp = Point { x: 1, y: 2 };
+//     {
+//         let mut p1 = tmp;
+//         p2 = f(p1);
+//     }
+// }
+fn tmp2() {
+    let mut p2;
+    {
+        let mut p1 = Point { x: 1, y: 2 };
+        p2 = f(p1);
+    }
+}
+
+// ==========
+// Mut-Mut-Mut as return and formal parameters fromMut
+// =========
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn mut f(mut p: Point, mut u: Point): Point {
+    // u is not used
+    let mut x = p.x; // NOTE: proj -> mut forces reinitialization
+    let mut y = p.y; // NOTE: proj -> mut forces reinitialization
+    &p.x = 10;
+    &p.y = 20;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(p1, p2);
+    // - p1 is moved, so it is not used anymore
+    // - p2 is moved, so it is not used anymore
+}
+
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);
+    }
+}
+
+// ==========
+// Mut-Mut-Imm as return and formal parameters fromMut
+// =========
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn mut f(mut p: Point, imm u: Point): Point {
+    // u is not used
+    let mut x = p.x; // NOTE: proj -> mut forces reinitialization
+    let mut y = p.y; // NOTE: proj -> mut forces reinitialization
+    &p.x = 10;
+    &p.y = 20;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(p1, p2);
+    // - p1 is moved, so it is not used anymore
+    // - p2 can be used again
+}
+
+// OPTIMIZATION to avoid copy and reference counting
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let imm p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);
+        // - p1 is moved, so it is not used anymore
+        // - p2 can be used again
+    }
+}
+
+// ==========
+// Mut-Mut-Proj as return and formal parameters fromMut
+// =========
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn mut f(mut p: Point, proj u: Point): Point {
+    // u is not used
+    let mut x = p.x; // NOTE: proj -> mut forces reinitialization
+    let mut y = p.y; // NOTE: proj -> mut forces reinitialization
+    &p.x = 10;
+    &p.y = 20;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(p1, &p2);
+    // - p1 is moved, so it is not used anymore
+    // - p2 is projected, so it can be used again
+}
+
+// OPTIMIZATION to avoid copy and reference counting
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, &p2);
+        // - p1 is moved, so it is not used anymore
+        // - p2 is projected, so it can be used again
+    }
+}
+
+// ========================================================================
+// ========================================================================
+// Store Imm in Struct from Mut
+// ========================================================================
+// ========================================================================
+
+
+// ==========
+// SINGLE CASE
+// ==========
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn mut f(mut p: Point): Point {
+    let imm x = p.x; // imm fields are always imm, even under mut binding
+    let imm y = p.y;
+    // let mut x = p.x; // ERROR: imm fields cannot be accessed as mut. Need to copy.
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = f(p1);
+    // - p1 is moved, so it is not used anymore
+}
+
+// OPTIMIZATION: to avoid copy and reference counting
+fn tmp2() {
+    let mut p2;
+    {
+        let mut p1 = Point { x: 1, y: 2 };
+        p2 = f(p1);
+    }
+}
+
+// ==========
+// Mut-Mut-Mut as return and formal parameters fromMut
+// =========
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn mut f(mut p: Point, mut u: Point): Point {
+    // u is not used
+    let imm x = p.x; // imm fields are always imm
+    let imm y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(p1, p2);
+    // - p1 is moved, so it is not used anymore
+    // - p2 is moved, so it is not used anymore
+}
+
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);
+    }
+}
+
+// ==========
+// Mut-Mut-Imm as return and formal parameters fromMut
+// =========
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn mut f(mut p: Point, imm u: Point): Point {
+    // u is not used
+    let imm x = p.x;
+    let imm y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(p1, p2);
+    // - p1 is moved, so it is not used anymore
+    // - p2 can be used again
+}
+
+// OPTIMIZATION to avoid copy and reference counting
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let imm p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);
+        // - p1 is moved, so it is not used anymore
+        // - p2 can be used again
+    }
+}
+
+// ==========
+// Mut-Mut-Proj as return and formal parameters fromMut
+// =========
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn mut f(mut p: Point, proj u: Point): Point {
+    // u is not used
+    let imm x = p.x;
+    let imm y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(p1, &p2);
+    // - p1 is moved, so it is not used anymore
+    // - p2 is projected, so it can be used again
+}
+
+// OPTIMIZATION to avoid copy and reference counting
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, &p2);
+        // - p1 is moved, so it is not used anymore
+        // - p2 is projected, so it can be used again
+    }
+}

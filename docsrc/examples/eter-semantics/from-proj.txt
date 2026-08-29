@@ -1,0 +1,808 @@
+// ========================================================================
+// ========================================================================
+// SCALAR TYPES
+// ========================================================================
+// ========================================================================
+
+// ==========
+// Proj to Proj
+// ==========
+
+fn main() {
+    let proj x: i32 = &1;
+    let proj y: i32 = x;     // OK: forwarding (x is consumed, x is dead after this)
+    // let proj z: i32 = &x; // ERROR: aliasing — cannot create a new proj while x is still alive
+}
+
+fn f(proj x: i32) {}
+fn main() {
+    let proj x: i32 = &1;
+    f(x);    // OK: forwarding x to f (x is consumed during the call)
+    // f(&x); // ERROR: aliasing — &x creates a new proj while x is still alive
+}
+
+// ==========
+// Proj to Imm
+// ==========
+
+fn main() {
+    let proj x: i32 = &1;
+    let imm y: i32 = x; // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    let imm z: i32 = x; // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    x = &2; // NOTE: Reinitialization is not always needed.
+}
+
+fn f(imm x: i32) {}
+fn main() {
+    let proj x: i32 = &1;
+    f(x);               // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    let imm z: i32 = x; // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    x = &2; // NOTE: Reinitialization is not always needed.
+}
+
+// ==========
+// Proj to Mut
+// ==========
+
+fn main() {
+    let proj x: i32 = &1;
+    let mut y: i32 = x; // NOTE: Changing the regime from proj to mut forces a reinitialization of the projection.
+    // let mut z: i32 = x; // ERROR: Changing the regime from proj to mut is allowed only once. Need to copy.
+                           //        This is to guarantee both that only one mutation is active at a time.
+    x = &2; // NOTE: Reinitialization is not always needed.
+}
+
+// OPTIMIZATION2
+fn f(mut x: i32) {}
+fn main() {
+    let proj x: i32 = &1;
+    f(x); // NOTE: Changing the regime from proj to mut forces a reinitialization of the projection.
+    // let mut z: i32 = x; // ERROR: Changing the regime from proj to mut is allowed only once. Need to copy.
+                           //        This is to guarantee both that only one mutation is active at a time.
+    x = &2; // NOTE: Reinitialization is not always needed.
+}
+
+// ========================================================================
+// ========================================================================
+// ARRAY TYPES
+// ========================================================================
+// ========================================================================
+
+// ==========
+// Proj to Proj
+// ==========
+
+fn main() {
+    let proj x: [i32; 3] = &[1, 2, 3];
+    let proj y: [i32; 3] = x;     // OK: forwarding (x is consumed, x is dead after this)
+    // let proj z: [i32; 3] = &x; // ERROR: aliasing — cannot create a new proj while x is still alive
+}
+
+fn f(proj x: [i32; 3]) {}
+fn main() {
+    let proj x: [i32; 3] = &[1, 2, 3];
+    f(x);    // OK: forwarding x to f (x is consumed during the call)
+    // f(&x); // ERROR: aliasing — &x creates a new proj while x is still alive
+}
+
+// ==========
+// Proj to Imm
+// ==========
+
+fn main() {
+    let proj x: [i32; 3] = &[1, 2, 3];
+    let imm y: [i32; 3] = x; // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    let imm z: [i32; 3] = x; // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    x = &[3, 2, 1]; // NOTE: Reinitialization is not always needed.
+}
+
+fn f(imm x: [i32; 3]) {}
+fn main() {
+    let proj x: [i32; 3] = &[1, 2, 3];
+    f(x);                    // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    let imm z: [i32; 3] = x; // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    x = &[3, 2, 1]; // NOTE: Reinitialization is not always needed.
+}
+
+// ==========
+// Proj to Mut
+// ==========
+fn main() {
+    let proj x: [i32; 3] = &[1, 2, 3];
+    let mut y: [i32; 3] = x; // NOTE: Changing the regime from proj to mut forces a reinitialization of the projection.
+    // let mut z: [i32; 3] = x; // ERROR: Changing the regime from proj to mut is allowed only once. Need to copy.
+                               //        This is to guarantee both that only one mutation is active at a time.
+    x = &[3, 2, 1]; // NOTE: Reinitialization is not always needed.
+}
+
+fn f(mut x: [i32; 3]) {}
+fn main() {
+    let proj x: [i32; 3] = &[1, 2, 3];
+    f(x); // NOTE: Changing the regime from proj to mut forces a reinitialization of the projection.
+    // let mut z: [i32; 3] = x; // ERROR: Changing the regime from proj to mut is allowed only once. Need to copy.
+                               //        This is to guarantee both that only one mutation is active at a time.
+    x = &[3, 2, 1]; // NOTE: Reinitialization is not always needed.
+}
+
+// ========================================================================
+// ========================================================================
+// Structs with Imm
+// ========================================================================
+// ========================================================================
+
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+// ==========
+// Proj to Proj
+// ==========
+
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    let proj q = p;     // OK: forwarding (p is consumed, p is dead after this)
+    // let proj r = &p; // ERROR: aliasing — cannot create a new proj while p is still alive
+}
+
+fn f(proj p: Point) {}
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    f(p);    // OK: forwarding p to f (p is consumed during the call)
+    // f(&p); // ERROR: aliasing — &p creates a new proj while p is still alive
+}
+
+// ==========
+// Proj to Imm
+// ==========
+
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    let imm q = p; // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    let imm r = p; // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    p = &Point { x: 3, y: 4 }; // NOTE: Reinitialization is not always needed.
+}
+
+fn f(imm p: Point) {}
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    f(p);          // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    let imm q = p; // NOTE: Changing the regime from proj to imm forces a reinitialization of the projection.
+    p = &Point { x: 3, y: 4 }; // NOTE: Reinitialization is not always needed.
+}
+
+// ==========
+// Proj to Mut
+// ==========
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    let mut q = p; // NOTE: Changing the regime from proj to mut forces a reinitialization of the projection.
+    // let mut r = p; // ERROR: Changing the regime from proj to mut is allowed only once. Need to copy.
+                     //        This is to guarantee both that only one mutation is active at a time.
+    p = &Point { x: 3, y: 4 }; // NOTE: Reinitialization is not always needed.
+}
+
+fn f(mut p: Point) {}
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    f(p); // NOTE: Changing the regime from proj to mut forces a reinitialization of the projection.
+    // let mut r = p; // ERROR: Changing the regime from proj to mut is allowed only once. Need to copy.
+                     //        This is to guarantee both that only one mutation is active at a time.
+    p = &Point { x: 3, y: 4 }; // NOTE: Reinitialization is not always needed.
+}
+
+// ========================================================================
+// ========================================================================
+// Proj-Proj as Formal Parameter and Return
+// ========================================================================
+// ========================================================================
+
+// NOTE: Inside the body, `p` is already proj. Returning `p` forwards the proj (OK).
+// Returning `&p` would alias it (ERROR). At the call site, `f(p)` forwards (OK);
+// `f(&p)` would create a new proj while p is still alive (ERROR).
+
+// ==========
+// Proj-Proj to Proj
+// ==========
+
+fn proj f(proj p: Point): Point { p }  // OK: forwarding p as the proj return
+// fn proj f_bad(proj p: Point): Point { &p }  // ERROR: aliasing — &p while p is already proj
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    let proj q = f(p);   // OK: forwarding — p is consumed, q holds the proj
+    // f(&p);            // ERROR: aliasing — &p creates a new proj while p is still alive
+}
+
+fn proj f2(proj p1: Point, proj p2: Point): Point { p1 }  // OK: forwarding p1 (p2 unused but consumed)
+fn main() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let proj p2 = &Point { x: 3, y: 4 };
+    let proj q = f2(p1, p2);   // OK: both forwarded, q holds the proj that was p1
+    // f2(&p1, &p2);            // ERROR: aliasing — &p1, &p2 create new projs while originals alive
+}
+
+// ==========
+// Proj-Proj to Imm
+// ==========
+fn proj f(proj p: Point): Point { p }
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    let imm q = f(p);   // OK: forwarding p, then proj -> imm (forced reinit of proj)
+    // f(&p);           // ERROR: aliasing — &p creates a new proj while p is still alive
+}
+
+fn proj f2(proj p1: Point, proj p2: Point): Point { p1 }
+fn main() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let proj p2 = &Point { x: 3, y: 4 };
+    let imm q = f2(p1, p2);    // OK: forwarding, then proj -> imm
+    // f2(&p1, &p2);            // ERROR: aliasing
+}
+
+// ===========
+// Proj-Proj to Mut
+// ===========
+fn proj f(proj p: Point): Point { p }
+fn main() {
+    let proj p = &Point { x: 1, y: 2 };
+    let mut q = f(p);   // OK: forwarding p, then proj -> mut (forced reinit, allowed once)
+    // f(&p);           // ERROR: aliasing — &p creates a new proj while p is still alive
+}
+
+fn proj f2(proj p1: Point, proj p2: Point): Point { p1 }
+fn main() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let proj p2 = &Point { x: 3, y: 4 };
+    let mut q = f2(p1, p2);    // OK: forwarding, then proj -> mut
+    // f2(&p1, &p2);            // ERROR: aliasing
+}
+
+// ========================================================================
+// ========================================================================
+// Proj-Imm as Formal Parameter and Return
+// ========================================================================
+// ========================================================================
+
+// NOTE: fn proj f(imm p) is a degenerate case.
+// A `imm` parameter cannot be projected (imm -> proj is forbidden),
+// so the function body cannot produce a valid proj return from its parameter.
+// All call-site usages are therefore also errors.
+
+// ==========
+// Proj-Imm to Imm
+// ==========
+fn proj f(imm p: Point): Point {
+    // &p // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    // let imm q = f(p); // ERROR: function body cannot produce a valid proj return
+}
+
+fn proj f2(imm p1: Point, imm p2: Point): Point {
+    // &p1 // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+fn main() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    // let imm q = f2(p1, p2); // ERROR: function body cannot produce a valid proj return
+}
+
+// ==========
+// Proj-Imm to Mut
+// ==========
+fn proj f(imm p: Point): Point {
+    // &p // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    // let mut q = f(p); // ERROR: function body cannot produce a valid proj return
+}
+
+fn proj f2(imm p1: Point, imm p2: Point): Point {
+    // &p1 // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+fn main() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    // let mut q = f2(p1, p2); // ERROR: function body cannot produce a valid proj return
+}
+
+// ===========
+// Proj-Imm to Proj
+// ===========
+fn proj f(imm p: Point): Point {
+    // &p // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+fn main() {
+    let imm p = Point { x: 1, y: 2 };
+    // let proj q = &f(p); // ERROR: function body cannot produce a valid proj return
+}
+
+fn proj f2(imm p1: Point, imm p2: Point): Point {
+    // &p1 // ERROR: Changing the regime from imm to proj is not allowed. Need to copy.
+}
+fn main() {
+    let imm p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    // let proj q = &f2(p1, p2); // ERROR: function body cannot produce a valid proj return
+}
+
+// ========================================================================
+// ========================================================================
+// Proj-Mut as Formal Parameter and Return
+// ========================================================================
+// ========================================================================
+
+// NOTE: fn proj f(mut p) is also a degenerate case.
+// A `mut` parameter is owned by the function (local binding).
+// Returning `&p` would create a proj to a local binding that escapes the function scope — dangling.
+// All call-site usages are therefore also errors.
+
+// ==========
+// Proj-Mut to Imm
+// ==========
+fn proj f(mut p: Point): Point {
+    // &p // ERROR: proj to local mut binding escapes function scope — dangling.
+}
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    // let imm q = f(p); // ERROR: function body cannot produce a valid proj return
+}
+
+fn proj f2(mut p1: Point, mut p2: Point): Point {
+    // &p1 // ERROR: proj to local mut binding escapes function scope — dangling.
+}
+fn main() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    // let imm q = f2(p1, p2); // ERROR: function body cannot produce a valid proj return
+}
+
+// ==========
+// Proj-Mut to Mut
+// ==========
+fn proj f(mut p: Point): Point {
+    // &p // ERROR: proj to local mut binding escapes function scope — dangling.
+}
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    // let mut q = f(p); // ERROR: function body cannot produce a valid proj return
+}
+
+fn proj f2(mut p1: Point, mut p2: Point): Point {
+    // &p1 // ERROR: proj to local mut binding escapes function scope — dangling.
+}
+fn main() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    // let mut q = f2(p1, p2); // ERROR: function body cannot produce a valid proj return
+}
+
+// ===========
+// Proj-Mut to Proj
+// ===========
+fn proj f(mut p: Point): Point {
+    // &p // ERROR: proj to local mut binding escapes function scope — dangling.
+}
+fn main() {
+    let mut p = Point { x: 1, y: 2 };
+    // let proj q = &f(p); // ERROR: function body cannot produce a valid proj return
+}
+
+fn proj f2(mut p1: Point, mut p2: Point): Point {
+    // &p1 // ERROR: proj to local mut binding escapes function scope — dangling.
+}
+fn main() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    // let proj q = &f2(p1, p2); // ERROR: function body cannot produce a valid proj return
+}
+
+// ========================================================================
+// ========================================================================
+// Store Proj in Struct from Proj
+// ========================================================================
+// ========================================================================
+
+// NOTE: proj binding + proj field -> ERROR (would create aliased projections).
+// The only valid operation on a `proj` binding to a struct with proj fields is
+// forwarding the whole proj (consuming p and passing it along).
+
+// SINGLE CASE
+
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn proj f(proj p: Point): Point {
+    // let proj x = p.x; // ERROR: proj binding + proj field -> aliased projections forbidden
+    // let proj y = p.y; // ERROR: same
+    p  // OK: forwarding the entire proj (p is consumed)
+}
+
+fn tmp1() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let proj p2 = f(p1);  // OK: forwarding — p1 is consumed, p2 holds the proj
+    // f(&p1);            // ERROR: aliasing — &p1 creates a new proj while p1 is still alive
+}
+
+fn tmp2() {
+    let proj p2;
+    {
+        let proj p1 = &Point { x: 1, y: 2 };
+        p2 = f(p1);  // OK: forwarding
+    }
+}
+
+// ========================================================================
+
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn proj f(proj p: Point, proj u: Point): Point {
+    // u is not used
+    // let proj x = p.x; // ERROR: proj binding + proj field -> aliased projections forbidden
+    // let proj y = p.y; // ERROR: same
+    p  // OK: forwarding p (u is also consumed as unused proj param)
+}
+
+fn tmp1() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let proj p2 = &Point { x: 1, y: 2 };
+    let proj p3 = f(p1, p2);  // OK: both forwarded, p3 holds the proj that was p1
+    // f(&p1, &p2);            // ERROR: aliasing
+}
+
+fn tmp2() {
+    let proj p3;
+    let proj p1 = &Point { x: 1, y: 2 };
+    {
+        let proj p2 = &Point { x: 3, y: 4 };
+        p3 = f(p1, p2);  // OK: forwarding — both p1 and p2 consumed
+    }
+}
+
+// ========================================================================
+
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn proj f(proj p: Point, mut u: Point): Point {
+    // u is not used
+    // let proj x = p.x; // ERROR: proj binding + proj field -> aliased projections forbidden
+    // let proj y = p.y; // ERROR: same
+    p  // OK: forwarding p (u is consumed as owned mut param)
+}
+
+fn tmp1() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 1, y: 2 };
+    let proj p3 = f(p1, p2);  // OK: p1 forwarded, p2 moved (consumed)
+    // f(&p1, p2);             // ERROR: aliasing — &p1 creates a new proj while p1 alive
+}
+
+fn tmp2() {
+    let proj p3;
+    let proj p1 = &Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);  // OK: forwarding
+    }
+}
+
+// ========================================================================
+
+struct Point {
+    proj x: i32,
+    proj y: i32,
+}
+
+fn proj f(proj p: Point, imm u: Point): Point {
+    // u is not used
+    // let proj x = p.x; // ERROR: proj binding + proj field -> aliased projections forbidden
+    // let proj y = p.y; // ERROR: same
+    p  // OK: forwarding p (u is imm, shared immutable)
+}
+
+fn tmp1() {
+    let proj p1 = &Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 1, y: 2 };
+    let proj p3 = f(p1, p2);  // OK: p1 forwarded, p2 shared (imm can be passed many times)
+    // f(&p1, p2);             // ERROR: aliasing — &p1 creates a new proj while p1 alive
+}
+
+fn tmp2() {
+    let proj p3;
+    let proj p1 = &Point { x: 1, y: 2 };
+    {
+        let imm p2 = Point { x: 3, y: 4 };
+        p3 = f(p1, p2);  // OK: forwarding
+    }
+}
+
+// ========================================================================
+// ========================================================================
+// Store Mut in Struct from Proj
+// ========================================================================
+// ========================================================================
+
+// NOTE: proj binding + mut field -> proj access (in-place mutable reference to the field).
+// From a proj binding, accessing a mut field gives proj access to that field.
+
+// ==========
+// SINGLE CASE
+// ==========
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn mut f(proj p: Point): Point {
+    // p.x gives proj access (proj binding + mut field -> proj)
+    let mut x = p.x; // proj -> mut: allowed once, forces reinitialization of p.x
+    let mut y = p.y; // proj -> mut: allowed once, forces reinitialization of p.y
+    *p.x = 10;       // reinit p.x
+    *p.y = 20;       // reinit p.y
+    Point { x, y }   // OK: returning a new Point (not the projection itself)
+    // p // ERROR: Escaping the return of a proj to a mut is not allowed. Need to copy.
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = f(&p1);
+    // p1 is projected, so it can be used again (after p2 dies)
+}
+
+fn tmp2() {
+    let mut p2;
+    {
+        let mut p1 = Point { x: 1, y: 2 };
+        p2 = f(&p1);
+    }
+}
+
+// ==========
+// Mut-Proj-Proj as return and formal parameters from Proj
+// =========
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn mut f(proj p: Point, proj u: Point): Point {
+    // u is not used
+    let mut x = p.x; // proj -> mut: forces reinitialization
+    let mut y = p.y; // proj -> mut: forces reinitialization
+    *p.x = 10;
+    *p.y = 20;
+    Point { x, y }
+    // p // ERROR: Escaping the return of a proj to a mut is not allowed. Need to copy.
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(&p1, &p2);
+    // p1 is projected, so it can be used again
+    // p2 is projected, so it can be used again
+}
+
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(&p1, &p2);
+    }
+}
+
+// ==========
+// Mut-Proj-Mut as return and formal parameters from Proj
+// =========
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn mut f(proj p: Point, mut u: Point): Point {
+    // u is not used
+    let mut x = p.x; // proj -> mut: forces reinitialization
+    let mut y = p.y; // proj -> mut: forces reinitialization
+    *p.x = 10;
+    *p.y = 20;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(&p1, p2);
+    // p1 is projected, so it can be used again
+    // p2 is moved, so it is not used anymore
+}
+
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(&p1, p2);
+    }
+}
+
+// ==========
+// Mut-Proj-Imm as return and formal parameters from Proj
+// =========
+struct Point {
+    mut x: i32,
+    mut y: i32,
+}
+
+fn mut f(proj p: Point, imm u: Point): Point {
+    // u is not used
+    let mut x = p.x; // proj -> mut: forces reinitialization
+    let mut y = p.y; // proj -> mut: forces reinitialization
+    *p.x = 10;
+    *p.y = 20;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(&p1, p2);
+    // p1 is projected, so it can be used again
+    // p2 can be used again
+}
+
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let imm p2 = Point { x: 3, y: 4 };
+        p3 = f(&p1, p2);
+    }
+}
+
+// ========================================================================
+// ========================================================================
+// Store Imm in Struct from Proj
+// ========================================================================
+// ========================================================================
+
+// NOTE: proj binding + imm field -> imm access (imm is more restrictive than proj).
+// From a proj binding, imm fields remain immutable — the proj binding does not grant
+// mutable access to fields that are declared imm.
+
+// ==========
+// SINGLE CASE
+// ==========
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn mut f(proj p: Point): Point {
+    let imm x = p.x; // imm field stays imm even under proj binding
+    let imm y = p.y;
+    // let mut x = p.x; // ERROR: imm fields cannot be accessed as mut. Need to copy.
+    // let proj x = &p.x; // ERROR: imm -> proj not allowed. Need to copy.
+    Point { x, y }
+    // p // ERROR: Escaping the return of a proj to a mut is not allowed. Need to copy.
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = f(&p1);
+    // p1 is projected, so it can be used again
+}
+
+fn tmp2() {
+    let mut p2;
+    {
+        let mut p1 = Point { x: 1, y: 2 };
+        p2 = f(&p1);
+    }
+}
+
+// ==========
+// Mut-Proj-Proj as return and formal parameters from Proj
+// =========
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn mut f(proj p: Point, proj u: Point): Point {
+    // u is not used
+    let imm x = p.x; // imm field: always imm
+    let imm y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(&p1, &p2);
+    // p1 is projected, so it can be used again
+    // p2 is projected, so it can be used again
+}
+
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(&p1, &p2);
+    }
+}
+
+// ==========
+// Mut-Proj-Mut as return and formal parameters from Proj
+// =========
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn mut f(proj p: Point, mut u: Point): Point {
+    // u is not used
+    let imm x = p.x;
+    let imm y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let mut p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(&p1, p2);
+    // p1 is projected, so it can be used again
+    // p2 is moved, so it is not used anymore
+}
+
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let mut p2 = Point { x: 3, y: 4 };
+        p3 = f(&p1, p2);
+    }
+}
+
+// ==========
+// Mut-Proj-Imm as return and formal parameters from Proj
+// =========
+struct Point {
+    imm x: i32,
+    imm y: i32,
+}
+
+fn mut f(proj p: Point, imm u: Point): Point {
+    // u is not used
+    let imm x = p.x;
+    let imm y = p.y;
+    Point { x, y }
+}
+
+fn tmp1() {
+    let mut p1 = Point { x: 1, y: 2 };
+    let imm p2 = Point { x: 3, y: 4 };
+    let mut p3 = f(&p1, p2);
+    // p1 is projected, so it can be used again
+    // p2 can be used again
+}
+
+fn tmp2() {
+    let mut p3;
+    let mut p1 = Point { x: 1, y: 2 };
+    {
+        let imm p2 = Point { x: 3, y: 4 };
+        p3 = f(&p1, p2);
+    }
+}

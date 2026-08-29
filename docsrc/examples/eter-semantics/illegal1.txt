@@ -1,0 +1,9 @@
+fn tmp(proj x: i32, proj y: i32) {
+    x = &y;
+}
+fn main() {
+    let mut x: i32 = 1;
+    let mut y: i32 = 2;
+    tmp(&x, &y);
+    // UB: x and y are mutable aliases of the same memory location
+}
