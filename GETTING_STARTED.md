@@ -102,9 +102,31 @@ After building, the `eterc` driver is available at:
 
 To enable debug output for a specific subsystem:
 
-```bash
-./build/tools/eter/eterc --debug-only=driver program.eter
+```sh
+build/doxygen/html/index.html
 ```
 
-Debug output is only available in `Debug` and `RelWithDebInfo` builds (the
-default when using `./x config`).
+If Doxygen is not installed, CMake will configure normally and print a status
+message indicating that `doc-doxygen` is disabled.
+
+## Common Problems
+
+### LLVM/MLIR version mismatch
+
+If you have multiple LLVM installations, ensure that `LLVM_DIR` and `MLIR_DIR`
+point to the same 22.x install.
+
+### Missing `lit` or `FileCheck`
+
+Make sure those tools are installed and reachable through your `PATH`, or
+provided by your LLVM installation.
+
+### Linker warnings on macOS
+
+Depending on the local Xcode or Homebrew setup, you may see warnings about LLVM
+search paths. These should be investigated if they turn into hard failures.
+
+## Next Steps
+
+Once Eter builds cleanly, the next natural steps are to add more regression
+tests, grow the driver, and introduce the first MLIR dialects and passes.

@@ -1,0 +1,58 @@
+// ========================================================================
+// ========================================================================
+// SCALAR TYPES
+// ========================================================================
+// ========================================================================
+
+// ==========
+// Mut to Mut
+// ==========
+fn mut_to_mut() {
+    let mut x: i32 = 1;
+    let mut y: i32 = x;
+    let mut z: i32 = x; // ERROR: Changing the regime from mut to mut is allowed only once. Need to copy.
+}
+
+fn f(mut x: i32) {}
+fn mut_to_mut_2() {
+    let mut x: i32 = 1;
+    f(x);
+    let mut z: i32 = x; // ERROR: Changing the regime from mut to mut is allowed only once. Need to copy.
+}
+
+// ==========
+// Mut to Let
+// ==========
+fn mut_to_let() {
+    let mut x: i32 = 1;
+    let y: i32 = x;
+    let z: i32 = x; // ERROR: Changing the regime from mut to let is allowed only once. Need to copy.
+                    // NOTE: We can permit to move from a mut to several let (within the same scope).
+                    //       But this is not very useful since you can use y instead of x.
+}
+
+fn f(let x: i32) {}
+fn mut_to_let_2() {
+    let mut x: i32 = 1;
+    f(x);
+    let z: i32 = x; // ERROR: Changing the regime from mut to let is allowed only once. Need to copy.
+                    // NOTE: We can permit to move from a mut to several let (within the same scope).
+                    //       But this is not very useful since you can use y instead of x.
+}
+
+// ===========
+// Mut to Proj
+// ===========
+fn mut_to_proj() {
+    let mut x: i32 = 1;
+    let proj y: i32 = x;
+    let proj z: i32 = x; // ERROR: Changing the regime from mut to proj is allowed only once. Need to copy.
+    &y = 2;
+}
+
+fn f(proj x: i32) {}
+fn mut_to_proj_2() {
+    let mut x: i32 = 1;
+    f(x);
+    let proj y: i32 = x; // ERROR: Changing the regime from mut to proj is allowed only once. Need to copy.
+}
